@@ -277,7 +277,7 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
       <div><kbd data-k="gearUp">X</kbd><kbd data-k="gearDown">Z</kbd>Gear up / down · <kbd data-k="driveMode">Q</kbd>Drive mode</div>
       <div><kbd data-k="tc">T</kbd>Traction control · <kbd data-k="camera">C</kbd>Camera · <kbd data-k="timer">G</kbd>0-60 timer</div>
       <div><kbd data-k="lookBack">B</kbd>Look behind (hold) · <kbd data-k="map">M</kbd>Map</div>
-      <div><kbd data-k="recover">R</kbd>Back on the road · <kbd data-k="mute">N</kbd>Mute · <kbd data-k="help">H</kbd>Help</div>
+      <div><kbd data-k="mute">N</kbd>Mute · <kbd data-k="help">H</kbd>Help</div>
       <div>Drag the mouse to look around</div>
     </div>
     <div class="gp" hidden>
@@ -286,7 +286,7 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
       <div><kbd data-p="lookBack">Right stick press</kbd>Look behind (hold)</div>
       <div><kbd data-p="gearUp">A</kbd><kbd data-p="gearDown">X</kbd>Gear up / down · <kbd data-p="handbrake">LB</kbd>Handbrake</div>
       <div><kbd data-p="driveMode">D-pad down</kbd>Drive mode · <kbd data-p="tc">D-pad left</kbd>Traction control</div>
-      <div><kbd data-p="recover">D-pad right</kbd>Back on the road · <kbd data-p="camera">Y</kbd>Camera</div>
+      <div><kbd data-p="camera">Y</kbd>Camera</div>
       <div><kbd data-p="timer">—</kbd>0-60 timer (bind it in Settings)</div>
       <div><kbd data-p="map">View</kbd>Map · <kbd data-p="pause">Menu</kbd>Pause</div>
     </div>
@@ -523,6 +523,7 @@ function noiseBuffer(ctx){
 const SND={idx:null,packs:{}};
 function sndPackFor(c){
   if((IND[c.ind]||{}).electric)return null;
+  if(c.sndPack)return c.sndPack;   // a car that names its own recording
   // every V6 uses the recorded 3.6 Pentastar until a car gets its own recording
   if(c.engSound==='v6'||c.engSound==='v6p')return 'pentastar';
   // Ford Mustang V8s: supercharged Shelbys get the GT500 recording, the GT350 the louder
@@ -6805,7 +6806,7 @@ function damageCar(amount,source){if(!(amount>0)||car.health<=0)return;
   car.health=Math.max(0,car.health-amount);car.lastHit={amount,source,t:performance.now()};
   if(car.health<=0){car.disabled=true;toast('Vehicle disabled');}}
 window.BACKROADS_DAMAGE=(a,src)=>damageCar(a,src||'external');
-function repairCar(){car.health=100;car.disabled=false;}
+function repairCar(){car.health=100;car.disabled=false;car.flat=null;}
 function spawnCar(key,color){
   if(carObj3){world.remove(carObj3.grp);carObj3=null;}
   makeCar(key,color);
@@ -6821,7 +6822,7 @@ function spawnCar(key,color){
   car.x=MAP.spawn.x;car.z=MAP.spawn.z;car.psi=MAP.spawn.psi;
   skidPool.forEach(m=>m.visible=false);smokePool.forEach(m=>m.visible=false);
   car.lastWheel=[null,null,null,null];
-  car.health=100;car.disabled=false;
+  car.health=100;car.disabled=false;car.flat=null;car.boost=0;car.boostPsi=0;car.smoke=0;   // a fresh car: nothing carried over from the last one (flat tyres, boost, smoke)
   buildLightRig();
   syncCar(0);
 }
@@ -6933,7 +6934,10 @@ function stepSmoke(dt){
    follows the same plan, then fade out.
 --------------------------------------------------------------------------- */
 const TR_MODELS=['bmw230i','fusionsport','g70_20t','g80_25t','accord_20t','q50_21luxerwd','mazda3turbo','s60_t5','durangoGTPlus','sq5'];
-const TR_POLICE=['crownvic_p71','impala_ls06'];          // State Police
+/* State Police Impala: the LS body and livery as before, with the Impala SS powertrain and chassis (5.3 V8, 303 hp, gearing,
+   weight, tyres) and the Crown Victoria police engine recording */
+PRESETS.impala_9c1=Object.assign({},PRESETS.impala_ss06,{name:PRESETS.impala_ls06.name,body:PRESETS.impala_ls06.body,sndPack:'crownvicdual'});
+const TR_POLICE=['crownvic_p71','impala_9c1'];          // State Police
 const TR_CITY=['taurussho','charger19pursuitv8'];          // Harlan Police Department
 const CITY_NAVY='#13264d',CITY_RED='#b3121b',CITY_WHITE='#eef0ee';
 // grays and silvers spread over several shades (light silver to gunmetal), roughly a third of the cars on the road
@@ -7215,7 +7219,7 @@ function trBuildTemplate(key){
   T.proxy=trProxy(A.grp,m=>paint.has(m),A.wheels);
   TPL[key]=T;
 }
-const TR_BUILD_Q=['crownvic_p71','impala_ls06','taurussho','charger19pursuitv8','accord_20t','fusionsport','mazda3turbo','sq5','g70_20t','bmw230i','s60_t5','durangoGTPlus','g80_25t','q50_21luxerwd'];
+const TR_BUILD_Q=['crownvic_p71','impala_9c1','taurussho','charger19pursuitv8','accord_20t','fusionsport','mazda3turbo','sq5','g70_20t','bmw230i','s60_t5','durangoGTPlus','g80_25t','q50_21luxerwd'];
 function trBuildNext(){const k=TR_BUILD_Q.find(k=>!TPL[k]&&PRESETS[k]);if(!k)return false;
   try{trBuildTemplate(k);}catch(e){console.warn('traffic model '+k+' failed',e);TPL[k]=null;TR_BUILD_Q.splice(TR_BUILD_Q.indexOf(k),1);}return true;}
 function trBuildIdle(){if(trBuildNext())setTimeout(trBuildIdle,MODE==='drive'?400:90);else trWarm();}
@@ -7906,7 +7910,7 @@ function polTrapSpots(){const out=[];
   return out;}
 
 /* ---------------------------------------------------------------- roster */
-const UNIT_MODELS={state:['crownvic_p71','impala_ls06'],city:['charger19pursuitv8','taurussho']};
+const UNIT_MODELS={state:['crownvic_p71','impala_9c1'],city:['charger19pursuitv8','taurussho']};
 function polFreeBay(S,avoidSeen){const free=S.bays.filter(b=>!b.unit&&!(avoidSeen&&trSeen(b.x,b.z,3)));return free.length?free[Math.floor(Math.random()*free.length)]:null;}
 function polCreateUnit(dept,bay,opt){
   const S=POL.st[dept];if(!S||!bay)return null;const ids=POL.nextId;const id=(dept==='state'?'S':'C')+(ids[dept]++);
@@ -9027,17 +9031,18 @@ const $=id=>document.getElementById(id);
 const ACTIONS=[
   ['throttle','Accelerate'],['brake','Brake / reverse'],['left','Steer left'],['right','Steer right'],
   ['handbrake','Handbrake'],['gearUp','Gear up'],['gearDown','Gear down'],['driveMode','Drive mode'],['tc','Traction control'],['timer','0-60 timer'],
-  ['camera','Change camera'],['lookBack','Look behind (hold)'],['recover','Back on the road'],['map','Full map'],['pause','Pause'],['mute','Mute'],['help','Show controls']];
+  ['camera','Change camera'],['lookBack','Look behind (hold)'],['map','Full map'],['pause','Pause'],['mute','Mute'],['help','Show controls']];
 const KB_DEFAULT={throttle:'KeyW',brake:'KeyS',left:'KeyA',right:'KeyD',handbrake:'Space',gearUp:'KeyX',gearDown:'KeyZ',driveMode:'KeyQ',tc:'KeyT',timer:'KeyG',
-  camera:'KeyC',lookBack:'KeyB',recover:'KeyR',map:'KeyM',pause:'Escape',mute:'KeyN',help:'KeyH'};
+  camera:'KeyC',lookBack:'KeyB',map:'KeyM',pause:'Escape',mute:'KeyN',help:'KeyH'};
 // controller: buttons on the standard mapping (D-pad 12-15). Triggers and sticks are fixed: RT throttle, LT brake, left stick steer, right stick look.
-const PAD_DEFAULT={handbrake:4,gearUp:0,gearDown:2,driveMode:13,tc:14,timer:-1,camera:3,lookBack:11,recover:15,map:8,pause:9,help:-1,mute:-1};
+const PAD_DEFAULT={handbrake:4,gearUp:0,gearDown:2,driveMode:13,tc:14,timer:-1,camera:3,lookBack:11,map:8,pause:9,help:-1,mute:-1};
 const PAD_FIXED={throttle:'RT (analog)',brake:'LT (analog)',left:'Left stick',right:'Left stick'};
 const PAD_NAMES=['A','B','X','Y','LB','RB','LT','RT','View','Menu','Left stick press','Right stick press','D-pad up','D-pad down','D-pad left','D-pad right','Guide'];
 const GFX_DEFAULT={shadows:'high',scale:'auto',distance:'normal',fov:56,fps:false,refl:false,reflRes:256,reflRate:2,reflDist:200,reflStr:1,trDetail:85,trDraw:700};
 const PLAY_DEFAULT={tod:'day',density:50};
 const CFG={kb:Object.assign({},KB_DEFAULT),pad:Object.assign({},PAD_DEFAULT),gfx:Object.assign({},GFX_DEFAULT),play:Object.assign({},PLAY_DEFAULT),police:Object.assign({},POLICE_DEFAULT)};
 try{const s=JSON.parse(localStorage.getItem('backroads.settings')||'null');if(s){Object.assign(CFG.kb,s.kb||{});Object.assign(CFG.pad,s.pad||{});Object.assign(CFG.gfx,s.gfx||{});Object.assign(CFG.play,s.play||{});Object.assign(CFG.police,s.police||{});}}catch(e){}
+delete CFG.kb.recover;delete CFG.pad.recover;   // 'Back on the road' was removed; drop it from older saved settings
 function saveCfg(){try{localStorage.setItem('backroads.settings',JSON.stringify(CFG));}catch(e){}}
 function keyName(code){if(!code)return '—';return code.replace(/^Key/,'').replace(/^Digit/,'').replace('Arrow','Arrow ').replace('Space','Space').replace('Escape','Esc').replace('ShiftLeft','Left Shift').replace('ShiftRight','Right Shift').replace('ControlLeft','Left Ctrl');}
 function padName(i){return i<0||i==null?'—':(PAD_NAMES[i]||('Button '+i));}
@@ -9066,7 +9071,7 @@ function doAction(act){
   switch(act){
     case 'timer':return t60Toggle();
     case 'tc':return toggleTC();case 'gearUp':return gearUp();case 'gearDown':return gearDown();case 'driveMode':return cycleMode();
-    case 'help':return $('help').classList.toggle('gone');case 'camera':return cycleCam();case 'recover':return recover();
+    case 'help':return $('help').classList.toggle('gone');case 'camera':return cycleCam();
     case 'map':return openMap('waypoint');
     case 'mute':muted=!muted;if(AC&&AC.master)AC.master.gain.value=muted?0:volGain(volSetting());return toast(muted?'Sound off':'Sound on');}}
 let muted=false;
@@ -9145,7 +9150,7 @@ function pollPad(dt){
   PAD.last={std,id:gp.id,buttons:now.map((p,i)=>p?i:-1).filter(i=>i>=0)};
   if(capture&&capture.kind==='pad'){const i=now.findIndex((p,k)=>p&&!was[k]);if(i>=0){CFG.pad[capture.action]=i;saveCfg();capture=null;renderSettings();}return;}
   if(MODE==='drive'){
-    ['gearUp','gearDown','driveMode','tc','timer','camera','recover','map','mute','help'].forEach(a=>{if(hit(CFG.pad[a]))doAction(a);});
+    ['gearUp','gearDown','driveMode','tc','timer','camera','map','mute','help'].forEach(a=>{if(hit(CFG.pad[a]))doAction(a);});
     if(hit(CFG.pad.pause))togglePause();
   }else if(MODE==='map'){
     mapPad(dt,hit);
@@ -9170,14 +9175,6 @@ function navList(){const sec=$(MODE==='pause'?'pause':MODE==='select'?'select':M
   return Array.from(sec.querySelectorAll('button')).filter(b=>b.offsetParent!==null&&!b.disabled);}
 function navMove(dir){const L=navList();if(!L.length)return;let i=L.indexOf(document.activeElement);
   i=i<0?0:(i+dir+L.length)%L.length;L[i].focus({preventScroll:true});L[i].scrollIntoView({block:'nearest'});}
-function recover(){ // put the car back on its wheels on the nearest road, facing along it
-  const q=nearestRoadPoint(car.x,car.z);if(!q)return;const r=q[3];
-  let bi=0,bd=1e9;r.pts.forEach((p,i)=>{const d=Math.hypot(p[0]-q[1],p[1]-q[2]);if(d<bd){bd=d;bi=i;}});
-  const a=r.pts[Math.max(0,bi-1)],b=r.pts[Math.min(r.pts.length-1,bi+1)];let dx=b[0]-a[0],dz=b[1]-a[1];
-  const fx=Math.cos(car.psi),fz=-Math.sin(car.psi);if(dx*fx+dz*fz<0){dx=-dx;dz=-dz;}
-  const L=Math.hypot(dx,dz);const rx=-dz/L,rz=dx/L;
-  const lo=r.laneOffsets[r.laneOffsets.length-1];car.x=q[1]+rx*lo;car.z=q[2]+rz*lo;car.psi=Math.atan2(-dz,dx);
-  car.u=car.v=car.yr=car.omega=0;car.gear=0;car.state='D';CAMV.init=false;toast('Back on '+r.name);}
 function bindTouch(){
   document.querySelectorAll('[data-touch]').forEach(b=>{const k=()=>CFG.kb[b.dataset.touch];
     const on=e=>{e.preventDefault();KEYS[k()]=true;b.classList.add('on');},off=e=>{e.preventDefault();KEYS[k()]=false;b.classList.remove('on');};
