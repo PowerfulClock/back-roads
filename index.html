@@ -8213,7 +8213,7 @@ function polIncidentStep(dt){const I=POL.inc;if(!I)return;const T=POL.pt;
 function polCloseIncident(caught){const I=POL.inc;if(!I)return;
   if(!caught)POL.warrant={level:I.level||1,desc:polDesc(),model:pick.i,color:pick.color,t:POL.t};else POL.warrant=null;
   POL.inc=null;POL.pit=null;POL.box=null;POL.rbox=null;
-  POL.units.forEach(u=>{u.k.conf=0;u.box=null;u.rbox=null;if(u.pit){u.pit=null;u.a.pitLat=0;u.a.pitAcc=null;}
+  POL.units.forEach(u=>{u.k.conf=0;u.box=null;u.rbox=null;u.joinAt=null;if(u.pit){u.pit=null;u.a.pitLat=0;u.a.pitAcc=null;}
     if(u.st==='pursuit'||u.st==='tail'||u.st==='stop'){u.role=null;u.node=null;u.holdNode=null;polLightsOff(u);u.st='patrol';
       if(u.spikeJob){polSpikeCancel(u,true);}
       if(u.a.mode!=='road')polRejoin(u.a);polPatrolDest(u);}});
@@ -8247,16 +8247,26 @@ function polProject(I){const l=I.lkp,out=[];if(l.ri==null)return out;let ri=l.ri
   return out;}
 function polDispatch(force){const I=POL.inc;if(!I)return;if(!force&&POL.t-POL.dispT<2)return;POL.dispT=POL.t;const C=polCfg(),L=I.level;
   const avail=POL.units.filter(u=>u.st!=='wrecked'&&!(POL.arrest&&POL.arrest.u===u));
-  // anyone who can see the suspect joins in
-  avail.forEach(u=>{if(u.k.vis&&u.role!=='chase'&&u.role!=='spike'&&u.st!=='stop'){if(u.role==='intercept'&&u.holdNode&&Math.hypot(PLAYER.x-u.a.x,PLAYER.z-u.a.z)>90)return;polAssign(u,'chase');
-    if(!u.saidSee){u.saidSee=true;polSay(u.id,'I have the suspect '+I.lkp.dir+' on '+I.lkp.where+', joining.',2);}}});
+  // units that see him join in, up to what this level of pursuit calls for. A station doesn't empty out because he drove past:
+  // at most one car leaves a station a minute, and only if the pursuit needs it (the officer takes a few seconds to get rolling);
+  // the rest stay put and radio in where he went.
+  const capC=[0,2,3,4,6,99][L];let nCh=avail.filter(u=>u.role==='chase'||u.joinAt).length;
+  avail.forEach(u=>{if(u.joinAt&&POL.t>=u.joinAt){u.joinAt=null;if(u.st==='parked'&&!u.role){polAssign(u,'chase');polSay(u.id,'Leaving '+(u.home?u.home.name:'the station')+' to join the pursuit.',2);}}});
+  avail.forEach(u=>{if(!(u.k.vis&&u.role!=='chase'&&u.role!=='spike'&&u.st!=='stop'&&!u.joinAt))return;if(u.role==='intercept'&&u.holdNode&&Math.hypot(PLAYER.x-u.a.x,PLAYER.z-u.a.z)>90)return;
+    if(u.st==='parked'){const st=u.home&&u.home.name||'station',recent=POL.units.some(q=>q!==u&&q.scrambleFrom===st&&POL.t-q.scrambleT<60);
+      if(nCh<capC&&!recent){u.scrambleFrom=st;u.scrambleT=POL.t;u.joinAt=POL.t+4+Math.random()*4;nCh++;return;}
+      if(POL.t-(POL.stSeen&&POL.stSeen[st]||-99)>25){(POL.stSeen=POL.stSeen||{})[st]=POL.t;polSay(u.id,'Suspect just went past '+st+', '+I.lkp.dir+' on '+I.lkp.where+'.',1);}
+      return;}
+    if(nCh>=capC&&u.role)return;                       // already busy (searching, intercepting) and the pursuit is full: keep at it
+    if(nCh>=capC&&Math.hypot(PLAYER.x-u.a.x,PLAYER.z-u.a.z)>80)return;   // a free unit only piles in on a full pursuit if he's right on top of it
+    polAssign(u,'chase');nCh++;
+    if(!u.saidSee){u.saidSee=true;polSay(u.id,'I have the suspect '+I.lkp.dir+' on '+I.lkp.where+', joining.',2);}});
   const assigned=avail.filter(u=>u.role),juris=I.lkp.town?'city':'state',prim=I.primary;
   let want=!C.backup?0:[0,0,2,4,7,99][L];
   const cache=new Map(),lk=polNearNode(I.lkp.x,I.lkp.z);
-  const cand=avail.filter(u=>!u.role&&u.st!=='stop'&&!u.retire).map(u=>({u,eta:polETA(u,lk,cache)}))
+  const cand=avail.filter(u=>!u.role&&!u.joinAt&&u.st!=='stop'&&!u.retire).map(u=>({u,eta:polETA(u,lk,cache)}))
     .filter(c=>L>=5||c.u.dept===juris||(prim&&c.u.dept===prim.dept&&L>=2)||(L>=4?c.eta<120:c.eta<60))
     .sort((p,q)=>p.eta-q.eta);
-  if(L>=4)want=Math.max(want,cand.filter(c=>c.u.dept===juris).length+assigned.length);
   const proj=polProject(I),taken=new Set(POL.units.filter(u=>u.holdNode||u.node).map(u=>(u.holdNode||u.node).id));
   for(const c of cand){if(assigned.length>=want&&L<5)break;const u=c.u;
     const chasers=POL.units.filter(q=>q.role==='chase').length;
@@ -8277,7 +8287,8 @@ function polDispatch(force){const I=POL.inc;if(!I)return;if(!force&&POL.t-POL.di
       if(p){taken.add(p.n.id);polAssign(u,'intercept',p.n);polSay(u.id,'Heading to '+polNodeName(p.n)+' to get ahead of him.',1);}}}
   // obsolete intercepts: he's already past the junction, or gone another way
   POL.units.forEach(u=>{if(u.role!=='intercept'||!u.holdNode)return;const p=proj.find(p=>p.n===u.holdNode);
-    if((!p&&!(L>=5&&I.lkp.town))||(p&&p.eta<-6)){const sn=polSearchNode(I,taken);polSay(u.id,'He\'s not coming my way, continuing toward the last position.',1);polAssign(u,'chase');}});}
+    if((!p&&!(L>=5&&I.lkp.town))||(p&&p.eta<-6)){const sn=polSearchNode(I,taken);const full=POL.units.filter(q=>q.role==='chase').length>=capC;
+      polSay(u.id,'He\'s not coming my way, continuing toward the last position.',1);if(full&&sn){taken.add(sn.id);polAssign(u,'search',sn);}else polAssign(u,'chase');}});}
 function polMins(s){return s<45?'under a minute':Math.round(s/60)<=1?'about a minute':'about '+Math.round(s/60)+' minutes';}
 /* where to look next: junctions within a few hops of where he was last seen, favouring the way he was heading and the distance
    he could have covered since; a little randomness so units don't all pick the same one */
