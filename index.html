@@ -315,7 +315,7 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
       <div class="row"><button class="btn" id="netNameCancel" type="button">Cancel</button><button class="btn go" id="netNameOk" type="button">Join</button></div>
     </div>
     <div class="row"><button class="btn" id="btnSrvBack" type="button">Back</button></div>
-    <p class="spawnnote">Servers use the default settings: medium traffic, 10 State Police and 10 City Police, and a 15-minute day followed by a 15-minute night. Everyone sees each other's cars and the police chasing them; your own traffic and police run on your machine.</p>
+    <p class="spawnnote">Servers use the default settings: medium traffic, 10 State Police and 10 City Police, and a 15-minute day followed by a 15-minute night. Everyone shares one world: the same traffic, the same police, the same traffic lights.</p>
   </div>
 </section>
 
@@ -5805,8 +5805,8 @@ function signalState(sig,road,t,movement){
   const ax=sig.axisOf[road]||'B',grp=movement==='left'&&ax==='A'&&sig.protectedLeft?'AL':ax;
   let k=((t+sig.offset)%sig.len+sig.len)%sig.len;
   for(const p of sig.cycle){if(k<p[2])return p[0]===grp?p[1]:'red';k-=p[2];}return 'red';}
-MAP.signalState=(x,z,road,movement)=>{const s=MAP.signals.find(q=>Math.hypot(q.x-x,q.z-z)<24);return s?signalState(s,road,performance.now()/1000,movement||'through'):null;};
-function updateSignals(){const t=performance.now()/1000;
+MAP.signalState=(x,z,road,movement)=>{const s=MAP.signals.find(q=>Math.hypot(q.x-x,q.z-z)<24);return s?signalState(s,road,sigClock(),movement||'through'):null;};
+function updateSignals(){const t=sigClock();
   MAP.signals.forEach(s=>{['A','B','AL'].forEach(grp=>{
     const road=Object.keys(s.axisOf).find(r=>s.axisOf[r]===(grp==='B'?'B':'A'));
     const st=road?signalState(s,road,t,grp==='AL'?'left':'through'):'red';
@@ -6569,7 +6569,7 @@ function playerPedals(h){
      Controller: RT throttle and LT brake, both analog; left stick steers. */
   let wantThr=0,wantBrk=0;
   const speed=car.u,kbF=ctl.up,kbB=ctl.down;
-  const padT=PAD.on?PAD.thr:0,padB=PAD.on?PAD.brk:0;
+  const live=MODE==='drive'&&!document.hidden,padT=live&&PAD.on?PAD.thr:0,padB=live&&PAD.on?PAD.brk:0;   // menus or a hidden tab: hands off
   if(car.state==='P'){
     if(kbF){car.state='D';car.gear=0;}else if(kbB){car.state='R';}
     wantBrk=1;wantThr=padT;                       // blipping in Park just revs the engine
@@ -6592,7 +6592,7 @@ function playerPedals(h){
   const v=Math.hypot(car.u,car.v);
   const lock=0.58/(1+Math.pow(v/9,1.8));
   let want=(ctl.left?1:0)-(ctl.right?1:0),rate=want?2.4:3.6;
-  if(!want&&PAD.on&&PAD.steer){const a=-PAD.steer;want=Math.sign(a)*Math.pow(Math.abs(a),1.35);rate=4.5;}
+  if(!want&&PAD.on&&PAD.steer&&MODE==='drive'&&!document.hidden){const a=-PAD.steer;want=Math.sign(a)*Math.pow(Math.abs(a),1.35);rate=4.5;}
   car.steer+=clamp(want*lock-car.steer,-rate*h,rate*h);
 }
 function stepDynamics(h){
@@ -7433,7 +7433,7 @@ function trCreate(key,opt){
   const pw=a.spec.hp/(a.m);a.pers.a*=clamp(pw/0.12,0.8,1.3);
   a.hornF=380+Math.random()*120;
   if(opt.unitText)a.unitText=opt.unitText;
-  trVisual(a,T.police?null:(opt.color||trPaint()));
+  a.paintHex=T.police?null:(opt.color||trPaint());trVisual(a,a.paintHex);
   if(opt.parked){a.x=opt.x;a.z=opt.z;a.psi=opt.psi;a.state='P';a.in.brk=1;a.in.hand=1;a.sim='phys';a.u=0;}
   else{
     a.gen={ri:opt.ri,idx:opt.idx,T:opt.T,off:opt.off,done:false};
@@ -7521,7 +7521,7 @@ function trMustStop(a,ev,dist,v,ALL,dt){
   if(dist<-1.2){ev.go=true;a.inNode=n;return false;}     // already over the line: clear the junction rather than stop in it
   if(ev.ctl==='signal'){
     const prot=n.signal.protectedLeft&&n.signal.axisOf[ev.app.road]==='A';
-    const st=signalState(n.signal,ev.app.road,performance.now()/1000,ev.turn==='L'?'left':'through');
+    const st=signalState(n.signal,ev.app.road,sigClock(),ev.turn==='L'?'left':'through');
     if(st==='green'&&ev.turn==='L'&&dist<2.5)ev.waitedG=(ev.waitedG||0)+dt;
     if(st==='green'){if(ev.turn==='L'&&dist<30&&!(prot?trOppLeftClear(a,ev,ALL):trOncomingClear(a,ev,ALL)))return true;
       if(dist<Math.max(6,v*1.6)&&!trBoxClear(a,n,ALL,false,true))return true;   // someone still crossing from the last phase
@@ -7843,6 +7843,7 @@ function trTry(Tg,opt){
     const cx=p.x+Math.cos(ang)*r,cz=p.z+Math.sin(ang)*r,list=RN.cells.get(cellKey(Math.floor(cx/100),Math.floor(cz/100)));if(!list)continue;
     const c=list[Math.floor(Math.random()*list.length)],road=MAP.roads[c[0]],pt=road.pts[c[1]];
     const d=Math.hypot(pt[0]-p.x,pt[1]-p.z);if(d<Rmin*0.85||d>Rmax+40)continue;
+    if(netCloserOther(pt[0],pt[1]))continue;   // nearer another player: that player's game fills this road
     if(opt.town!=null&&trInTown(pt[0],pt[1])!==opt.town)continue;
         if(MAP.nodes.some(n=>Math.hypot(n.x-pt[0],n.z-pt[1])<(n.R||12)+14))continue;
     if(TRAFFIC.cars.some(o=>Math.hypot(o.x-pt[0],o.z-pt[1])<Tg.gap*(opt.police?1.5:1)))continue;
@@ -7875,16 +7876,16 @@ function trafficFrame(dt){
     const cp=Math.cos(PLAYER.psi),sp=Math.sin(PLAYER.psi);TRAFFIC.pBlocked=TRAFFIC.cars.some(o=>{const dx=o.x-PLAYER.x,dz=o.z-PLAYER.z,f=dx*cp-dz*sp,l=dx*sp+dz*cp;return f>0&&f<16&&Math.abs(l)<2.6;});}
   const Tg=trTargets(),cars=TRAFFIC.cars;
   /* keep the population near the target */
-  const moving=cars.filter(a=>a.alive&&!a.parked&&!a.unit&&!a.remote&&a.fade>0).length;
+  const moving=cars.filter(a=>a.alive&&!a.parked&&!a.unit&&(!a.remote||(a.netTr&&Math.hypot(a.x-PLAYER.x,a.z-PLAYER.z)<400))&&a.fade>0).length;   // other games' traffic near us counts too
   TRAFFIC.spawnT-=dt;
-  if(TRAFFIC.warm){let n=0;while(cars.filter(a=>!a.parked&&!a.unit&&!a.remote).length<Tg.target&&n++<Tg.target*2){if(!trTry(Tg,{warm:true,Rmin:Tg.cw>0.5?40:80}))break;}
+  if(TRAFFIC.warm){let n=0;while(cars.filter(a=>!a.parked&&!a.unit&&(!a.remote||a.netTr)).length<Tg.target&&n++<Tg.target*2){if(!trTry(Tg,{warm:true,Rmin:Tg.cw>0.5?40:80}))break;}
     cars.forEach(a=>{if(!trSeen(a.x,a.z,3))a.alpha=1;});TRAFFIC.warm=false;}
   else if(TRAFFIC.spawnT<=0&&moving<Tg.target&&cars.length<Tg.hard+6){TRAFFIC.spawnT=Tg.interval*(0.6+Math.random()*0.8);
     trTry(Tg,{});}
   // police are not traffic: they are the persistent units of the police system
   /* remove the ones that are far away (fading if you could see them go); police, and other players' cars, are not traffic */
   const v=Math.hypot(PLAYER.u,PLAYER.v),Rd=trRing(Tg,v)[1]+lerp(90,70,Tg.cw);
-  for(const a of cars.slice()){if(a.unit||a.remote){a.alpha=1;continue;}const d=Math.hypot(a.x-PLAYER.x,a.z-PLAYER.z);
+  for(const a of cars.slice()){if(a.unit||a.remote){a.alpha=1;continue;}const d=netPlayerD(a.x,a.z);   // online: kept while any player is near
     if(a.fade>0){a.alpha=Math.min(1,a.alpha+dt/1.4);
       const far=a.parked?1e9:a.acc?280:Rd;
       if(d>far||(a.deadEnd&&a.gen.done&&a.k>=a.path.length-3)||(a.stuckT>80&&d>130)||(moving>Tg.hard&&d>160)){if(trSeen(a.x,a.z,3)&&d<900)a.fade=-1;else{trRemove(a);continue;}}}
@@ -7892,7 +7893,7 @@ function trafficFrame(dt){
   /* think and drive */
   const ALL=trAll(),P0=car,h=H;
   try{
-    for(const a of cars){if(!a.alive||a.remote)continue;const d=Math.hypot(a.x-PLAYER.x,a.z-PLAYER.z);   // other players' cars are moved by the network
+    for(const a of cars){if(!a.alive||a.remote)continue;const d=netPlayerD(a.x,a.z);   // other players' cars are moved by the network
       if(a.parked){if(!a.awake)continue;if(d>40&&Math.hypot(a.u,a.v)<0.05){a.awake=false;continue;}}
       else if(a.sim==='phys'&&d>(a.emerg?470:195)&&!a.acc&&!(a.unit&&(a.mode==='man'||a.mode==='rev')))trToKin(a);
       else if(a.sim==='kin'&&d<(a.emerg?440:170))trToPhys(a);
@@ -7983,7 +7984,8 @@ function polTrapSpots(){const out=[];
 
 /* ---------------------------------------------------------------- roster */
 const UNIT_MODELS={state:['crownvic_p71','impala_9c1'],city:['charger19pursuitv8','taurussho']};
-function polFreeBay(S,avoidSeen){const free=S.bays.filter(b=>!b.unit&&!(avoidSeen&&trSeen(b.x,b.z,3)));return free.length?free[Math.floor(Math.random()*free.length)]:null;}
+function polFreeBay(S,avoidSeen){const free=S.bays.filter(b=>!b.unit&&!(avoidSeen&&trSeen(b.x,b.z,3)));if(NET.on)return free[0]||null;   // online every game must put the same unit in the same bay
+  return free.length?free[Math.floor(Math.random()*free.length)]:null;}
 function polCreateUnit(dept,bay,opt){
   const S=POL.st[dept];if(!S||!bay)return null;const ids=POL.nextId;const id=(dept==='state'?'S':'C')+(ids[dept]++);
   const models=UNIT_MODELS[dept].filter(k=>TPL[k]);if(!models.length)return null;
@@ -8159,7 +8161,7 @@ function polSense(u,dt){const a=u.a,k=u.k,P=PLAYER,d=Math.hypot(P.x-a.x,P.z-a.z)
 /* ---------------------------------------------------------------- traffic enforcement */
 const VIOL={speed:'speeding',wrong:'driving on the wrong side',slow:'impeding traffic',reckless:'reckless lane changes',collision:'a collision with another vehicle',warrant:'the vehicle from an earlier pursuit'};
 function polEnforce(u,dt){const C=polCfg(),a=u.a,k=u.k,T=POL.pt;
-  if(!C.enforce||POL.stop||POL.inc||POL.arrest||u.cool>POL.t)return;
+  if(netBusy(u)||!C.enforce||POL.stop||POL.inc||POL.arrest||u.cool>POL.t)return;
   if(!['patrol','trap','to_trap','return'].includes(u.st))return;
   if(!k.vis){k.radT=Math.max(0,k.radT-dt);k.eyeT=0;k.paceT=0;return;}
   const P=PLAYER,dx=P.x-a.x,dz=P.z-a.z,d=Math.hypot(dx,dz),cp=Math.cos(a.psi),sp=Math.sin(a.psi),f=(dx*cp-dz*sp)/Math.max(d,1);
@@ -8193,7 +8195,7 @@ function polColorName(hex){const c=new TH.Color(hex),h={},l=0.3*c.r+0.59*c.g+0.1
   return H<20||H>340?(l<0.25?'maroon':'red'):H<45?'orange':H<70?'gold':H<170?'green':H<255?(l<0.2?'dark blue':'blue'):'purple';}
 
 /* ---------------------------------------------------------------- traffic stops */
-function polStartStop(u,v){const a=u.a;POL.stop={u,v,ph:'catch',t0:POL.t,win:null,litT:0,stopX:0,stopZ:0,procT:0,dur:0};
+function polStartStop(u,v){netClaim(u);const a=u.a;POL.stop={u,v,ph:'catch',t0:POL.t,win:null,litT:0,stopX:0,stopZ:0,procT:0,dur:0};
   u.st='stop';u.lights=true;u.siren=false;a.emerg=true;
   const dir=polCompass(POL.pt.vx,POL.pt.vz),where=polWhere(PLAYER.x,PLAYER.z);
   polSay(u.id,(v.type==='warrant'?'Dispatch, I have '+VIOL.warrant+', '+polDesc()+', '+dir+' on '+where+'. Attempting a stop.':
@@ -8255,6 +8257,7 @@ const SEARCH_T=[0,45,60,80,110,150];   // seconds without a sighting before the 
 function polLKP(u){const T=POL.pt,s=u&&!u.k.vis&&u.k.seen||{x:PLAYER.x,z:PLAYER.z,vx:T.vx||0,vz:T.vz||0,speed:T.speed||0,t:POL.t};
   return {x:s.x,z:s.z,vx:s.vx,vz:s.vz,speed:s.speed,t:s.t,ri:T.onRoad?T.ri:null,idx:T.idx,T:T.T||1,where:polWhere(s.x,s.z),dir:polCompass(s.vx,s.vz),town:trInTown(s.x,s.z)};}
 function polIncident(level,why,u){
+  if(u&&netBusy(u))u=null;if(u)netClaim(u);
   if(POL.inc){POL.inc.level=Math.max(POL.inc.level,level);return;}
   POL.inc={level,why,t0:POL.t,primary:u,lkp:polLKP(u),lastVisT:POL.t,vis:true,pursuitT:0,hits:0,wrecked:0,rams:0,maxMph:0,wrong:false,lastReport:{},spikeT:-99};
   POL.warrant=null;
@@ -8290,6 +8293,7 @@ function polCloseIncident(caught){const I=POL.inc;if(!I)return;
   if(!caught)POL.warrant={level:I.level||1,desc:polDesc(),model:pick.i,color:pick.color,t:POL.t};else POL.warrant=null;
   POL.inc=null;POL.pit=null;POL.box=null;POL.rbox=null;
   POL.units.forEach(u=>{u.k.conf=0;u.box=null;u.rbox=null;u.joinAt=null;if(u.pit){u.pit=null;u.a.pitLat=0;u.a.pitAcc=null;}
+    if(u.netGhost)return;   // another player's game is driving it
     if(u.st==='pursuit'||u.st==='tail'||u.st==='stop'){u.role=null;u.node=null;u.holdNode=null;polLightsOff(u);u.st='patrol';
       if(u.spikeJob){polSpikeCancel(u,true);}
       if(u.a.mode!=='road')polRejoin(u.a);polPatrolDest(u);}});
@@ -8322,7 +8326,7 @@ function polProject(I){const l=I.lkp,out=[];if(l.ri==null)return out;let ri=l.ri
     const ex=nx.e.ex[T];if(!ex)break;ri=ex.ri;idx=ex.idx;T=ex.w;}
   return out;}
 function polDispatch(force){const I=POL.inc;if(!I)return;if(!force&&POL.t-POL.dispT<2)return;POL.dispT=POL.t;const C=polCfg(),L=I.level;
-  const avail=POL.units.filter(u=>u.st!=='wrecked'&&!(POL.arrest&&POL.arrest.u===u));
+  const avail=POL.units.filter(u=>u.st!=='wrecked'&&!(POL.arrest&&POL.arrest.u===u)&&!netBusy(u));
   // units that see him join in, up to what this level of pursuit calls for. A station doesn't empty out because he drove past:
   // at most one car leaves a station a minute, and only if the pursuit needs it (the officer takes a few seconds to get rolling);
   // the rest stay put and radio in where he went.
@@ -8376,7 +8380,7 @@ function polSearchNode(I,taken){const l=I.lkp,lk=polNearNode(l.x,l.z),seen=new S
   return best||(taken.has(lk.id)?null:lk);}
 function polOncoming(u){const a=u.a,P=PLAYER,dx=P.x-a.x,dz=P.z-a.z,d=Math.hypot(dx,dz);if(d<1||d>500||POL.pt.speed<4)return false;
   return (dx*Math.cos(a.psi)-dz*Math.sin(a.psi))/d>0.55&&(-dx*Math.cos(P.psi)+dz*Math.sin(P.psi))/d>0.55;}
-function polAssign(u,role,node){const a=u.a;
+function polAssign(u,role,node){netClaim(u);const a=u.a;
   if(u.st==='trap'||u.spot){polLeaveTrap(u,1,()=>{});}
   if(a.mode==='parked'){polDepart(u);}
   if(u.st==='return'&&u.bay){u.bay.unit=null;u.bay=null;}
@@ -8611,7 +8615,7 @@ function polNodeWait(u,r,dt){if(r.stop&&Math.abs(u.a.u)<0.6)u.nodeWait=(u.nodeWa
   if((u.nodeWait||0)>(POL.inc&&POL.inc.level>=3?1.2:2.5))return {cap:5,stop:false};return r;}
 function polNodeRule(a,n,dist){if(n.control==='corner')return {cap:99,stop:false};   // a bend where two roads meet: the curve itself sets the speed
   const fx=Math.cos(a.psi),fz=-Math.sin(a.psi);let green=false;
-  if(n.signal){const ap=n.approaches.find(p=>p.dirX*fx+p.dirZ*fz>0.7);if(ap)green=signalState(n.signal,ap.road,performance.now()/1000,'through')==='green';}
+  if(n.signal){const ap=n.approaches.find(p=>p.dirX*fx+p.dirZ*fz>0.7);if(ap)green=signalState(n.signal,ap.road,sigClock(),'through')==='green';}
   else if(n.control==='stop'||n.control==='all-way stop'){const ap=n.approaches.find(p=>p.dirX*fx+p.dirZ*fz>0.7);green=!!ap&&n.stops.indexOf(ap.road)<0;}
   else green=true;
   const I=POL.inc,hot=a.unit&&a.unit.st==='pursuit'&&I&&I.level>=3,clear=polCrossClear(a,n,hot?2.0:3.2),town=!!n.town;
@@ -8623,7 +8627,7 @@ function polNodeRule(a,n,dist){if(n.control==='corner')return {cap:99,stop:false
   return {cap:clear?(town?15:27):(dist>60?13:5),stop:!clear&&dist<16};}
 
 /* ---------------------------------------------------------------- recognition (warrant / description) */
-function polRecognize(u,dt){const k=u.k,P=PLAYER,a=u.a,I=POL.inc,W=POL.warrant;
+function polRecognize(u,dt){if(netBusy(u))return;const k=u.k,P=PLAYER,a=u.a,I=POL.inc,W=POL.warrant;
   if(u.st==='wrecked'||u.st==='parked'||u.st==='stop'||POL.stop&&POL.stop.u===u){k.conf=0;return;}
   if(!(I||W)||(I&&u.role==='chase')){k.conf=0;return;}
   const match=I?true:(W&&W.model===pick.i);
@@ -8879,7 +8883,7 @@ function polStripsStep(){if(!POL.strips.length)return;const ALL=trAll();
       if(o===PLAYER){S.hitPlayer=true;polToast('Tyre punctured');}else if(!o.unit&&!o.acc)setTimeout(()=>aiCrashed(o,0,'spikes'),1500);});}}
 
 /* ---------------------------------------------------------------- damage */
-function polUnitHit(a,hit,by){const u=a.unit;if(!u||u.st==='wrecked')return;if(hit<2.2)return;
+function polUnitHit(a,hit,by){const u=a.unit;if(!u||u.st==='wrecked'||u.netGhost)return;   // another game's unit: its own game scores the damageif(hit<2.2)return;
   u.health=Math.max(0,u.health-0.33*Math.pow(hit-2.2,1.7)*0.8);a.health=u.health;
   if(u.health<=0)polWreck(u,by===PLAYER);}
 function polPlayerHit(a,imp){const u=a.unit;if(!u)return;u.touchT=POL.t;polUnitHit(a,imp,PLAYER);
@@ -8894,6 +8898,8 @@ function polWreck(u,byPlayer){const a=u.a;u.st='wrecked';u.box=null;u.rbox=null;
   if(polCfg().respawn>=0)POL.replace.push({dept:u.dept,at:POL.t+(+polCfg().respawn||180)});
   if(POL.inc)polDispatch(true);}
 function polReplaceStep(){
+  if(NET.on){['state','city'].forEach(dept=>{const want=+polCfg()[dept]||0,have=POL.units.filter(u=>u.dept===dept&&u.st!=='wrecked'&&!u.retire).length,pend=POL.replace.filter(r=>r.dept===dept).length;
+    if(have+pend<want)POL.replace.push({dept,at:POL.t+(+polCfg().respawn||180)});});}   // a unit wrecked in another player's game still needs replacing
   for(let i=POL.replace.length-1;i>=0;i--){const r=POL.replace[i];if(POL.t<r.at)continue;const S=POL.st[r.dept];if(!S)continue;
     if(Math.hypot(PLAYER.x-S.x,PLAYER.z-S.z)<150)continue;const bay=polFreeBay(S,true);if(!bay)continue;
     const want=+polCfg()[r.dept]||0,have=POL.units.filter(u=>u.dept===r.dept&&u.st!=='wrecked'&&!u.retire).length;
@@ -9065,6 +9071,7 @@ function polMini(x,toScreen,W,H){const t=POL.t;
 
 /* ---------------------------------------------------------------- per-unit decisions (5 a second) */
 function polBrain(u,dt){const a=u.a;polSense(u,dt);if(u.st==='wrecked')return;
+  if(u.netGhost){if(!netBusy(u)){polEnforce(u,dt);polRecognize(u,dt);}return;}   // driven by another player's game: only watch our own driver
   if(u.replan&&a.mode==='road')polReplan(a);
   switch(u.st){
     case 'parked':if(!u.retire&&POL.t>u.departAt&&!POL.inc)polDepart(u);break;
@@ -9095,7 +9102,7 @@ function policeFrame(dt){if(!POL.ready||MODE!=='drive'){if(!POL.ready)POL_PL.for
   POL.trackT=(POL.trackT||0)-dt;if(POL.trackT<=0){polTrack(0.25);POL.trackT=0.25;}
   POL.units.forEach(u=>{u.brainT-=dt;if(u.brainT<=0){u.brainT=0.2;polBrain(u,0.2);}});
   polStopStep(dt);polIncidentStep(dt);polBoxStep(dt);polDispatch(false);polStripsStep();polRadioStep(dt);polSirenStep();
-  POL.repT=(POL.repT||0)-dt;if(POL.repT<=0){POL.repT=2;polReplaceStep();}
+  POL.repT=(POL.repT||0)-dt;if(POL.repT<=0){POL.repT=2;if(nwIsAuth())polReplaceStep();}   // online only the world host puts replacements in service
   polHud(false);polMarkers();}
 function policeVisual(a){if(a.unit||a.ghostUnit||a.lensM&&Object.keys(a.lensM).length)polLights(a);}
 /* ---------------------------------------------------------------------------
@@ -9252,9 +9259,9 @@ async function netJoin(raw){if(NET.busy)return;const name=netCleanName(raw),bad=
   if(!NET.room||clash||ahead>=NET_MAX){if(NET.room)try{await NET.room.presence({n:null,jt:null,d:null});}catch(e){}
     NET.busy=false;netNameMsg(!NET.room?'Lost the connection to the server.':clash?'Someone else just took that name. Pick another.':'The server just filled up.');return;}
   NET.busy=false;NET.name=name;try{localStorage.setItem('backroads.netname',name);}catch(e){}
-  NET.on=true;netApplyRules();const inp=$('netNameIn');if(inp)inp.blur();$('netName').hidden=true;toSelect();}
+  NET.on=true;nwClear();nwBgSetup();netApplyRules();const inp=$('netNameIn');if(inp)inp.blur();$('netName').hidden=true;toSelect();}
 /* back out of the game but stay on the server list */
-function netLeaveGame(){if(!NET.on)return;NET.on=false;netClearRemote();if(NET.room){try{NET.room.presence({n:null,jt:null,d:null,c:null,col:null,s:null,k:null});}catch(e){}}netRestoreRules();}
+function netLeaveGame(){if(!NET.on)return;NET.on=false;netClearRemote();nwClear();if(NET.room){try{NET.room.presence({n:null,jt:null,d:null,c:null,col:null,s:null,cl:null,pu:null,tr:null,sp:null});}catch(e){}}netRestoreRules();}
 async function netExit(){netLeaveGame();await netClose();}
 
 /* ---- server rules: default settings, medium traffic, 10 + 10 police, the day/night clock ---- */
@@ -9274,16 +9281,14 @@ function netFrame(dt){if(!NET.on)return;
   if(!NET.room)return;
   NET.sendT-=dt;
   if(NET.sendT<=0){NET.sendT=0.1;
-    if(MODE==='drive'||MODE==='pause'||MODE==='map'){const c=car;
-      const cops=[];POL.units.forEach(u=>{const a=u.a;if(cops.length>=5||!a||!a.alive||u.st==='parked'||!(u.lights||u.st==='pursuit'))return;
-        if(Math.hypot(a.x-c.x,a.z-c.z)>420)return;
-        cops.push([a.key,nr(a.x,100),nr(a.z,100),nr(a.psi,1000),nr(a.u||0,10),u.lights?1:0,u.dept==='city'?'c':'s',u.id,nr((a.in&&a.in.brk)||0,10)]);});
-      const C=CARS[pick.i];
-      NET.room.presence({n:NET.name,jt:NET.jt,d:1,c:c.key,col:pick.color||C.colors[0],
-        s:[nr(c.x,100),nr(c.z,100),nr(c.psi,1000),nr(c.u,100),nr(c.v,100),nr(c.yr,100),nr(c.steer||0,1000),nr(c.brk||0,100),nr(c.thr||0,100),c.gear|0,c.state,Math.round(c.rpm||0)],
-        k:cops}).catch(()=>{});}
-    else NET.room.presence({n:NET.name,jt:NET.jt,d:0,s:null,k:null}).catch(()=>{});}
-  if(MODE==='drive')netRemoteFrame(dt);
+    if(MODE==='drive'||MODE==='pause'||MODE==='map'){const c=car,C=CARS[pick.i];
+      const pr=Object.assign({n:NET.name,jt:NET.jt,d:1,c:c.key,col:pick.color||C.colors[0],
+        s:[nr(c.x,100),nr(c.z,100),nr(c.psi,1000),nr(c.u,100),nr(c.v,100),nr(c.yr,100),nr(c.steer||0,1000),nr(c.brk||0,100),nr(c.thr||0,100),c.gear|0,c.state,Math.round(c.rpm||0)]},nwPayload());
+      // the Claude room carries at most 4 KB per player: send the nearest traffic that fits
+      if(netTransport()==='claude'){let L=JSON.stringify(pr).length;while(L>3800&&pr.tr&&pr.tr.length){pr.tr=pr.tr.slice(0,Math.floor(pr.tr.length*0.7));L=JSON.stringify(pr).length;}}
+      NET.room.presence(pr).catch(()=>{});}
+    else NET.room.presence({n:NET.name,jt:NET.jt,d:0,s:null,cl:null,pu:null,tr:null,sp:null}).catch(()=>{});}
+  if(MODE==='drive'||MODE==='pause'||MODE==='map'){netRemoteFrame(dt);nwFrame(dt);}
   NET.hudT-=dt;if(NET.hudT<=0){NET.hudT=0.5;netHud();}}
 
 /* ---- the other players' cars ---- */
@@ -9322,14 +9327,7 @@ function netRemoteFrame(dt){const now=performance.now(),seen=new Set();
     netApply(R.car,s);
     const d=Math.hypot(s[0]-camera.position.x,s[1]-camera.position.z);R.tag.visible=d<450;
     R.tag.position.set(s[0],(GROUND_Y||0)+2.2,s[1]);const sc=d<60?0.27:d<200?0.22:0.18;R.tag.scale.set(sc,sc/4,1);
-    // the police chasing that player, as they see them
-    const keep=new Set();(Array.isArray(P.k)?P.k:[]).forEach(q=>{if(!Array.isArray(q)||q.length<8)return;const id=String(q[7]);keep.add(id);
-      let G=R.cops.get(id);if(!G){G={buf:[],car:null};R.cops.set(id,G);}
-      const gs=[q[1],q[2],q[3],q[4],0,0,0,q[8]||0,0,0,'D',1500];const pv=G.buf[G.buf.length-1];if(!pv||pv.s[0]!==gs[0]||pv.s[1]!==gs[1]||pv.s[2]!==gs[2]){G.buf.push({t:now,s:gs});if(G.buf.length>16)G.buf.shift();}
-      const g=netSample(G.buf,now);if(!g)return;
-      if(!G.car||!G.car.alive){G.car=netMakeCar(q[0],null,g[0],g[1],g[2]);if(!G.car)return;G.car.ghostUnit={id:'G'+id,dept:q[6]==='c'?'city':'state',lights:true,st:'pursuit'};}
-      G.car.ghostUnit.lights=!!q[5];netApply(G.car,g);});
-    R.cops.forEach((G,id)=>{if(!keep.has(id)){if(G.car&&G.car.alive)trRemove(G.car);R.cops.delete(id);}});});
+    });
   NET.rem.forEach((R,id)=>{if(!seen.has(id)){netDropRemote(R);NET.rem.delete(id);}});}
 
 /* ---- on screen: who is here, and where they are on the minimap ---- */
@@ -9366,6 +9364,146 @@ function netNameMsg(t,ok){const m=$('netNameErr');if(!m)return;m.textContent=t||
 function netBackFromServers(){netExit();const inp=$('netNameIn');if(inp)inp.blur();$('netName').hidden=true;MODE='menu';openModes();}
 function openModes(){MODE='modes';show('modes');}
 /* ---------------------------------------------------------------------------
+   ONLINE: ONE SHARED WORLD
+   Police. One player's game, the world host (the first player on the server who is driving), runs every unit that
+   nobody else is using: patrols, parked cruisers, speed traps. Every player's game watches its own driver with every
+   unit. When a unit pulls a player over, joins that player's pursuit or is sent to back it up, that player's game
+   claims the unit and drives it until the job is done, then hands it back to the host. Everyone else sees each unit
+   where its owner says it is. If two games claim the same unit at once, the earlier claim keeps it.
+   Traffic. Each game runs the cars it spawned and only spawns on road that is nearer its own car than anyone else's;
+   everyone sees everyone's cars, and each game's cars react to the other players' cars.
+   Spike strips, traffic lights and the day/night cycle are shared too.
+--------------------------------------------------------------------------- */
+const NW={claims:{},freeT:{},ub:{},heard:{},rtr:new Map(),strips:new Map(),sid:0,tickT:0,joinT:0};
+const NW_ST={parked:'p',patrol:'r',trap:'t',stop:'s',pursuit:'c',tail:'l',wrecked:'w',leaving:'v',return:'b',to_trap:'q'};
+const NW_ST_R=Object.fromEntries(Object.entries(NW_ST).map(([k,v])=>[v,k]));
+function nwActive(){return !!(NET.on&&NET.room&&(MODE==='drive'||MODE==='pause'||MODE==='map'));}
+function nwMePeer(){const m=netMe();return m?m.peer:'';}
+// players whose game is running the world right now (in the garage, a game runs nothing)
+function nwDrivers(){return netPlayers().filter(p=>p.sameTab?nwActive():p.presence.d===1);}
+function nwAuthPeer(){const d=nwDrivers();return d.length?d[0].peer:null;}
+function nwIsAuth(){return !NET.on||nwAuthPeer()===nwMePeer();}
+function nwClaimant(id){let best=null,bt=Infinity,bj=Infinity;
+  for(const p of nwDrivers()){const cl=p.sameTab?NW.claims:(p.presence.cl||{}),t=cl[id];if(t==null)continue;const j=p.presence.jt||0;
+    if(t<bt||(t===bt&&(j<bj||(j===bj&&p.peer<best)))){best=p.peer;bt=t;bj=j;}}
+  return best;}
+function nwOwner(id){return nwClaimant(id)||nwAuthPeer();}
+/* a unit another player's game is using for their own stop or pursuit */
+function netBusy(u){if(!NET.on)return false;const c=nwClaimant(u.id);return !!c&&c!==nwMePeer();}
+/* this game is about to give the unit a job: take it over */
+function netClaim(u){if(!NET.on||!u)return;if(NW.claims[u.id]==null)NW.claims[u.id]=Date.now();NW.freeT[u.id]=0;if(u.netGhost)nwTake(u);}
+function nwJob(u){return !!(u.role||u.st==='stop'||u.st==='pursuit'||u.st==='tail'||(POL.stop&&POL.stop.u===u)||(POL.arrest&&POL.arrest.u===u)||u.box||u.rbox||u.spikeJob);}
+/* a unit another game was driving is now this game's: carry on from where it is */
+function nwTake(u){const a=u.a;u.netGhost=false;a.remote=false;if(a.mode==='remote')a.mode='hold';a.alpha=1;a.fade=1;
+  if(u.st==='wrecked'){a.acc=true;a.hazard=true;polHold(a);return;}
+  if(u.st==='parked'&&u.bay){polPark(a);a.sim='phys';a.state='P';return;}
+  if(u.bay){if(u.bay.unit===u)u.bay.unit=null;u.bay=null;}
+  a.parked=false;a.awake=true;a.vk=Math.max(0,a.u||0);trToPhys(a);
+  u.role=null;u.st='patrol';u.lights=false;u.siren=false;a.emerg=false;u.spot=null;u.box=null;u.rbox=null;u.pit=null;a.pitAcc=null;
+  u.shiftEnd=POL.t+300+Math.random()*300;polRejoin(a);polPatrolDest(u);}
+/* this game no longer drives the unit: drop any job it had here and follow the owner's positions */
+function nwGhost(u){const a=u.a;
+  if(POL.stop&&POL.stop.u===u){POL.stop=null;polComm(null);}
+  if(POL.arrest&&POL.arrest.u===u)POL.arrest=null;
+  if(POL.pit===u)POL.pit=null;if(u.spikeJob)polSpikeCancel(u,false);
+  if(u.spot){u.spot.used=null;u.spot=null;}
+  if(POL.inc&&POL.inc.primary===u)POL.inc.primary=null;
+  u.role=null;u.node=null;u.holdNode=null;u.box=null;u.rbox=null;u.pit=null;u.joinAt=null;a.pitAcc=null;a.pitLat=0;
+  u.netGhost=true;a.remote=true;a.mode='remote';a.sim='phys';a.parked=false;a.awake=true;a.alpha=1;a.fade=1;a.in={thr:0,brk:0,steer:0,hand:0};}
+/* a unit only another game knows about (a replacement put in service there): make it here */
+function nwMakeUnit(id,key,x,z,psi){const dept=id[0]==='C'?'city':'state',S=POL.st[dept];if(!S)return null;
+  if(!TPL[key]){try{trBuildTemplate(key);}catch(e){}}if(!TPL[key])key=UNIT_MODELS[dept].find(k=>TPL[k]);if(!key)return null;
+  const a=trCreate(key,{parked:true,x,z,psi,instant:true,unitText:id});if(!a)return null;a.persist=true;
+  const u={id,dept,a,st:'patrol',bay:null,home:S,role:null,lights:false,siren:false,sirenMode:'wail',health:100,departAt:1e9,shiftEnd:0,restUntil:0,
+    radar:dept==='state',attn:0.8,k:{vis:false,q:0,visT:0,lostT:999,conf:0,trail:[],ti:0,seen:null,radT:0,eyeT:0,paceT:0},cool:0,brainT:Math.random()*0.2,
+    mode:'patrol',msgT:{},say:{},retire:false};
+  a.unit=u;POL.units.push(u);const n=parseInt(id.slice(1),10);if(n>=POL.nextId[dept])POL.nextId[dept]=n+1;
+  nwGhost(u);return u;}
+
+/* ---- what this game sends: the units it drives, its own traffic near the others, its spike strips ---- */
+const nr1=v=>Math.round(v*10)/10;
+function nwPayload(){const out={},me=nwMePeer(),others=nwDrivers().filter(p=>!p.sameTab);
+  out.cl=Object.assign({},NW.claims);
+  out.pu=POL.units.filter(u=>!u.netGhost&&u.a&&u.a.alive).map(u=>{const a=u.a;
+    return [u.id,a.key,nr1(a.x),nr1(a.z),Math.round(a.psi*100)/100,nr1(a.u||0),NW_ST[u.st]||'r',(u.lights?1:0)|(u.siren?2:0)|((a.in&&a.in.brk>0.3)?4:0),
+      u.bay&&u.st==='parked'?u.home.bays.indexOf(u.bay):-1,Math.round(u.health)];});
+  // own traffic: only what someone else is close enough to see
+  const ops=others.map(p=>p.presence.s).filter(s=>Array.isArray(s));
+  if(ops.length){const tr=[];
+    for(const a of TRAFFIC.cars){if(!a.alive||a.remote||a.unit||a.fade<=0)continue;
+      let near=1e9;for(const s of ops)near=Math.min(near,Math.hypot(a.x-s[0],a.z-s[1]));if(near>330)continue;
+      tr.push([near,[a.id,a.key,a.paintHex||'#888888',nr1(a.x),nr1(a.z),Math.round(a.psi*100)/100,nr1(a.u||a.vk||0),
+        (a.sigL?1:0)|(a.sigR?2:0)|(a.hazard?4:0)|(a.in&&a.in.brk>0.3?8:0)]]);}
+    tr.sort((p,q)=>p[0]-q[0]);out.tr=tr.slice(0,32).map(q=>q[1]);}
+  else out.tr=[];
+  out.sp=POL.strips.filter(S=>!S.remote).map(S=>{if(!S.nid)S.nid=++NW.sid;return [S.nid,nr1(S.x),nr1(S.z),Math.round(S.ax*1000)/1000,Math.round(S.az*1000)/1000,nr1(S.len)];});
+  return out;}
+
+/* ---- five times a second: who drives which unit; hand back units this game has finished with ---- */
+function nwTick(dt){if(!nwActive())return;const me=nwMePeer();if(!me)return;const now=Date.now();
+  if(!NW.joinT){NW.joinT=now;POL.units.forEach(u=>NW.heard[u.id]=now);}
+  // claims this game has finished with go back to the host after a moment
+  Object.keys(NW.claims).forEach(id=>{const u=POL.units.find(q=>q.id===id);if(!u||u.netGhost){delete NW.claims[id];delete NW.freeT[id];return;}
+    if(nwJob(u))NW.freeT[id]=0;else{NW.freeT[id]=(NW.freeT[id]||0)+dt;if(NW.freeT[id]>1.2){delete NW.claims[id];delete NW.freeT[id];}}});
+  const auth=nwAuthPeer();
+  POL.units.slice().forEach(u=>{const own=nwOwner(u.id)===me;
+    if(own&&u.netGhost)nwTake(u);
+    else if(!own&&!u.netGhost){if(NW.claims[u.id]!=null){delete NW.claims[u.id];}nwGhost(u);}
+    // a unit nobody is sending any more (towed, retired): it is gone
+    if(!own&&u.netGhost&&now-(NW.heard[u.id]||now)>8000&&auth&&auth!==me){polRemoveUnit(u);delete NW.ub[u.id];}});}
+
+/* ---- every frame: other games' units, traffic and spike strips, where their owners put them ---- */
+function nwFrame(dt){if(!nwActive())return;const now=performance.now(),wall=Date.now(),seenTr=new Set(),seenSp=new Set();
+  nwDrivers().forEach(p=>{if(p.sameTab)return;const P=p.presence;
+    (Array.isArray(P.pu)?P.pu:[]).forEach(q=>{if(!Array.isArray(q)||q.length<10)return;const id=String(q[0]);
+      if(nwOwner(id)!==p.peer)return;NW.heard[id]=wall;
+      let u=POL.units.find(x=>x.id===id);if(!u){u=nwMakeUnit(id,q[1],q[2],q[3],q[4]);if(!u)return;}
+      if(!u.netGhost)return;
+      const B=NW.ub[id]||(NW.ub[id]={buf:[]}),s=[q[2],q[3],q[4],q[5],0,0,0,(q[7]&4)?1:0,0,0,'D',1200],pv=B.buf[B.buf.length-1];
+      if(!pv||pv.s[0]!==s[0]||pv.s[1]!==s[1]||pv.s[2]!==s[2]||pv.s[3]!==s[3]){B.buf.push({t:now,s});if(B.buf.length>16)B.buf.shift();}
+      B.st=NW_ST_R[q[6]]||'patrol';B.fl=q[7];B.bay=q[8];B.h=q[9];});
+    (Array.isArray(P.tr)?P.tr:[]).forEach(q=>{if(!Array.isArray(q)||q.length<8)return;const key=p.peer+':'+q[0];seenTr.add(key);
+      let R=NW.rtr.get(key);if(!R){R={buf:[],car:null};NW.rtr.set(key,R);}
+      const s=[q[3],q[4],q[5],q[6],0,0,0,(q[7]&8)?1:0,0.2,0,'D',1500],pv=R.buf[R.buf.length-1];
+      if(!pv||pv.s[0]!==s[0]||pv.s[1]!==s[1]||pv.s[2]!==s[2]){R.buf.push({t:now,s});if(R.buf.length>16)R.buf.shift();}
+      R.fl=q[7];if(!R.car||!R.car.alive){R.car=netMakeCar(q[1],q[2],q[3],q[4],q[5]);if(R.car){R.car.netTr=true;R.car.persist=true;}}});
+    (Array.isArray(P.sp)?P.sp:[]).forEach(q=>{if(!Array.isArray(q)||q.length<6)return;const key=p.peer+':'+q[0];seenSp.add(key);if(NW.strips.has(key))return;
+      const S={x:q[1],z:q[2],ax:q[3],az:q[4],len:q[5],unit:null,remote:true,hit:new Set(),t:POL.t,mesh:polSpikeMesh(q[5])};
+      S.mesh.position.set(S.x,GROUND_Y+0.025,S.z);S.mesh.rotation.y=Math.atan2(-S.az,S.ax);world.add(S.mesh);POL.strips.push(S);NW.strips.set(key,S);});});
+  // the other games' units
+  POL.units.forEach(u=>{if(!u.netGhost)return;const B=NW.ub[u.id];if(!B||!B.buf.length)return;const s=netSample(B.buf,now);if(!s)return;const a=u.a;
+    netApply(a,s);a.remote=true;a.alpha=1;u.st=B.st;u.lights=!!(B.fl&1);u.siren=!!(B.fl&2);a.emerg=u.lights;u.health=B.h;a.health=B.h;
+    if(u.st==='wrecked'){a.acc=true;a.hazard=true;}
+    const S=u.home;if(u.st==='parked'&&B.bay>=0&&S&&S.bays[B.bay]){const bay=S.bays[B.bay];if(u.bay!==bay){if(u.bay&&u.bay.unit===u)u.bay.unit=null;u.bay=bay;bay.unit=u;}a.state='P';}
+    else if(u.bay&&u.st!=='return'){if(u.bay.unit===u)u.bay.unit=null;u.bay=null;}});
+  // the other games' traffic
+  NW.rtr.forEach((R,key)=>{if(!seenTr.has(key)){R.miss=(R.miss||0)+dt;if(R.miss>1.5){if(R.car&&R.car.alive)trRemove(R.car);NW.rtr.delete(key);}return;}R.miss=0;
+    if(!R.car||!R.car.alive)return;const s=netSample(R.buf,now);if(!s)return;netApply(R.car,s);R.car.sigL=!!(R.fl&1);R.car.sigR=!!(R.fl&2);R.car.hazard=!!(R.fl&4);});
+  NW.strips.forEach((S,key)=>{if(seenSp.has(key))return;world.remove(S.mesh);POL.strips=POL.strips.filter(x=>x!==S);NW.strips.delete(key);});
+  NW.tickT-=dt;if(NW.tickT<=0){NW.tickT=0.2;nwTick(0.2);}}
+function nwClear(){NW.rtr.forEach(R=>{if(R.car&&R.car.alive)trRemove(R.car);});NW.rtr.clear();
+  NW.strips.forEach(S=>{world.remove(S.mesh);POL.strips=POL.strips.filter(x=>x!==S);});NW.strips.clear();
+  NW.claims={};NW.freeT={};NW.ub={};NW.heard={};NW.joinT=0;}
+
+/* ---- traffic spawning and upkeep on a shared road network ---- */
+function nwOtherCars(){if(!NET.on)return null;const out=[];nwDrivers().forEach(p=>{if(!p.sameTab&&Array.isArray(p.presence.s))out.push(p.presence.s);});return out.length?out:null;}
+// another player's car is closer to this point than ours: their game spawns traffic here, not ours
+function netCloserOther(x,z){const o=nwOtherCars();if(!o)return false;const dm=Math.hypot(x-PLAYER.x,z-PLAYER.z);return o.some(s=>Math.hypot(x-s[0],z-s[1])<dm);}
+// distance from a point to the nearest player, us or anyone else on the server
+function netPlayerD(x,z){let d=Math.hypot(x-PLAYER.x,z-PLAYER.z);const o=nwOtherCars();if(o)for(const s of o)d=Math.min(d,Math.hypot(x-s[0],z-s[1]));return d;}
+
+/* ---- traffic lights run on the shared clock online, so everyone sees the same phase ---- */
+function sigClock(){return NET.on?Date.now()/1000:performance.now()/1000;}
+
+/* ---- keep the game running in a background tab: browsers pause animation frames there, so a worker keeps time ---- */
+let NW_TICK=null;
+function nwBgSetup(){if(NW_TICK!==null)return;NW_TICK=false;
+  try{const src='let t=null;onmessage=e=>{clearInterval(t);t=null;if(e.data>0)t=setInterval(()=>postMessage(0),e.data);};';
+    NW_TICK=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
+    NW_TICK.onmessage=()=>{if(document.hidden&&NET.on)frame(performance.now(),true);};}catch(e){NW_TICK=false;}
+  document.addEventListener('visibilitychange',()=>{if(NW_TICK)NW_TICK.postMessage(document.hidden&&NET.on?50:0);
+    if(NET.on&&AC){try{document.hidden?AC.suspend():(MODE==='drive'&&AC.resume());}catch(e){}}});}
+/* ---------------------------------------------------------------------------
    Settings (saved in this browser): graphics and control bindings
 --------------------------------------------------------------------------- */
 const $=id=>document.getElementById(id);
@@ -9393,7 +9531,7 @@ function padName(i){return i<0||i==null?'—':(PAD_NAMES[i]||('Button '+i));}
    Controls
 --------------------------------------------------------------------------- */
 function kbHeld(a){return !!KEYS[CFG.kb[a]];}
-function controls(){return{up:kbHeld('throttle')||KEYS.ArrowUp,down:kbHeld('brake')||KEYS.ArrowDown,left:kbHeld('left')||KEYS.ArrowLeft,right:kbHeld('right')||KEYS.ArrowRight,hand:kbHeld('handbrake')};}
+function controls(){if(MODE!=='drive'||document.hidden)return{up:false,down:false,left:false,right:false,hand:false};return{up:kbHeld('throttle')||KEYS.ArrowUp,down:kbHeld('brake')||KEYS.ArrowDown,left:kbHeld('left')||KEYS.ArrowLeft,right:kbHeld('right')||KEYS.ArrowRight,hand:kbHeld('handbrake')};}
 let capture=null;   // settings: waiting for a key or button to bind
 window.addEventListener('keydown',e=>{
   if(!capture&&e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')&&e.target.offsetParent!==null)return;   // typing a name, not driving
@@ -10131,18 +10269,23 @@ $('btnT60').addEventListener('click',e=>{e.preventDefault();e.currentTarget.blur
    Main loop (fixed 240 Hz physics, the drag sim drew at 60)
 --------------------------------------------------------------------------- */
 let last=performance.now(),acc=0;const H=1/240;
-function frame(now){
-  requestAnimationFrame(frame);
+function frame(now,bg){   // bg: a tick from the background worker while the tab is hidden (online): simulate, don't draw
+  if(!bg)requestAnimationFrame(frame);
   let dt=Math.min(0.05,(now-last)/1000);last=now;
-  pollPad(dt);fpsFrame(dt);netFrame(dt);if(MODE!=='drive'&&TR_V.length)trAudioStop();
-  if(MODE==='drive'){
+  if(!bg){pollPad(dt);fpsFrame(dt);}netFrame(dt);if(MODE!=='drive'&&TR_V.length)trAudioStop();
+  // on a server the world does not stop while the pause menu, the map or settings are open, or the tab is in the background
+  const held=NET.on&&(MODE==='pause'||(MODE==='map'&&FM.prevMode!=='select')||(MODE==='settings'&&settingsFrom==='pause'));
+  if(MODE==='drive'||held){
     acc+=dt;
     car.surf=surfaceAt(car.x,car.z);
     policeFrame(dt);trafficFrame(dt);
     let n=0;while(acc>=H&&n<20){const u0=car.u;stepCar(H);collide();trafficCollide();t60Step(H,u0);acc-=H;n++;}
-    if(car.crash>0){crashSound(car.crash);car.crash=0;}
-    syncCar(dt);trafficVisuals(dt);healthFrame(dt);stepSmoke(dt);driveCamera(dt);navFrame(dt);drawHud();audioFrame();trAudio();updateReflections(dt);
-  }else if(MODE==='map'){drawFullMap();if(FM.prevMode==='select')previewCamera(dt);}
+    if(car.crash>0){if(!bg&&!held)crashSound(car.crash);car.crash=0;}
+    if(bg)return;
+    syncCar(dt);trafficVisuals(dt);healthFrame(dt);stepSmoke(dt);if(!held){driveCamera(dt);navFrame(dt);drawHud();audioFrame();trAudio();updateReflections(dt);}
+    if(MODE==='map')drawFullMap();
+  }else if(bg)return;
+  else if(MODE==='map'){drawFullMap();if(FM.prevMode==='select')previewCamera(dt);}
   else if(MODE==='pause'||(MODE==='settings'&&settingsFrom==='pause')){}
   else if(MODE==='select'){syncCar(0);previewCamera(dt);stepSmoke(dt);updateReflections(dt);}
   else menuCamera(dt);
