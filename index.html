@@ -7650,7 +7650,10 @@ function trThink(a,dt,ALL){
     if(dist<0&&(ev.go||ev.ctl==='free'||ev.ctl==='signal')){ev.passed=true;a.inNode=ev.node;}}
   // police: a junction they must check before crossing; the end of a fixed path (a manoeuvre, the end of a track)
   if(a.trailStop!=null){const g=a.trailStop-a.s-a.halfLen;acc=Math.min(acc,idm(Math.max(0.05,g),0,0.6,1));}
-  if(a.nodeCap!=null&&a.nodeCapD!=null&&v>a.nodeCap){const req=(v*v-a.nodeCap*a.nodeCap)/(2*Math.max(3,a.nodeCapD));if(!a.emerg||req>(a.brakePlan||5.2)*0.8||a.nodeCapD<4)acc=Math.min(acc,-req);else if(req>0.25)acc=Math.min(acc,0);}
+  // accSafe: the most acceleration that corners and junction rules allow. PIT, ram, overtake and box-in moves set their own
+  // acceleration but never more than this, so they can't carry a car into a turn too fast
+  let accSafe=1e9;
+  if(a.nodeCap!=null&&a.nodeCapD!=null&&v>a.nodeCap){const req=(v*v-a.nodeCap*a.nodeCap)/(2*Math.max(3,a.nodeCapD));if(!a.emerg||req>(a.brakePlan||5.2)*0.8||a.nodeCapD<4){acc=Math.min(acc,-req);accSafe=Math.min(accSafe,-req);}else if(req>0.25){acc=Math.min(acc,0);accSafe=Math.min(accSafe,0);}}
   if(a.gen&&a.gen.done&&L.length&&!(a.mode==='man'&&!a.unit.manStop)){const g=L[L.length-1].s-a.s-a.halfLen*0.3;if(a.mode==='trail'&&a.unit&&a.unit.k.vis){if(g<90)acc=Math.min(acc,idm(Math.max(0.05,g),POL.pt.speed||0,(a.followGap||9)-4,0.5));}else if(g<60)acc=Math.min(acc,a.unit&&a.unit.box?idm(Math.max(0.05,g),0,0.3,0.25):idm(Math.max(0.05,g),0,0.4,0.8));}
   for(const e of a.events){if(e.passed&&!e.done&&a.s-a.halfLen>e.sExit){e.done=true;if(a.inNode===e.node)a.inNode=null;delete a.choice[e.node.id];}}
   if(a.events.length>6&&a.events[0].done)a.events.shift();
@@ -7659,8 +7662,8 @@ function trThink(a,dt,ALL){
   for(let j=a.k;j<L.length;j+=(a.emerg?1:2)){const p=L[j],ds=p.s-a.s;if(ds>lookC)break;if(p.kap<0.004)continue;   // every point for a pursuit unit: its track is rebuilt each step
     let vc=Math.sqrt((a.ayOverride||P.ay)/p.kap);
     const del=Math.atan(p.kap*(a.L||2.9)),vl=(a.unit&&a.mode==='man')?14:9;vc=Math.min(vc,del>=0.56?1.4:vl*Math.pow(0.58/del-1,1/1.8)*0.9);
-    if(ds<=2){v0=Math.min(v0,vc);continue;}
-    if(vc<v){const req=(v*v-vc*vc)/(2*Math.max(0.5,ds-2.5));if(!firm||req>firm*0.8)acc=Math.min(acc,-req);else if(req>(a.unit&&a.unit.st==='pursuit'?firm*0.5:0.25))acc=Math.min(acc,0);}}   // not braking yet, but no more throttle into a corner we're already too fast for
+    if(ds<=2){v0=Math.min(v0,vc);if(v>vc)accSafe=Math.min(accSafe,-(v-vc)*2);continue;}
+    if(vc<v){const req=(v*v-vc*vc)/(2*Math.max(0.5,ds-2.5));if(!firm||req>firm*0.8){acc=Math.min(acc,-req);accSafe=Math.min(accSafe,-req);}else if(req>(a.unit&&a.unit.st==='pursuit'?firm*0.5:0.25)){acc=Math.min(acc,0);accSafe=Math.min(accSafe,0);}}}   // not braking yet, but no more throttle into a corner we're already too fast for
   /* lane changes on four-lane road; going round a blockage on a two-lane */
   const onRoad=here.ri>=0?MAP.roads[here.ri]:(here.ri===-2?TRAIL_ROAD:null);
   if(a.lc&&a.lc.ph==='sig'&&ev&&!ev.passed&&!a.emerg&&!a.unit&&onRoad&&onRoad.lanes===4&&((ev.turn==='R'&&here.off<5)||(ev.turn==='L'&&here.off>5))&&ev.s-a.s<Math.max(16,v*2.2)&&ev.s-a.s>-1){
@@ -7711,7 +7714,7 @@ function trThink(a,dt,ALL){
   if(a.lc&&a.lc.sig)sig=a.lc.to<a.lc.from?-1:1;
   if(a.av&&a.av.sig)sig=a.av.ph==='back'?1:-1;
   a.sigL=sig<0;a.sigR=sig>0;
-  if(a.pitAcc!=null)acc=(a.unit&&a.unit.rbox&&ld&&ld.o!==PLAYER&&ld.gap<Math.max(8,v*1.6))?Math.min(acc,a.pitAcc):a.pitAcc;   // a box slot never drives into another car
+  if(a.pitAcc!=null)acc=Math.min(accSafe,(a.unit&&a.unit.rbox&&ld&&ld.o!==PLAYER&&ld.gap<Math.max(8,v*1.6))?Math.min(acc,a.pitAcc):a.pitAcc);   // a box slot never drives into another car
   /* reaction: a driver doesn't change pedals instantly */
   acc=clamp(acc,-8.5,P.a*(a.emerg?1.6:1.15));
   const tau=acc<a.aCmd?(acc<-3.5?0.12:P.react*(a.emerg?0.25:0.35)):(a.emerg?0.16:0.45);a.aCmd+=(acc-a.aCmd)*Math.min(1,dt/tau);
@@ -8455,8 +8458,10 @@ function polChaseMove(u){const a=u.a,k=u.k,P=PLAYER,I=POL.inc,T=POL.pt;
     // coming at us down the same road (he turned round, or we came the other way): keep heading for him in our own lane,
     // never turn round early or duck down a side street. At 4 stars and up, swing across his path and stop to block him.
     // Once he is past, turn round right behind him.
-    const headOn=T.speed>4&&d<600&&fu>0.15&&along<-3&&(sameRoad||d<120)&&(fp>0.3||sameRoad);
-    if(headOn||(u.headOn&&fu>-0.1&&d<600&&POL.t-u.headOn<2)){if(headOn)u.headOn=POL.t;u.oncoming=true;
+    // strict: he is really on our road, in front of us, pointed at us and closing (a nearby cross street is not "our road")
+    const myQ=polRoadAt(a.x,a.z),onHis=!!(myQ&&T.onRoad&&myQ.ri===T.ri&&myQ.d<myQ.r.width/2+3),latP=Math.abs(-(P.x-a.x)*sp-(P.z-a.z)*cp);
+    const headOn=T.speed>4&&d<450&&fu>0.5&&fp>0.5&&along<-3&&latP<14&&(onHis||d<80);
+    if(headOn||(u.headOn&&fu>0.3&&d<450&&POL.t-u.headOn<1.2)){if(headOn)u.headOn=POL.t;u.oncoming=true;
       if(I&&I.level>=4&&polBlockTry(u,d,T))return;
       u.why='oncoming, holding course';if(a.mode==='trail')polRejoin(a);return;}
     if(u.headOn&&fu<=-0.1&&d<90&&POL.t-u.headOn<4){u.headOn=null;u.oncoming=false;u.turnCool=0;u.turnLog=[];if(polTurnAround(u,'suspect went past'))return;}
@@ -8606,7 +8611,12 @@ function polTrailPath(u){const a=u.a,k=u.k,L=k.trail;if(L.length<1)return false;
   k.ti=i;if(i>=L.length-1&&d2(L[L.length-1])<9&&!k.vis)return false;
   // the track is behind us, or swings away more than the car can turn: the brain will turn round
   const f0=fw(L[i]),dd=Math.sqrt(d2(L[i]));u.needTurn=dd>8&&f0<-0.3*dd;
-  const raw=[];for(let j=i;j<Math.min(L.length,i+170);j++)raw.push(L[j]);
+  // crumbs dropped inside a junction are mostly turn noise (the line through the box wobbles, and the road a crumb snaps to
+  // there is often the crossing road): leave them out and let the two road stretches be joined by one smooth curve.
+  // His latest few crumbs always stay, so the track still reaches him while he is in the junction.
+  const inJ=c=>{if(c.inJ===undefined){c.inJ=false;for(const n of MAP.nodes){if(n.control==='corner'||Math.abs(n.x-c.x)>30||Math.abs(n.z-c.z)>30)continue;if(Math.hypot(n.x-c.x,n.z-c.z)<(n.R||10)+1.5){c.inJ=true;break;}}}return c.inJ;};
+  const raw=[];const jEnd=Math.min(L.length,i+170);for(let j=i;j<jEnd;j++){if(j<L.length-3&&inJ(L[j]))continue;raw.push(L[j]);}
+  if(!raw.length)raw.push(L[Math.min(L.length-1,i)]);
   const lane=(ri,idx,T)=>{const r=MAP.roads[ri],Pp=r.pts,n=Pp.length;idx=r.closed?((idx%n)+n)%n:clamp(idx,0,n-1);const i1=r.closed?(idx+1)%n:Math.min(n-1,idx+1),i0=r.closed?(idx-1+n)%n:Math.max(0,idx-1);
     let tx=Pp[i1][0]-Pp[i0][0],tz=Pp[i1][1]-Pp[i0][1];const l=Math.hypot(tx,tz)||1;tx=tx/l*T;tz=tz/l*T;const off=r.lanes===4?3.6:LANE_OFF;return [Pp[idx][0]-tz*off,Pp[idx][1]+tx*off];};
   // a crumb's road counts only if a neighbour agrees (one taken inside a junction often reads as the crossing road)
@@ -8644,11 +8654,22 @@ function polTrailPath(u){const a=u.a,k=u.k,L=k.trail;if(L.length<1)return false;
   if(!rs.length)rs=[[raw[0].x,raw[0].z]];
   const lr=raw[raw.length-1];
   let sm=rs;for(let pass=0;pass<2;pass++){const o=sm.map(q=>q.slice());for(let j=2;j<sm.length-2;j++){o[j][0]=(sm[j-2][0]+sm[j-1][0]+sm[j][0]+sm[j+1][0]+sm[j+2][0])/5;o[j][1]=(sm[j-2][1]+sm[j-1][1]+sm[j][1]+sm[j+1][1]+sm[j+2][1])/5;}sm=o;}
+  // keep the line clear of posts and poles (stop signs and signal poles sit right on the inside of a corner): nudge any
+  // point that would put the car's side into one out to a safe distance
+  {const clr=a.halfWid+0.55;let run=0;for(let j=0;j<sm.length&&run<70;j++){const q=sm[j];if(j)run+=Math.hypot(q[0]-sm[j-1][0],q[1]-sm[j-1][1]);
+    for(const o of COL.near(q[0],q[1])){if(!o.c||o.r>1.2)continue;const dx=q[0]-o.x,dz=q[1]-o.z,d=Math.hypot(dx,dz),need=clr+o.r;
+      if(d<need&&d>0.01){q[0]=o.x+dx/d*need;q[1]=o.z+dz/d*need;}}}}
   polPathReset(a,true);a.gen={ri:0,idx:0,T:1,off:0,done:true};
   {const lo=(a.avCur||0)+(a.evCur||0)+(a.pitLat||0),fx=Math.cos(a.psi),fz=-Math.sin(a.psi);trPush(a,a.x+fz*lo,a.z-fx*lo,-2,0,0,0);}
   // first track point far enough ahead that closing a small lateral offset isn't read as a sharp bend
   const st0=clamp(a.u*0.3,3.5,7);let started=false;
-  for(const q of sm){if(!started){const dd=Math.hypot(q[0]-a.x,q[1]-a.z);if(dd<st0||fw({x:q[0],z:q[1]})<0)continue;started=true;}trPush(a,q[0],q[1],-2,0,0,0);}
+  // mid-turn, the first points can belong to the old road's lane line and sit on the wrong side of the car: steering for them
+  // first jerks the car the wrong way. Skip a leading point that lies on the opposite side from where the track goes next.
+  const latOf=q=>-(q[0]-a.x)*sp-(q[1]-a.z)*cp;
+  for(let qi=0;qi<sm.length;qi++){const q=sm[qi];if(!started){const dd=Math.hypot(q[0]-a.x,q[1]-a.z);if(dd<st0||fw({x:q[0],z:q[1]})<0)continue;
+      const lq=latOf(q);if(Math.abs(lq)>0.8){let far=null;for(let j=qi+1;j<sm.length;j++){if(Math.hypot(sm[j][0]-q[0],sm[j][1]-q[1])>8){far=sm[j];break;}}
+        if(far){const lf=latOf(far);if(Math.sign(lf)!==Math.sign(lq)&&Math.abs(lf)>1.5)continue;}}
+      started=true;}trPush(a,q[0],q[1],-2,0,0,0);}
   if(a.path.length<2)trPush(a,lr.x,lr.z,-2,0,0,0);
   if(a.path.length<2)return false;a.mode='trail';if(a.path.length>1){const p1=a.path[1],lat1=Math.abs(-(p1.x-a.x)*Math.sin(a.psi)-(p1.z-a.z)*Math.cos(a.psi));if(lat1<1.8)for(let j=1;j<Math.min(6,a.path.length);j++)if(a.path[j].s<st0+5)a.path[j].kap=0;}
   // junctions along the track: the emergency rules for crossing them
@@ -8767,7 +8788,7 @@ function polRamStep(u,dt){const a=u.a,P=PLAYER;let r=u.ram;
    happens next is down to the tyres, the masses and the contact. Any doubt and it backs off. */
 function polPitOk(u){const I=POL.inc,a=u.a,T=POL.pt,P=PLAYER;if(POL.box||u.box||POL.rbox||!I||I.level<3||!u.k.vis||a.mode!=='trail'||u.health<40)return false;
   const hot=I.level>=4;   // 4 stars and up: PIT at highway speed, closer to junctions and traffic, on gentle bends
-  if(T.speed<(hot?6:8)||T.speed>(hot?40:22)||!T.onRoad||(TRAFFIC.pNodeD||0)<(hot?45:60)||a.surf!=='asphalt')return false;
+  if(T.speed<(hot?6:8)||T.speed>(hot?40:22)||!T.onRoad||(TRAFFIC.pNodeD||0)<Math.max(hot?45:60,T.speed*3.2)||a.surf!=='asphalt')return false;
   {const fx=Math.cos(P.psi),fz=-Math.sin(P.psi),rx=-fz,rz=fx,w=a.halfWid+(P.halfWid||0.9)+0.9;   // the slot beside his rear quarter must be pavement
     for(const al of [-3,-6])if(surfaceAt(P.x+fx*al-rx*w,P.z+fz*al-rz*w)!=='asphalt')return false;}
   const r=MAP.roads[T.ri],Pp=r.pts,i0=T.idx,i1=Math.max(0,Math.min(Pp.length-1,i0+T.T*30)),i2=Math.max(0,Math.min(Pp.length-1,i0+T.T*60));
@@ -8786,7 +8807,10 @@ function polPitStep(u,dt){const a=u.a,P=PLAYER;let p=u.pit;
   const along=(a.x-P.x)*fx+(a.z-P.z)*fz,lat=(a.x-P.x)*rx+(a.z-P.z)*rz,hw=a.halfWid+(P.halfWid||0.9);
   const vrel=PLAYER.u-a.u,abort=p.ph!=='recover'&&!polPitOk(u);
   if(abort&&p.ph!=='slow'&&(POL.pt.speed||0)<8){p.ph='slow';p.t=0;}   // he is braking hard: brake with him, hold our line (don't swerve out past him)
-  else if(abort&&p.ph!=='slow'){p.ph='recover';p.t=0;polSay(u.id,'Backing off, not safe.'+(window.PITDBG?polPitWhy(u):''),1);}
+  else if(abort&&p.ph!=='slow'){
+    // still behind his bumper: nothing to back out of, just drop the PIT and keep chasing at full pace
+    if(p.ph==='approach'&&along<-(a.halfLen+(P.halfLen||2.3))*0.9){u.pit=null;POL.pit=null;u.pitCool=POL.t+(POL.inc&&POL.inc.level>=4?3:8);a.pitAcc=null;return;}
+    p.ph='recover';p.t=0;polSay(u.id,'Backing off, not safe.'+(window.PITDBG?polPitWhy(u):''),1);}
   if(p.ph==='slow'){const sv=POL.pt.speed||0;a.pitAcc=clamp(-(a.u-sv)*2.5-1.5,-7.5,0);
     if(a.u<sv+1.2||p.t>4){u.pit=null;POL.pit=null;u.pitCool=POL.t+(POL.inc&&POL.inc.level>=4?4:10);a.pitAcc=null;}return;}
   let tgtLat,acc;
