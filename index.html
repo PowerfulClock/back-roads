@@ -9353,7 +9353,7 @@ function netTag(name){const cv=document.createElement('canvas');cv.width=256;cv.
   x.font='600 30px "Barlow Condensed","Arial Narrow",sans-serif';const w=Math.min(240,x.measureText(name).width+28);
   x.fillStyle='rgba(18,20,23,.78)';x.fillRect((256-w)/2,10,w,44);x.fillStyle='#ffa219';x.fillRect((256-w)/2,10,4,44);
   x.fillStyle='#ece8df';x.textAlign='center';x.textBaseline='middle';x.fillText(name,128,33);
-  const t=new TH.CanvasTexture(cv);const s=new TH.Sprite(new TH.SpriteMaterial({map:t,depthTest:false,transparent:true,sizeAttenuation:false,fog:false}));s.renderOrder=20;s.scale.set(0.22,0.055,1);world.add(s);return s;}   // a constant size on screen, like a name tag
+  const t=new TH.CanvasTexture(cv);const s=new TH.Sprite(new TH.SpriteMaterial({map:t,depthTest:true,depthWrite:false,transparent:true,sizeAttenuation:true,fog:false}));s.renderOrder=20;s.scale.set(2.4,0.6,1);world.add(s);return s;}   // a fixed size in the world: shrinks with distance like the car, and buildings or hills in front hide it
 function netDropRemote(R){if(R.car&&R.car.alive)trRemove(R.car);R.car=null;
   if(R.tag){world.remove(R.tag);R.tag.material.map.dispose();R.tag.material.dispose();R.tag=null;}
   R.cops.forEach(G=>{if(G.car&&G.car.alive)trRemove(G.car);});R.cops.clear();}
@@ -9375,8 +9375,8 @@ function netRemoteFrame(dt){const now=performance.now(),seen=new Set();
     const s=netSample(R.buf,now);if(!s)return;
     if(!R.car||!R.car.alive||R.key!==P.c||R.col!==P.col){if(R.car&&R.car.alive)trRemove(R.car);R.car=netMakeCar(P.c,P.col,s[0],s[1],s[2]);R.key=P.c;R.col=P.col;if(!R.car)return;}
     netApply(R.car,s);
-    const d=Math.hypot(s[0]-camera.position.x,s[1]-camera.position.z);R.tag.visible=d<450;
-    R.tag.position.set(s[0],(GROUND_Y||0)+2.2,s[1]);const sc=d<60?0.27:d<200?0.22:0.18;R.tag.scale.set(sc,sc/4,1);
+    const d=Math.hypot(s[0]-camera.position.x,s[1]-camera.position.z);R.tag.visible=d<300;
+    R.tag.position.set(s[0],(R.car&&R.car.alive&&R.car.root?R.car.root.position.y:GROUND_Y)+2.25,s[1]);
     });
   NET.rem.forEach((R,id)=>{if(!seen.has(id)){netDropRemote(R);NET.rem.delete(id);}});}
 
@@ -10332,7 +10332,7 @@ function frame(now,bg){   // bg: a tick from the background worker while the tab
     let n=0;while(acc>=H&&n<20){const u0=car.u;stepCar(H);collide();trafficCollide();t60Step(H,u0);acc-=H;n++;}
     if(car.crash>0){if(!bg&&!held)crashSound(car.crash);car.crash=0;}
     if(bg)return;
-    syncCar(dt);trafficVisuals(dt);healthFrame(dt);stepSmoke(dt);if(!held){driveCamera(dt);navFrame(dt);drawHud();audioFrame();trAudio();updateReflections(dt);}
+    syncCar(dt);trafficVisuals(dt);healthFrame(dt);stepSmoke(dt);if(!held){driveCamera(dt);navFrame(dt);drawHud();audioFrame();trAudio();updateReflections(dt);}else if(MODE!=='map'){driveCamera(dt);updateReflections(dt);}   // paused online: keep showing the live world behind the menu
     if(MODE==='map')drawFullMap();
   }else if(bg)return;
   else if(MODE==='map'){drawFullMap();if(FM.prevMode==='select')previewCamera(dt);}
@@ -10343,7 +10343,7 @@ function frame(now,bg){   // bg: a tick from the background worker while the tab
   const sp=(todNow||TOD.day).sunPos;sun.position.set(fx+sp[0],sp[1],fz+sp[2]);sun.target.position.set(fx,0,fz);sun.target.updateMatrixWorld();
   updateSignals();updateLamps();
   skyDome.position.set(camera.position.x,0,camera.position.z);if(STARS)STARS.position.copy(skyDome.position);
-  if(MODE!=='pause'&&MODE!=='map'&&!(MODE==='settings'&&settingsFrom==='pause'))renderer.render(world,camera);
+  if(held&&MODE!=='map'||MODE!=='pause'&&MODE!=='map'&&!(MODE==='settings'&&settingsFrom==='pause'))renderer.render(world,camera);
 }
 
 /* ---------------------------------------------------------------------------
