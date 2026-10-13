@@ -9569,7 +9569,7 @@ const KB_DEFAULT={throttle:'KeyW',brake:'KeyS',left:'KeyA',right:'KeyD',handbrak
 const PAD_DEFAULT={handbrake:4,gearUp:0,gearDown:2,driveMode:13,tc:14,timer:-1,camera:3,lookBack:11,map:8,pause:9,help:-1,mute:-1};
 const PAD_FIXED={throttle:'RT (analog)',brake:'LT (analog)',left:'Left stick',right:'Left stick'};
 const PAD_NAMES=['A','B','X','Y','LB','RB','LT','RT','View','Menu','Left stick press','Right stick press','D-pad up','D-pad down','D-pad left','D-pad right','Guide'];
-const GFX_DEFAULT={shadows:'high',scale:'auto',distance:'normal',fov:56,speedfx:1,mblur:1,fps:false,refl:false,reflRes:256,reflRate:2,reflDist:200,reflStr:1,trDetail:85,trDraw:700};
+const GFX_DEFAULT={shadows:'high',scale:'auto',distance:'normal',fov:56,look:'cine',speedfx:1,mblur:1,fps:false,refl:false,reflRes:256,reflRate:2,reflDist:200,reflStr:1,trDetail:85,trDraw:700};
 const PLAY_DEFAULT={tod:'day',density:50};
 const CFG={kb:Object.assign({},KB_DEFAULT),pad:Object.assign({},PAD_DEFAULT),gfx:Object.assign({},GFX_DEFAULT),play:Object.assign({},PLAY_DEFAULT),police:Object.assign({},POLICE_DEFAULT)};
 try{const s=JSON.parse(localStorage.getItem('backroads.settings')||'null');if(s){Object.assign(CFG.kb,s.kb||{});Object.assign(CFG.pad,s.pad||{});Object.assign(CFG.gfx,s.gfx||{});Object.assign(CFG.play,s.play||{});Object.assign(CFG.police,s.police||{});}}catch(e){}
@@ -9761,9 +9761,9 @@ function mbInit(){
   MB.mat=new TH.ShaderMaterial({uniforms:{tDiffuse:{value:null},amt:{value:0},ctr:{value:new TH.Vector2(0.5,0.6)}},depthTest:false,depthWrite:false,
     vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}',
     fragmentShader:'uniform sampler2D tDiffuse;uniform float amt;uniform vec2 ctr;varying vec2 vUv;\n'+
-      'void main(){vec2 d=vUv-ctr;float w=smoothstep(0.1,0.55,length(d*vec2(1.3,1.0)));vec2 st=d*amt*w/11.0;vec4 c=vec4(0.0);float tot=0.0;\n'+
+      'void main(){if(amt<0.0005){gl_FragColor=texture2D(tDiffuse,vUv);}else{vec2 d=vUv-ctr;float w=smoothstep(0.1,0.55,length(d*vec2(1.3,1.0)));vec2 st=d*amt*w/11.0;vec4 c=vec4(0.0);float tot=0.0;\n'+
       'for(int i=0;i<12;i++){float f=float(i);float wt=1.0-f/15.0;c+=texture2D(tDiffuse,vUv-st*f)*wt;tot+=wt;}\n'+
-      'gl_FragColor=c/tot;\n#include <tonemapping_fragment>\n#include <encodings_fragment>\n}'});
+      'gl_FragColor=c/tot;}\n#include <tonemapping_fragment>\n#include <encodings_fragment>\n}'});
   MB.scene=new TH.Scene();MB.cam=new TH.OrthographicCamera(-1,1,1,-1,0,1);
   const q=new TH.Mesh(new TH.PlaneGeometry(2,2),MB.mat);q.frustumCulled=false;MB.scene.add(q);MB.sz=new TH.Vector2();}
 function mbTarget(w,h){
@@ -9775,7 +9775,9 @@ function renderMain(){
   const k=CFG.gfx.mblur==null?1:+CFG.gfx.mblur,mph=Math.abs(car.u||0)*2.237;
   const tgt=MB.force!=null?MB.force:MODE==='drive'&&MB.ok&&k>0?k*0.075*Math.pow(clamp((mph-40)/110,0,1),1.2):0;
   MB.amt+=(tgt-MB.amt)*0.15;
-  if(MB.amt<0.004){renderer.render(world,camera);return;}
+  if(MB.amt<0.004)MB.amt=0;
+  // the Cinematic picture always goes through the off-screen pass (its tone and contrast are what people liked)
+  if(!MB.amt&&(CFG.gfx.look==='classic'||!MB.ok)){renderer.render(world,camera);return;}
   try{if(!MB.mat)mbInit();renderer.getDrawingBufferSize(MB.sz);const rt=mbTarget(MB.sz.x|0,MB.sz.y|0);
     renderer.setRenderTarget(rt);renderer.render(world,camera);renderer.setRenderTarget(null);
     MB.mat.uniforms.tDiffuse.value=rt.texture;MB.mat.uniforms.amt.value=MB.amt;renderer.render(MB.scene,MB.cam);}
@@ -10225,6 +10227,7 @@ function renderSettings(){
     h+=seg('scale','Resolution',[['auto','Auto'],['low','Low'],['medium','Medium'],['high','High'],['max','Max']],g.scale);
     h+=seg('distance','View distance',[['short','Short'],['normal','Normal'],['far','Far']],g.distance);
     h+=seg('fov','Field of view',[[50,'50°'],[56,'56°'],[62,'62°'],[70,'70°']],+g.fov);
+    h+=seg('look','Picture',[['cine','Cinematic'],['classic','Classic']],g.look||'cine');
     h+=seg('speedfx','Speed effects',[[0,'Off'],[0.6,'Subtle'],[1,'Normal'],[1.5,'Strong']],+(g.speedfx==null?1:g.speedfx));
     h+=seg('mblur','Motion blur',[[0,'Off'],[1,'Normal'],[1.6,'Strong']],+(g.mblur==null?1:g.mblur));
     h+=seg('fps','Frame rate counter',[[false,'Off'],[true,'On']],g.fps);
