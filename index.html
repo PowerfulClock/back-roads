@@ -90,6 +90,7 @@ h1 span{display:block;color:transparent;-webkit-text-stroke:2px var(--paper)}
 
 /* ---------- HUD ---------- */
 #hud{pointer-events:none}
+#speedfx{position:absolute;inset:0;opacity:0;pointer-events:none;background:radial-gradient(ellipse 75% 70% at 50% 46%,rgba(0,0,0,0) 55%,rgba(0,0,0,.28) 80%,rgba(0,0,0,.6) 100%)}
 #hud>*{pointer-events:none}
 .where{position:absolute;left:16px;top:calc(14px + env(safe-area-inset-top,0px));font-size:22px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;text-shadow:0 1px 4px rgba(0,0,0,.7)}
 .where small{display:block;font:500 10px var(--mono);letter-spacing:.16em;color:var(--amber);text-shadow:none}
@@ -336,6 +337,7 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
 </section>
 
 <section id="hud" class="layer" hidden>
+  <div id="speedfx"></div>
   <div class="where"><small>Now on</small><span id="roadName"></span></div>
   <div id="netbox" hidden></div>
   <div class="topbtns"><button id="btnMap" type="button">MAP</button><button id="btnPause" type="button">PAUSE</button></div>
@@ -9567,7 +9569,7 @@ const KB_DEFAULT={throttle:'KeyW',brake:'KeyS',left:'KeyA',right:'KeyD',handbrak
 const PAD_DEFAULT={handbrake:4,gearUp:0,gearDown:2,driveMode:13,tc:14,timer:-1,camera:3,lookBack:11,map:8,pause:9,help:-1,mute:-1};
 const PAD_FIXED={throttle:'RT (analog)',brake:'LT (analog)',left:'Left stick',right:'Left stick'};
 const PAD_NAMES=['A','B','X','Y','LB','RB','LT','RT','View','Menu','Left stick press','Right stick press','D-pad up','D-pad down','D-pad left','D-pad right','Guide'];
-const GFX_DEFAULT={shadows:'high',scale:'auto',distance:'normal',fov:56,fps:false,refl:false,reflRes:256,reflRate:2,reflDist:200,reflStr:1,trDetail:85,trDraw:700};
+const GFX_DEFAULT={shadows:'high',scale:'auto',distance:'normal',fov:56,speedfx:1,fps:false,refl:false,reflRes:256,reflRate:2,reflDist:200,reflStr:1,trDetail:85,trDraw:700};
 const PLAY_DEFAULT={tod:'day',density:50};
 const CFG={kb:Object.assign({},KB_DEFAULT),pad:Object.assign({},PAD_DEFAULT),gfx:Object.assign({},GFX_DEFAULT),play:Object.assign({},PLAY_DEFAULT),police:Object.assign({},POLICE_DEFAULT)};
 try{const s=JSON.parse(localStorage.getItem('backroads.settings')||'null');if(s){Object.assign(CFG.kb,s.kb||{});Object.assign(CFG.pad,s.pad||{});Object.assign(CFG.gfx,s.gfx||{});Object.assign(CFG.play,s.play||{});Object.assign(CFG.police,s.police||{});}}catch(e){}
@@ -9725,7 +9727,35 @@ function bindOrbit(){
   el.addEventListener('wheel',e=>{if(MODE!=='drive')return;e.preventDefault();CAMV.zoom=clamp(CAMV.zoom*(1+Math.sign(e.deltaY)*0.08),0.6,2.2);},{passive:false});
 }
 function wrapA(a){while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a;}
+/* sense of speed: the field of view opens up, the camera sinks and buzzes at speed, leans back under
+   acceleration and pushes in under braking. Off the pavement it shakes hard, more the faster you go. */
+const SFX={fov:0,acc:0,lu:0,t:0,rough:0,jx:0,jy:0,jr:0,vig:0,init:false};
+function nz(t,f,ph){return Math.sin(t*f+ph)*0.55+Math.sin(t*f*2.37+ph*1.9)*0.3+Math.sin(t*f*5.13+ph*0.7)*0.15;}
+function speedFx(dt){
+  const g=CFG.gfx,k=g.speedfx==null?1:+g.speedfx,v=Math.abs(car.u)||0,mph=v*2.237;
+  if(!SFX.init){SFX.lu=car.u;SFX.init=true;}
+  SFX.t+=dt;const a=dt>0?(car.u-SFX.lu)/dt:0;SFX.lu=car.u;
+  SFX.acc+=(clamp(a*Math.sign(car.u||1),-14,14)-SFX.acc)*Math.min(1,dt*3);
+  const sp=clamp((mph-25)/115,0,1);
+  SFX.fov+=(k*14*Math.pow(clamp((mph-15)/135,0,1),0.85)-SFX.fov)*Math.min(1,dt*2.2);
+  // surface: grass and fields are rough, gravel a bit, pavement smooth
+  const s=car.surf,off=(s==='grass'||s==='field')?1:s==='water'?0.7:s==='gravel'?0.3:0;
+  SFX.rough+=(off-SFX.rough)*Math.min(1,dt*8);
+  const offK=SFX.rough*clamp(mph/55,0,1.8);            // grows with speed and keeps growing past 55 mph
+  // random jolts off road: bumps, ruts, furrows
+  if(offK>0.02&&Math.random()<dt*(4+mph*0.25)*SFX.rough){const j=offK*(0.6+Math.random()*0.8);
+    SFX.jx=(Math.random()-0.5)*0.5*j;SFX.jy=(Math.random()*0.9+0.2)*0.35*j;SFX.jr=(Math.random()-0.5)*0.09*j;}
+  const dk=Math.pow(0.0005,dt);SFX.jx*=dk;SFX.jy*=dk;SFX.jr*=dk;
+  const sb=clamp((mph-20)/120,0,1),t=SFX.t,buzz=k*0.035*Math.pow(sb,1.3),rb=0.09*offK;
+  const o={fov:SFX.fov,back:1+k*clamp(SFX.acc*0.011,-0.09,0.12)-k*0.05*sp,up:1-k*0.1*sp,
+    x:nz(t,31,0.3)*buzz+nz(t,23,1.1)*rb+SFX.jx,y:nz(t,37,2.2)*buzz*0.8+nz(t,27,0.4)*rb*1.2+SFX.jy,z:nz(t,29,4.1)*buzz+nz(t,21,2.6)*rb,
+    roll:nz(t,17,0.9)*k*0.006*sb+nz(t,19,3.3)*0.03*offK+SFX.jr,pitch:nz(t,25,5.2)*k*0.004*sb+nz(t,22,1.7)*0.022*offK};
+  SFX.vig+=(k*0.6*sp+0.35*clamp(offK,0,1)-SFX.vig)*Math.min(1,dt*3);
+  const el=$('speedfx');if(el)el.style.opacity=SFX.vig.toFixed(3);
+  return o;}
+function shakeCam(o,m){camera.position.x+=o.x*m;camera.position.y+=o.y*m;camera.position.z+=o.z*m;camera.rotateZ(o.roll);camera.rotateX(o.pitch);}
 function driveCamera(dt){
+  const FX=speedFx(dt);
   const lookBack=PAD.lookBack||kbHeld('lookBack');
   if(lookBack!==CAMV.back){CAMV.back=lookBack;CAMV.init=false;}       // snap, don't swing round
   const stickMag=Math.hypot(PAD.camX,PAD.camY);
@@ -9743,9 +9773,9 @@ function driveCamera(dt){
     const s=car.susp,dir=lookBack?-1:1;
     camera.position.set(car.x+cp*(lookBack?-1.9:0.25),1.32-(s.f+s.r)/2*U*0.6,car.z-sp*(lookBack?-1.9:0.25));
     const ly=lookBack?0:CAMV.yaw;const c2=Math.cos(car.psi+ly),s2=Math.sin(car.psi+ly);
-    camera.lookAt(camera.position.x+c2*30*dir,1.0,camera.position.z-s2*30*dir);camera.fov=fovBase+6;camera.updateProjectionMatrix();CAMV.init=false;return;}
-  camera.fov=CAMV.mode===1?fovBase-8:fovBase;camera.updateProjectionMatrix();
-  const back=(CAMV.mode===1?11:6.4)*CAMV.zoom,up=(CAMV.mode===1?3.9:2.25)*CAMV.zoom;
+    camera.lookAt(camera.position.x+c2*30*dir,1.0,camera.position.z-s2*30*dir);shakeCam(FX,0.5);camera.fov=fovBase+6+FX.fov;camera.updateProjectionMatrix();CAMV.init=false;return;}
+  camera.fov=(CAMV.mode===1?fovBase-8:fovBase)+FX.fov;camera.updateProjectionMatrix();
+  const back=(CAMV.mode===1?11:6.4)*CAMV.zoom*(lookBack?1:FX.back),up=(CAMV.mode===1?3.9:2.25)*CAMV.zoom*(lookBack?1:FX.up);
   const yaw=car.psi+CAMV.yaw;
   const tx=car.x-Math.cos(yaw)*back*Math.cos(CAMV.pitch),tz=car.z+Math.sin(yaw)*back*Math.cos(CAMV.pitch),ty=up+back*Math.sin(CAMV.pitch);
   // the offset from the car is what gets smoothed (not the world position), so the camera swings smoothly but
@@ -9756,6 +9786,7 @@ function driveCamera(dt){
   CAMV.pos.set(car.x+CAMV.rel.x,Math.max(0.6,CAMV.rel.y),car.z+CAMV.rel.z);
   camera.position.copy(CAMV.pos);
   camera.lookAt(car.x+Math.cos(yaw)*1.2,0.95,car.z-Math.sin(yaw)*1.2);
+  shakeCam(FX,1);
 }
 let menuT=0;
 function menuCamera(dt){
@@ -10167,6 +10198,7 @@ function renderSettings(){
     h+=seg('scale','Resolution',[['auto','Auto'],['low','Low'],['medium','Medium'],['high','High'],['max','Max']],g.scale);
     h+=seg('distance','View distance',[['short','Short'],['normal','Normal'],['far','Far']],g.distance);
     h+=seg('fov','Field of view',[[50,'50°'],[56,'56°'],[62,'62°'],[70,'70°']],+g.fov);
+    h+=seg('speedfx','Speed effects',[[0,'Off'],[0.6,'Subtle'],[1,'Normal'],[1.5,'Strong']],+(g.speedfx==null?1:g.speedfx));
     h+=seg('fps','Frame rate counter',[[false,'Off'],[true,'On']],g.fps);
     h+='<div class="srow"><span class="slab">Car reflections</span><div class="segs" role="group" aria-label="Car reflections"><button type="button" class="seg on" disabled>Off</button><button type="button" class="seg" disabled>On</button></div></div>';
     h+='<p class="snote">Car reflections are switched off for now.</p>';
