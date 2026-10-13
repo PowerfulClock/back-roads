@@ -7630,7 +7630,7 @@ function trThink(a,dt,ALL){
     if(sus&&a.mode==='trail'&&a.unit&&a.unit.k.vis)vl=Math.max(vl,(POL.pt.speed||0)*0.9);   // he is turning, not stopping: the corner on his track sets our speed
     if(!(pass&&ld.o===a.av.o&&Math.abs(a.avCur-a.av.amt)<0.5)){
       if(pass&&ld.o===a.av.o)acc=Math.min(acc,a.emerg?idm(Math.max(0.3,ld.gap),Math.max(0,vl),0.8,0.2):clamp((1.2-v)*1.5,-3,1));
-      else acc=Math.min(acc,idm(ld.gap,vl,sus?a.followGap:leaderObs?P.s0+1.2:P.s0,sus?0.8:T));}
+      else acc=Math.min(acc,idm(ld.gap,vl,sus?a.followGap:leaderObs?P.s0+1.2:P.s0,sus?(POL.inc&&POL.inc.level>=4?0.5:0.8):T));}
     // honk at a player who has just sat in the road
     // ...but never at someone who is waiting at a light or in a queue, and not before ten seconds of sitting there
     a.behindT=(ld.o===PLAYER&&v<0.5&&ld.gap<15)?(a.behindT||0)+dt:0;
@@ -7768,7 +7768,8 @@ function trPair(A,B){if(trLotPass(A,B))return 0;
 function trafficCollide(){if(!TRAFFIC.cars.length)return;
   for(const a of TRAFFIC.cars){if(!a.alive||a.sim!=='phys')continue;const imp=trPair(PLAYER,a);if(imp<=0)continue;
     if(a.parked)a.awake=true;
-    if(imp>2.2){damageCar(0.33*Math.pow(imp-2.2,1.7),a.unit?'police':'traffic');PLAYER.crash=Math.max(PLAYER.crash,Math.min(1,imp/14));}
+    // cruisers are heavy and bull-barred: hitting one (or being hit by one) costs more
+    if(imp>(a.unit?1.8:2.2)){damageCar(0.33*Math.pow(imp-(a.unit?1.8:2.2),1.7)*(a.unit?1.6:1),a.unit?'police':'traffic');PLAYER.crash=Math.max(PLAYER.crash,Math.min(1,imp/14));}
     if(a.unit){polPlayerHit(a,imp);continue;}
     if(a.remote)continue;   // another player's car: it is their game that reacts
     if(imp>1.6){aiCrashed(a,imp,PLAYER);POL.pt.hitT=POL.t;}}}
@@ -8318,7 +8319,7 @@ function polIncidentStep(dt){const I=POL.inc;if(!I)return;const T=POL.pt;
 function polCloseIncident(caught){const I=POL.inc;if(!I)return;
   if(!caught)POL.warrant={level:I.level||1,desc:polDesc(),model:pick.i,color:pick.color,t:POL.t};else POL.warrant=null;
   POL.inc=null;POL.pit=null;POL.box=null;POL.rbox=null;
-  POL.units.forEach(u=>{u.k.conf=0;u.box=null;u.rbox=null;u.joinAt=null;if(u.pit){u.pit=null;u.a.pitLat=0;u.a.pitAcc=null;}
+  POL.units.forEach(u=>{u.k.conf=0;u.box=null;u.rbox=null;u.joinAt=null;if(u.pit||u.ram){u.pit=null;u.ram=null;u.a.pitLat=0;u.a.pitAcc=null;}
     if(u.netGhost)return;   // another player's game is driving it
     if(u.st==='pursuit'||u.st==='tail'||u.st==='stop'){u.role=null;u.node=null;u.holdNode=null;polLightsOff(u);u.st='patrol';
       if(u.spikeJob){polSpikeCancel(u,true);}
@@ -8680,33 +8681,65 @@ function polRecognize(u,dt){if(netBusy(u))return;const k=u.k,P=PLAYER,a=u.a,I=PO
   if(u.st==='tail'&&k.conf>=1&&!POL.stop){polStartStop(u,{type:'warrant'});}
   if(u.st==='tail'&&k.conf<0.25){u.st='patrol';polRejoin(a);polPatrolDest(u);}}
 
+/* ---------------------------------------------------------------- RAM (5 stars)
+   Anything goes: up to three chasers at a time drive straight into the suspect, rear-ending him from behind and
+   slamming his doors when alongside, then drop back a moment and go again. */
+function polRamOk(u){const I=POL.inc,a=u.a,T=POL.pt;if(!I||I.level<5||POL.box||u.box||u.rbox||u.pit||!u.k.vis||a.mode!=='trail'||(u.health!=null&&u.health<20)||a.sim!=='phys')return false;
+  if((T.speed||0)<5||!T.onRoad||a.surf!=='asphalt'||Math.hypot(a.x-PLAYER.x,a.z-PLAYER.z)>55)return false;
+  // only where the road runs fairly straight: ramming overrides the cornering speed limits
+  const r=MAP.roads[T.ri];if(!r)return false;const Pp=r.pts,i0=T.idx,iB=Math.max(0,Math.min(Pp.length-1,i0-T.T*25)),i1=Math.max(0,Math.min(Pp.length-1,i0+T.T*25)),i2=Math.max(0,Math.min(Pp.length-1,i0+T.T*50));
+  const h0=Math.atan2(Pp[i0][1]-Pp[iB][1],Pp[i0][0]-Pp[iB][0]),h1=Math.atan2(Pp[i1][1]-Pp[i0][1],Pp[i1][0]-Pp[i0][0]),h2=Math.atan2(Pp[i2][1]-Pp[i1][1],Pp[i2][0]-Pp[i1][0]);
+  return Math.abs(wrapPi(h0-h1))<0.3&&Math.abs(wrapPi(h1-h2))<0.3&&(TRAFFIC.pNodeD||0)>20;}
+function polRamStep(u,dt){const a=u.a,P=PLAYER;let r=u.ram;
+  if(!r){if(POL.t<(u.ramCool||0)||!polRamOk(u))return;
+    if(POL.units.filter(v=>v.ram).length>=3)return;
+    r=u.ram={ph:'go',t:0};if(Math.random()<0.4)polSay(u.id,['Taking him out!','Ramming the suspect!','Going in!'][Math.floor(Math.random()*3)],2);}
+  r.t+=dt;if(!polRamOk(u)){u.ram=null;a.pitAcc=null;u.ramCool=POL.t+2;return;}
+  const fx=Math.cos(P.psi),fz=-Math.sin(P.psi),rx=-fz,rz=fx,along=(a.x-P.x)*fx+(a.z-P.z)*fz,lat=(a.x-P.x)*rx+(a.z-P.z)*rz,hw=a.halfWid+(P.halfWid||0.9);
+  const vrel=P.u-a.u,hit=u.touchT&&POL.t-u.touchT<0.25;
+  if(r.ph==='go'){
+    let tgtLat,acc;
+    if(along>-(a.halfLen+(P.halfLen||2.3))*0.8){tgtLat=Math.sign(lat||1)*(hw-1.6);acc=clamp(1.2*vrel+0.8,-2,4);}   // alongside: slam the door
+    else{tgtLat=0;acc=clamp(2.2*(vrel+9),-2.5,7);}                                                                 // behind: close at ~20 mph faster and hit him hard
+    a.pitLat=(a.pitLat||0)+clamp(tgtLat-(a.pitLat||0),-2.2*dt,2.2*dt);a.pitAcc=acc;
+    if(hit||r.t>9){r.ph='back';r.t=0;}}
+  else{a.pitAcc=clamp(-1.5*(vrel-3),-4,1);a.pitLat=(a.pitLat||0)*Math.max(0,1-dt*2);   // drop back a couple of lengths, then again
+    if(r.t>1.3){u.ram=null;a.pitAcc=null;u.ramCool=POL.t+0.8+Math.random()*1.5;}}}
+
 /* ---------------------------------------------------------------- PIT
    Only one unit at a time, only in a level-3+ pursuit, at moderate speed, on a straight with no traffic close
    by and no junction ahead. The unit drives up alongside the suspect's rear quarter and steers into it; what
    happens next is down to the tyres, the masses and the contact. Any doubt and it backs off. */
 function polPitOk(u){const I=POL.inc,a=u.a,T=POL.pt,P=PLAYER;if(POL.box||u.box||POL.rbox||!I||I.level<3||!u.k.vis||a.mode!=='trail'||u.health<40)return false;
-  if(T.speed<8||T.speed>22||!T.onRoad||(TRAFFIC.pNodeD||0)<60||a.surf!=='asphalt')return false;
+  const hot=I.level>=4;   // 4 stars and up: PIT at highway speed, closer to junctions and traffic, on gentle bends
+  if(T.speed<(hot?6:8)||T.speed>(hot?40:22)||!T.onRoad||(TRAFFIC.pNodeD||0)<(hot?45:60)||a.surf!=='asphalt')return false;
+  {const fx=Math.cos(P.psi),fz=-Math.sin(P.psi),rx=-fz,rz=fx,w=a.halfWid+(P.halfWid||0.9)+0.9;   // the slot beside his rear quarter must be pavement
+    for(const al of [-3,-6])if(surfaceAt(P.x+fx*al-rx*w,P.z+fz*al-rz*w)!=='asphalt')return false;}
   const r=MAP.roads[T.ri],Pp=r.pts,i0=T.idx,i1=Math.min(Pp.length-1,i0+T.T*30),i2=Math.max(0,Math.min(Pp.length-1,i0+T.T*60));
-  const h1=Math.atan2(Pp[i1][1]-Pp[i0][1],Pp[i1][0]-Pp[i0][0]),h2=Math.atan2(Pp[i2][1]-Pp[i1][1],Pp[i2][0]-Pp[i1][0]);if(Math.abs(wrapPi(h1-h2))>0.12)return false;
-  if(TRAFFIC.cars.some(o=>o!==a&&o.alive&&!(o.unit&&o.unit.role==='chase')&&Math.hypot(o.x-P.x,o.z-P.z)<45))return false;
-  return trOncomingFree(a,trAll(),140,PLAYER);}
+  const h1=Math.atan2(Pp[i1][1]-Pp[i0][1],Pp[i1][0]-Pp[i0][0]),h2=Math.atan2(Pp[i2][1]-Pp[i1][1],Pp[i2][0]-Pp[i1][0]);if(Math.abs(wrapPi(h1-h2))>(hot?0.16:0.12))return false;
+  if(TRAFFIC.cars.some(o=>o!==a&&o.alive&&!(o.unit&&o.unit.role==='chase')&&Math.hypot(o.x-P.x,o.z-P.z)<(hot?30:45)))return false;
+  return trOncomingFree(a,trAll(),hot?100:140,PLAYER);}
+function polPitWhy(u){const I=POL.inc,a=u.a,T=POL.pt,P=PLAYER;const r=[];if(POL.box||u.box||POL.rbox)r.push('box');if(!u.k.vis)r.push('vis');if(a.mode!=='trail')r.push('mode'+a.mode);if(u.health<40)r.push('hp');
+  if(!T.onRoad)r.push('offroad');r.push('spd'+T.speed.toFixed(0)+' nd'+(TRAFFIC.pNodeD||0).toFixed(0)+' surf'+a.surf);
+  const near=TRAFFIC.cars.filter(o=>o!==a&&o.alive&&!(o.unit&&o.unit.role==='chase')&&Math.hypot(o.x-P.x,o.z-P.z)<22);if(near.length)r.push('near'+near.map(o=>o.unit?o.unit.id:o.parked?'pk':'car').join(','));
+  if(!trOncomingFree(a,trAll(),100,PLAYER))r.push('oncoming');return ' ['+r.join(' ')+']';}
 function polPitStep(u,dt){const a=u.a,P=PLAYER;let p=u.pit;
   if(!p){if(POL.pit||POL.t<(u.pitCool||0)||!polPitOk(u))return;
-    const fx=Math.cos(P.psi),fz=-Math.sin(P.psi),along=(a.x-P.x)*fx+(a.z-P.z)*fz;if(along>-4||along<-35)return;
-    if(Math.random()>0.25)return;p=u.pit={ph:'approach',t:0,side:-1,ok:0};POL.pit=u;polSay(u.id,'Lining up for a PIT.',2);}
+    const fx=Math.cos(P.psi),fz=-Math.sin(P.psi),along=(a.x-P.x)*fx+(a.z-P.z)*fz;if(along>-4||along<(POL.inc.level>=4?-55:-35))return;
+    const hot=POL.inc.level>=4;if(Math.random()>(hot?0.7:0.25))return;p=u.pit={ph:'approach',t:0,side:-1,ok:0};POL.pit=u;polSay(u.id,'Lining up for a PIT.',2);}
   p.t+=dt;const fx=Math.cos(P.psi),fz=-Math.sin(P.psi),rx=-fz,rz=fx;
   const along=(a.x-P.x)*fx+(a.z-P.z)*fz,lat=(a.x-P.x)*rx+(a.z-P.z)*rz,hw=a.halfWid+(P.halfWid||0.9);
   const vrel=PLAYER.u-a.u,abort=p.ph!=='recover'&&!polPitOk(u);
   if(abort&&p.ph!=='slow'&&(POL.pt.speed||0)<8){p.ph='slow';p.t=0;}   // he is braking hard: brake with him, hold our line (don't swerve out past him)
-  else if(abort&&p.ph!=='slow'){p.ph='recover';p.t=0;polSay(u.id,'Backing off, not safe.',1);}
+  else if(abort&&p.ph!=='slow'){p.ph='recover';p.t=0;polSay(u.id,'Backing off, not safe.'+(window.PITDBG?polPitWhy(u):''),1);}
   if(p.ph==='slow'){const sv=POL.pt.speed||0;a.pitAcc=clamp(-(a.u-sv)*2.5-1.5,-7.5,0);
-    if(a.u<sv+1.2||p.t>4){u.pit=null;POL.pit=null;u.pitCool=POL.t+10;a.pitAcc=null;}return;}
+    if(a.u<sv+1.2||p.t>4){u.pit=null;POL.pit=null;u.pitCool=POL.t+(POL.inc&&POL.inc.level>=4?4:10);a.pitAcc=null;}return;}
   let tgtLat,acc;
-  if(p.ph==='approach'){tgtLat=p.side*(hw+0.55);const want=-(P.b||1.4)-a.halfLen*0.7,e=along-want;acc=clamp(-0.9*e+1.3*vrel,-3.5,3);
-    if(Math.abs(lat-tgtLat)<0.35&&Math.abs(e)<0.8){p.ok+=dt;if(p.ok>0.4){p.ph='contact';p.t=0;}}else p.ok=0;if(p.t>14){p.ph='recover';p.t=0;}}
+  if(p.ph==='approach'){tgtLat=p.side*(hw+0.55);const want=-(P.b||1.4)-a.halfLen*0.7,e=along-want,hot=POL.inc&&POL.inc.level>=4;acc=clamp(-0.9*e+1.3*vrel,-3.5,hot?4.5:3);
+    if(Math.abs(lat-tgtLat)<(hot?0.6:0.35)&&Math.abs(e)<(hot?1.3:0.8)){p.ok+=dt;if(p.ok>(hot?0.2:0.4)){p.ph='contact';p.t=0;}}else p.ok=Math.max(0,p.ok-dt*0.5);if(p.t>14){p.ph='recover';p.t=0;}}
   else if(p.ph==='contact'){tgtLat=p.side*(hw-0.5);const want=-(P.b||1.4)-a.halfLen*0.55,e=along-want;acc=clamp(-0.7*e+1.2*vrel+0.3,-2,2.5);
     if(p.t>1.6||(u.touchT&&POL.t-u.touchT<0.3)){p.ph='recover';p.t=0;if(u.touchT&&POL.t-u.touchT<0.4){polSay(u.id,'Contact made.',2);POL.pitHitT=POL.t;}}}
-  else{tgtLat=p.side*(hw+2.5);acc=-2.4;if(p.t>1.8){u.pit=null;POL.pit=null;u.pitCool=POL.t+25;a.pitAcc=null;return;}}
+  else{tgtLat=p.side*(hw+(a.u>22?1.2:2.5));acc=a.u>22?-1.5:-2.4;if(p.t>1.8){u.pit=null;POL.pit=null;u.pitCool=POL.t+(POL.inc&&POL.inc.level>=4?7:25);a.pitAcc=null;return;}}
   a.pitLat=(a.pitLat||0)+clamp(tgtLat-(lat-0)-0,-1,1)*0+clamp((tgtLat)-(a.pitLat||0),-1.4*dt,1.4*dt);a.pitAcc=acc;}
 
 /* ---------------------------------------------------------------- box-in
@@ -8767,7 +8800,7 @@ function polBoxPlan(B,taken){const P=PLAYER;
     for(let ui=0;ui<cands.length;ui++){if(used&(1<<ui)||!opt[ui][ki])continue;pick[ki]=ui;rec(ki+1,used|(1<<ui),v+W[kinds[ki]]-opt[ui][ki].r.cost);}pick[ki]=-1;};
   rec(0,0,0);if(!best)return 0;let n=0;
   best.forEach((ui,ki)=>{if(ui<0)return;const u=cands[ui],o=opt[ui][ki];polBoxGo(u,o.S,o.r);n++;});return n;}
-function polBoxGo(u,S,r){const a=u.a;if(u.pit){u.pit=null;if(POL.pit===u)POL.pit=null;}a.pitAcc=null;a.pitLat=0;
+function polBoxGo(u,S,r){const a=u.a;u.ram=null;if(u.pit){u.pit=null;if(POL.pit===u)POL.pit=null;}a.pitAcc=null;a.pitLat=0;
   u.box={kind:S.kind,p:S.p,held:false,t:POL.t};u.holdStop=false;u.oncoming=false;u.chaseMode=null;u.why='boxing in ('+S.kind+')';
   if(!r.pts.length){polHold(a);u.box.held=true;return;}
   polManeuver(a,r.pts,()=>{if(u.box)u.box.held=true;},{stop:true});}
@@ -8809,7 +8842,7 @@ function polBoxUnit(u){const a=u.a;if(!POL.box){u.box=null;return;}
    standing box; if he speeds off, or turns away, they go back to chasing. */
 function polRBoxOpp(){const I=POL.inc,T=POL.pt;if(!I||POL.box||POL.arrest||(POL.stop&&POL.stop.ph!=='catch'))return false;
   return T.onRoad&&(T.crawlT||0)>2&&(TRAFFIC.pNodeD||99)>25;}
-function polRBoxCands(){const P=PLAYER;return POL.units.filter(u=>!u.box&&!u.rbox&&!u.pit&&u.st==='pursuit'&&u.role==='chase'&&u.k.vis&&(u.health==null||u.health>20)&&u.a.alive&&u.a.sim==='phys'&&
+function polRBoxCands(){const P=PLAYER;return POL.units.filter(u=>!u.box&&!u.rbox&&!u.pit&&!u.ram&&u.st==='pursuit'&&u.role==='chase'&&u.k.vis&&(u.health==null||u.health>20)&&u.a.alive&&u.a.sim==='phys'&&
   u.a.mode!=='rev'&&u.a.mode!=='man'&&Math.hypot(u.a.x-P.x,u.a.z-P.z)<170).sort((p,q)=>Math.hypot(p.a.x-P.x,p.a.z-P.z)-Math.hypot(q.a.x-P.x,q.a.z-P.z));}
 function polRBoxFill(R){const have=POL.units.filter(u=>u.rbox).map(u=>u.rbox.kind),kinds=['front','rear','side'].filter(k=>!have.includes(k));let n=0;
   for(const u of polRBoxCands()){const k=kinds.shift();if(!k)break;u.rbox={kind:k,ph:k==='front'?'stage':'go',t:POL.t};u.holdStop=false;u.oncoming=false;u.why='rolling box ('+k+')';
@@ -8923,15 +8956,16 @@ function polStripsStep(){if(!POL.strips.length)return;const ALL=trAll();
       if(o===PLAYER){S.hitPlayer=true;polToast('Tyre punctured');}else if(!o.unit&&!o.acc)setTimeout(()=>aiCrashed(o,0,'spikes'),1500);});}}
 
 /* ---------------------------------------------------------------- damage */
-function polUnitHit(a,hit,by){const u=a.unit;if(!u||u.st==='wrecked'||u.netGhost)return;   // another game's unit: its own game scores the damageif(hit<2.2)return;
-  u.health=Math.max(0,u.health-0.33*Math.pow(hit-2.2,1.7)*0.8);a.health=u.health;
+function polUnitHit(a,hit,by){const u=a.unit;if(!u||u.st==='wrecked'||u.netGhost)return;   // another game's unit: its own game scores the damage
+  if(hit<2.2)return;
+  u.health=Math.max(0,u.health-0.33*Math.pow(hit-2.2,1.7)*(u.ram?0.45:0.8));a.health=u.health;   // a unit ramming on purpose hits with its push bar
   if(u.health<=0)polWreck(u,by===PLAYER);}
 function polPlayerHit(a,imp){const u=a.unit;if(!u)return;u.touchT=POL.t;polUnitHit(a,imp,PLAYER);
-  if(u.pit&&u.pit.ph!=='approach')return;   // his own PIT contact
+  if((u.pit&&u.pit.ph!=='approach')||u.ram)return;   // his own PIT or ram contact
   if(imp<3||POL.t-(u.ramT||-9)<2.5){u.ramT=POL.t;return;}u.ramT=POL.t;const I=POL.inc;
   if(I){I.rams++;if(u.k.vis)polSay(u.id,'Suspect rammed my unit!',3);}
   else if(u.st!=='parked'||imp>4){polSay(u.id,'Vehicle just struck a police unit on '+polWhere(PLAYER.x,PLAYER.z)+'. In pursuit.',3);if(POL.stop)POL.stop=null;polComm(null);polIncident(2,'struck a police vehicle',u);}}
-function polWreck(u,byPlayer){const a=u.a;u.st='wrecked';u.box=null;u.rbox=null;a.pitAcc=null;u.role=null;u.holdNode=null;u.node=null;polLightsOff(u);a.acc=true;a.accT=TRAFFIC.t;a.hazard=true;
+function polWreck(u,byPlayer){const a=u.a;u.st='wrecked';u.ram=null;u.box=null;u.rbox=null;a.pitAcc=null;u.role=null;u.holdNode=null;u.node=null;polLightsOff(u);a.acc=true;a.accT=TRAFFIC.t;a.hazard=true;
   if(u.spikeJob)polSpikeCancel(u,true);if(POL.pit===u){POL.pit=null;u.pit=null;}if(POL.stop&&POL.stop.u===u){POL.stop=null;polComm(null);}
   if(POL.inc&&byPlayer)POL.inc.wrecked++;u.wreckT=POL.t;
   polSay(u.id,'My unit is disabled'+(POL.inc?', out of the pursuit.':'.'),3);
@@ -9132,11 +9166,11 @@ function polBrain(u,dt){const a=u.a;polSense(u,dt);if(u.st==='wrecked')return;
         u.manDone=null;u.merge=null;u.chaseMode='recover';u.why='jammed, backing off';POL.unjams=(POL.unjams||0)+1;
         if(blocked)polReverse(a,4,a.psi,a2=>{polRejoin(a2);u.chaseMode=null;u.goalKey=null;});else{polRejoin(a);u.chaseMode=null;u.goalKey=null;}
         break;}
-      if(u.role==='spike')polSpikeStep(u,dt);else if(u.rbox&&!u.box)polRBoxUnit(u,dt);else polRoleMove(u);if(u.role==='chase'&&!u.rbox)polPitStep(u,dt);break;}
+      if(u.role==='spike')polSpikeStep(u,dt);else if(u.rbox&&!u.box)polRBoxUnit(u,dt);else polRoleMove(u);if(u.role==='chase'&&!u.rbox){polRamStep(u,dt);if(!u.ram)polPitStep(u,dt);}break;}
   polEnforce(u,dt);polRecognize(u,dt);}
 /* driving, called by the traffic loop in place of the ordinary driver */
 function polThink(a,dt,ALL){const u=a.unit;polDriveParams(u);a.trailStop=null;a.nodeCap=null;a.nodeCapD=null;a.emStop=false;
-  if(u.pit||u.rbox)a.pitAcc=a.pitAcc;else{a.pitAcc=null;a.pitLat=(a.pitLat||0)*Math.max(0,1-dt*1.5);}
+  if(u.pit||u.rbox||u.ram)a.pitAcc=a.pitAcc;else{a.pitAcc=null;a.pitLat=(a.pitLat||0)*Math.max(0,1-dt*1.5);}
   switch(a.mode){
     case 'parked':return;
     case 'hold':a.in.thr=0;a.in.brk=1;a.in.steer*=0.9;a.ad=-4;if(a.sim==='kin')a.vk=0;return;
