@@ -45,6 +45,11 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
 
 /* ---------- loading ---------- */
 #loading{position:fixed;inset:0;display:grid;place-items:center;background:var(--ink);font:500 14px var(--mono);color:var(--dim);letter-spacing:.08em;padding-inline:16px;text-align:center;z-index:9}
+#loading .ld{width:min(420px,100%);display:grid;gap:12px;text-align:left}
+#loading .ld-t{font:700 44px/1 var(--display,'Barlow Condensed','Arial Narrow',sans-serif);letter-spacing:.04em;color:var(--paper)}
+#loading .ld-bar{height:6px;background:rgba(255,255,255,.08);overflow:hidden}
+#loading .ld-bar i{display:block;height:100%;width:0;background:#ffa219;transition:width .15s linear}
+#loading .ld-row{display:flex;justify-content:space-between;gap:12px;font:500 12px var(--mono);color:var(--dim)}
 
 /* ---------- main menu ---------- */
 #menu{background:linear-gradient(90deg,rgba(14,16,18,.82) 0%,rgba(14,16,18,.5) 34%,rgba(14,16,18,0) 60%)}
@@ -276,7 +281,7 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
 </style>
 
 <div id="stage"></div>
-<div id="loading">Building the county…</div>
+<div id="loading">Loading…</div>
 
 <section id="menu" class="layer" hidden>
   <div class="rail">
@@ -7625,7 +7630,8 @@ function trThink(a,dt,ALL){
   let leaderObs=false;
   if(ld){let vl=ld.v,T=P.T;
     if(vl<-1)vl=Math.min(0,vl*1.5);                         // coming the other way at us
-    leaderObs=(trIsObstacle(ld.o)&&!(a.unit&&ld.o===PLAYER&&['stop','pursuit','tail'].includes(a.unit.st)))||(a.emerg&&ld.o.ai&&!ld.o.unit&&!ld.o.acc&&((ld.o.yieldT||0)>0.5||ld.v<v0-5));
+    leaderObs=(trIsObstacle(ld.o)&&!(a.unit&&ld.o===PLAYER&&['stop','pursuit','tail'].includes(a.unit.st)))||(a.emerg&&ld.o.ai&&!ld.o.unit&&!ld.o.acc&&((ld.o.yieldT||0)>0.5||ld.v<v0-5))
+      ||(a.emerg&&a.unit&&ld.o.unit&&ld.v<1.5&&(POL.pt.speed||0)>3&&!ld.o.unit.box&&!ld.o.unit.holdStop);   // another cruiser stuck or crashed ahead: go round it, don't queue behind it
     const sus=ld.o===PLAYER&&a.followGap;
     if(sus&&a.mode==='trail'&&a.unit&&a.unit.k.vis)vl=Math.max(vl,(POL.pt.speed||0)*0.9);   // he is turning, not stopping: the corner on his track sets our speed
     if(!(pass&&ld.o===a.av.o&&Math.abs(a.avCur-a.av.amt)<0.5)){
@@ -7768,8 +7774,7 @@ function trPair(A,B){if(trLotPass(A,B))return 0;
 function trafficCollide(){if(!TRAFFIC.cars.length)return;
   for(const a of TRAFFIC.cars){if(!a.alive||a.sim!=='phys')continue;const imp=trPair(PLAYER,a);if(imp<=0)continue;
     if(a.parked)a.awake=true;
-    // cruisers are heavy and bull-barred: hitting one (or being hit by one) costs more
-    if(imp>(a.unit?1.8:2.2)){damageCar(0.33*Math.pow(imp-(a.unit?1.8:2.2),1.7)*(a.unit?1.6:1),a.unit?'police':'traffic');PLAYER.crash=Math.max(PLAYER.crash,Math.min(1,imp/14));}
+    if(imp>2.2){damageCar(0.33*Math.pow(imp-2.2,1.7),a.unit?'police':'traffic');PLAYER.crash=Math.max(PLAYER.crash,Math.min(1,imp/14));}
     if(a.unit){polPlayerHit(a,imp);continue;}
     if(a.remote)continue;   // another player's car: it is their game that reacts
     if(imp>1.6){aiCrashed(a,imp,PLAYER);POL.pt.hitT=POL.t;}}}
@@ -8319,7 +8324,7 @@ function polIncidentStep(dt){const I=POL.inc;if(!I)return;const T=POL.pt;
 function polCloseIncident(caught){const I=POL.inc;if(!I)return;
   if(!caught)POL.warrant={level:I.level||1,desc:polDesc(),model:pick.i,color:pick.color,t:POL.t};else POL.warrant=null;
   POL.inc=null;POL.pit=null;POL.box=null;POL.rbox=null;
-  POL.units.forEach(u=>{u.k.conf=0;u.box=null;u.rbox=null;u.joinAt=null;if(u.pit||u.ram){u.pit=null;u.ram=null;u.a.pitLat=0;u.a.pitAcc=null;}
+  POL.units.forEach(u=>{u.k.conf=0;u.box=null;u.rbox=null;u.joinAt=null;if(u.pit||u.ram||u.ovt||u.block){u.pit=null;u.ram=null;u.ovt=null;u.block=null;u.a.pitLat=0;u.a.pitAcc=null;}
     if(u.netGhost)return;   // another player's game is driving it
     if(u.st==='pursuit'||u.st==='tail'||u.st==='stop'){u.role=null;u.node=null;u.holdNode=null;polLightsOff(u);u.st='patrol';
       if(u.spikeJob){polSpikeCancel(u,true);}
@@ -8434,6 +8439,11 @@ function polRoleMove(u){const a=u.a,k=u.k,P=PLAYER,I=POL.inc;
   if(u.role==='intercept'){if(a.mode!=='road'){polRejoin(a);polRouteTo(a,u.holdNode);}
     if(u.holdNode&&!u.inPos)polRouteTurnCheck(u,u.holdNode);
     if(u.holdNode&&!u.inPos&&Math.hypot(a.x-u.holdNode.x,a.z-u.holdNode.z)<u.holdNode.R+14&&Math.abs(a.u)<0.5){u.inPos=true;polSay(u.id,'In position at '+polNodeName(u.holdNode)+'.',1);}}}
+/* the primary: whichever chasing unit is closest to him and can see him. It never takes another way round to head him off:
+   it stays on his tail, on his exact line, so the pursuit doesn't lose sight of him */
+function polLead(){if(POL._leadT===POL.t)return POL._lead;POL._leadT=POL.t;let best=null,bd=1e9;
+  for(const u of POL.units){if(u.role!=='chase'||u.st!=='pursuit'||!u.k.vis||u.netGhost||!u.a.alive)continue;const d=Math.hypot(u.a.x-PLAYER.x,u.a.z-PLAYER.z);if(d<bd){bd=d;best=u;}}
+  POL._lead=best;if(best&&POL.inc)POL.inc.primary=best;return best;}
 /* chasing: decided at 5 Hz from what this officer can see (or last saw) */
 function polChaseMove(u){const a=u.a,k=u.k,P=PLAYER,I=POL.inc,T=POL.pt;
   const d=Math.hypot(P.x-a.x,P.z-a.z),cp=Math.cos(a.psi),sp=Math.sin(a.psi),fu=((P.x-a.x)*cp-(P.z-a.z)*sp)/Math.max(d,1);
@@ -8442,8 +8452,14 @@ function polChaseMove(u){const a=u.a,k=u.k,P=PLAYER,I=POL.inc,T=POL.pt;
     const fp=(-(P.x-a.x)*Math.cos(P.psi)+(P.z-a.z)*Math.sin(P.psi))/Math.max(d,1); // is he pointing at us
     let sameRoad=false;if(T.onRoad){const Rp=MAP.roads[T.ri].pts,ii=polRoadIdx(T.ri,a.x,a.z);sameRoad=Math.hypot(Rp[ii][0]-a.x,Rp[ii][1]-a.z)<MAP.roads[T.ri].width/2+8;}
     const sameWay=Math.cos(P.psi)*cp+Math.sin(P.psi)*sp>0.5;
-    // coming straight at us: ease off in our own lane and let him go by, then turn round behind him
-    if(fu>0.55&&fp>0.55&&T.speed>4&&d<450){u.oncoming=true;u.why='oncoming, letting him pass';if(a.mode==='trail')polRejoin(a);return;}
+    // coming at us down the same road (he turned round, or we came the other way): keep heading for him in our own lane,
+    // never turn round early or duck down a side street. At 4 stars and up, swing across his path and stop to block him.
+    // Once he is past, turn round right behind him.
+    const headOn=T.speed>4&&d<600&&fu>0.15&&along<-3&&(sameRoad||d<120)&&(fp>0.3||sameRoad);
+    if(headOn||(u.headOn&&fu>-0.1&&d<600&&POL.t-u.headOn<2)){if(headOn)u.headOn=POL.t;u.oncoming=true;
+      if(I&&I.level>=4&&polBlockTry(u,d,T))return;
+      u.why='oncoming, holding course';if(a.mode==='trail')polRejoin(a);return;}
+    if(u.headOn&&fu<=-0.1&&d<90&&POL.t-u.headOn<4){u.headOn=null;u.oncoming=false;u.turnCool=0;u.turnLog=[];if(polTurnAround(u,'suspect went past'))return;}
     if(fu<0.3)u.oncoming=false;
     // he is behind us and not catching us up (went past, turned round, or we overshot his turn): turn round now
     // he has stopped close by: stop with him (that's an arrest), don't drive round in circles
@@ -8452,7 +8468,8 @@ function polChaseMove(u){const a=u.a,k=u.k,P=PLAYER,I=POL.inc,T=POL.pt;
     if(fu<-0.25&&d>15&&(along<-0.5*T.speed||T.speed<3)&&(sameRoad||d<160)){if(polTurnAround(u,'suspect behind'))return;}
     if(u.needTurn&&a.mode==='trail'&&Math.abs(a.u)<9){if(polTurnAround(u,'track behind'))return;}
     // on his road going his way, or close: drive his line
-    if(fu>-0.2&&(d<60||(sameRoad&&sameWay)||(a.mode==='trail'&&u.chaseMode==='trail'))){
+    const isLead=polLead()===u;
+    if(fu>-0.2&&(d<60||isLead||(sameRoad&&sameWay)||(a.mode==='trail'&&u.chaseMode==='trail'))){
       if(a.mode!=='trail'){const l=k.trail[k.trail.length-1],fresh=l&&Math.hypot(l.x-P.x,l.z-P.z)<6&&k.trail.length>3;
         if(!fresh){k.trail=[{x:P.x,z:P.z}];k.ti=0;}else{k.ti=Math.max(0,k.trail.length-60);}a.mode='trail';}
       // he doubled back on himself: running round his loop is pointless, start the track again from where he is now
@@ -8524,7 +8541,7 @@ function polStuckCheck(u){const a=u.a;if(a.sim!=='phys'||(a.mode!=='road'&&a.mod
   polReverse(a,5,a.psi,a2=>{const q=polRoadAt(a2.x,a2.z);if(q&&q.d>q.r.width/2+2)polRecover(u,'back to the road',true);else{polRejoin(a2);u.chaseMode=null;u.goalKey=null;}});return true;}
 /* not in sight / on the road network: if the target is behind and the way back is shorter than carrying on to the next junction, turn round */
 const _pnd=new Map();
-function polRouteTurnCheck(u,tg){const a=u.a;if(a.mode!=='road'||POL.t<(u.turnCool||0)||POL.t<(u.rtcAt||0))return;u.rtcAt=POL.t+0.7;
+function polRouteTurnCheck(u,tg){const a=u.a;if(a.mode!=='road'||POL.t<(u.turnCool||0)||POL.t<(u.rtcAt||0)||(u.headOn&&POL.t-u.headOn<3))return;u.rtcAt=POL.t+0.7;
   const d=Math.hypot(tg.x-a.x,tg.z-a.z);if(d<60)return;const fu=((tg.x-a.x)*Math.cos(a.psi)-(tg.z-a.z)*Math.sin(a.psi))/d;if(fu>-0.15)return;
   const p=a.path[Math.min(a.path.length-1,a.k+1)];if(!p||p.ri<0)return;
   const tn=tg.id!=null?tg:polNearNode(tg.x,tg.z),extra=tg.id!=null?0:Math.hypot(tn.x-tg.x,tn.z-tg.z);
@@ -8567,14 +8584,15 @@ function polDriveParams(u){const a=u.a,T=POL.pt,lim=trZoneMph(a.x,a.z),I=POL.inc
         if(u.st==='stop'&&POL.stop&&POL.stop.u===u&&POL.stop.ph!=='catch'){v=clamp((g-9)*0.4,0,14);dm='pull in';}}
       else{const gone=I?POL.t-I.lastVisT:0;if(gone>=25){dm='search';v=Math.min(cap,(lim+15)/MS2MPH);}}}
     else if(u.role==='search'){dm='search';v=Math.min(cap,(lim+15)/MS2MPH);}
-    if(u.oncoming){v=Math.min(v,9);dm='let-pass';}
+    if(u.oncoming&&!u.block){const g=Math.hypot(PLAYER.x-a.x,PLAYER.z-a.z);v=Math.min(v,g>200?22:g>90?15:9);dm='let-pass';}
     if(u.holdStop&&(u.role==='chase'||u.st==='stop')){const g=Math.hypot(PLAYER.x-a.x,PLAYER.z-a.z);v=Math.min(v,clamp((g-10)*0.3,0,6));dm='close in';}
     if((u.slowFor||0)>POL.t){v=Math.min(v,8);dm='turn-wait';}
     if(a.mode==='man'||a.mode==='rev')dm='recover';
     if(u.merge&&a.mode==='man'&&polMergeBlocked(u)){v=0.3;dm='give way';}
     if(u.box&&a.mode==='man'){const rem=Math.max(0,(u.manEnd||0)-a.s);v=clamp(Math.sqrt(2*3.2*Math.max(0,rem-1.5)),2.5,17);dm='box in';}
+    if(u.block&&a.mode==='man'){const rem=Math.max(0,(u.manEnd||0)-a.s);v=clamp(Math.sqrt(2*5.5*Math.max(0,rem-1)),0,16);dm='block';}
     a.v0Set=v;a.followGap=u.box?2.5:L>=3?6:9;
-    const grip=clamp((a.mu||1)*G*(L>=3?0.68:0.66),4.8,7.4);a.ayOverride=dm==='search'?Math.min(grip,5):grip;
+    const grip=clamp((a.mu||1)*G*(L>=4?0.76:L>=3?0.68:0.66),4.8,L>=4?8.4:7.4);a.ayOverride=dm==='search'?Math.min(grip,5):grip;
     a.brakePlan=dm==='search'?3.6:5;a.pers.a=dm==='search'?2.6:4.2;a.pers.b=4.5;if(u.box){a.pers.b=7;a.brakePlan=6.5;}}
   else if(u.st==='tail'){a.v0Set=Math.min((lim+12)/MS2MPH,Math.max(T.speed+2,6));a.followGap=45;a.emerg=false;dm='tail';a.pers.a=u.aNorm;a.pers.b=2.6;}
   else{a.emerg=false;a.pers.a=u.aNorm;a.pers.b=2.6;}
@@ -8657,8 +8675,8 @@ function polNodeRule(a,n,dist){if(n.control==='corner')return {cap:99,stop:false
   else green=true;
   const I=POL.inc,u=a.unit;
   // actively chasing him: no lifting for junctions at all; only ease off (never stop) if a car will be in the crossing just as we get there
-  if(u&&u.st==='pursuit'&&u.role==='chase'&&I){const v=Math.max(4,Math.abs(a.u)),eta=clamp(dist/v,0.6,2.2);
-    return polCrossClear(a,n,eta)?{cap:99,stop:false}:{cap:dist>35?24:14,stop:false};}
+  if(u&&u.st==='pursuit'&&I&&(u.role==='chase'||(I.level>=4&&u.role!=='search'))){const v=Math.max(4,Math.abs(a.u)),eta=clamp(dist/v,0.6,2.2);
+    return polCrossClear(a,n,eta)?{cap:99,stop:false}:{cap:dist>35?(I.level>=4?28:24):(I.level>=4?17:14),stop:false};}
   const hot=u&&u.st==='pursuit'&&I&&I.level>=3,clear=polCrossClear(a,n,hot?2.0:3.2),town=!!n.town;
   // right of way: still lift off and look; a red light or stop sign against them: slow down, look both ways, then go.
   // In a 3-star+ pursuit: much less lift when the crossing is visibly clear; still a hard stop if something is about to be in it
@@ -8680,6 +8698,43 @@ function polRecognize(u,dt){if(netBusy(u))return;const k=u.k,P=PLAYER,a=u.a,I=PO
     if(u.spot)polLeaveTrap(u,1);}
   if(u.st==='tail'&&k.conf>=1&&!POL.stop){polStartStop(u,{type:'warrant'});}
   if(u.st==='tail'&&k.conf<0.25){u.st='patrol';polRejoin(a);polPatrolDest(u);}}
+
+/* ---------------------------------------------------------------- BLOCK (4 stars and up)
+   A unit meeting him head-on swings across into his lane and stops at an angle, side-on to him, so he has to get round it. */
+function polBlockTry(u,d,T){const a=u.a,P=PLAYER;if(u.block)return true;
+  if(POL.t<(u.blockCool||0)||a.sim!=='phys'||(a.mode!=='road'&&a.mode!=='trail')||a.surf!=='asphalt'||POL.box||u.box)return false;
+  if(POL.units.filter(v=>v.block).length>=2)return false;
+  const close=Math.max(1,Math.abs(a.u)+T.speed),tm=d/close;if(d<28||d>140||tm<2.2)return false;   // too close to make it in time, or still far off
+  const fx=Math.cos(a.psi),fz=-Math.sin(a.psi),rx=-fz,rz=fx,latS=(P.x-a.x)*rx+(P.z-a.z)*rz;if(Math.abs(latS)>9)return false;
+  const L=clamp(d*0.3,12,26),side=Math.sign(latS)||-1,ang=1.15;           // ~65 degrees across the road, nose toward his lane
+  const ex=a.x+fx*L+rx*latS,ez=a.z+fz*L+rz*latS,dx=fx*Math.cos(ang)+side*rx*Math.sin(ang),dz=fz*Math.cos(ang)+side*rz*Math.sin(ang);
+  if(surfaceAt(ex,ez)!=='asphalt')return false;
+  const pts=polBez([a.x,a.z],[fx,fz],[ex,ez],[dx,dz],L*0.45,L*0.35,1.2);
+  u.block={t0:POL.t,ph:'go'};u.why='blocking the road';u.blockCool=POL.t+14;
+  polSay(u.id,['Blocking the road!','Putting my car across the road.','Cutting him off!'][Math.floor(Math.random()*3)],2);
+  polManeuver(a,pts,a2=>{polHold(a2);if(u.block)u.block.ph='hold';},{stop:true});return true;}
+function polBlockStep(u){const B=u.block;if(!B)return;const a=u.a,P=PLAYER,d=Math.hypot(P.x-a.x,P.z-a.z);
+  const fx=Math.cos(P.psi),fz=-Math.sin(P.psi),past=(a.x-P.x)*fx+(a.z-P.z)*fz<-6;   // he is beyond us
+  if(POL.box||u.box||POL.t-B.t0>(B.ph==='hold'?9:7)||(past&&d>12)||!POL.inc){u.block=null;u.headOn=null;u.oncoming=false;
+    if(a.mode==='hold'||a.mode==='man'){polRejoin(a);u.chaseMode=null;u.goalKey=null;}u.turnCool=0;u.turnLog=[];}}
+
+/* ---------------------------------------------------------------- OVERTAKE
+   The primary can't keep up and a quicker cruiser is right behind it: the quicker one goes round and takes over. */
+function polOvertakeStep(u,dt){const a=u.a,lead=polLead();let o=u.ovt;
+  const done=()=>{u.ovt=null;a.pitAcc=null;};
+  if(!o){if(!lead||lead===u||a.mode!=='trail'||lead.a.mode!=='trail'||u.pit||u.ram||u.rbox||u.box||!u.k.vis||(POL.inc&&POL.inc.level<2))return;
+    if(POL.units.some(v=>v.ovt))return;
+    const L=lead.a,T=POL.pt,gl=Math.hypot(L.x-PLAYER.x,L.z-PLAYER.z);
+    lead.lagT=(gl>55&&T.speed>L.u+1)?(lead.lagT||0)+dt:Math.max(0,(lead.lagT||0)-dt);   // the primary is dropping back
+    if(lead.lagT<2.5||polTopV(a)<polTopV(L)*1.05)return;
+    const fx=Math.cos(L.psi),fz=-Math.sin(L.psi),al=(a.x-L.x)*fx+(a.z-L.z)*fz,lt=Math.abs(-(a.x-L.x)*fz+(a.z-L.z)*fx);
+    if(al>-4||al<-60||lt>4||Math.cos(a.psi-L.psi)<0.9)return;
+    if(!trOncomingFree(a,trAll(),220,L)||(TRAFFIC.pNodeD||0)<40)return;
+    o=u.ovt={t:0,lead};polSay(u.id,'Passing '+lead.id+', I\'ll take the lead.',2);}
+  o.t+=dt;const L=o.lead.a;if(o.lead.st!=='pursuit'||o.t>14||!u.k.vis||!trOncomingFree(a,trAll(),140,L)){a.pitLat=(a.pitLat||0)*0.5;done();return;}
+  const fx=Math.cos(L.psi),fz=-Math.sin(L.psi),al=(a.x-L.x)*fx+(a.z-L.z)*fz;
+  if(al>L.halfLen+a.halfLen+5){a.pitLat=(a.pitLat||0)+clamp(0-(a.pitLat||0),-1.4*dt,1.4*dt);a.pitAcc=1.5;if(Math.abs(a.pitLat)<0.3){done();}return;}   // past: back into lane
+  a.pitLat=(a.pitLat||0)+clamp(-3.6-(a.pitLat||0),-1.6*dt,1.6*dt);a.pitAcc=a.pitLat<-2.4?5:1;}
 
 /* ---------------------------------------------------------------- RAM (5 stars)
    Anything goes: up to three chasers at a time drive straight into the suspect, rear-ending him from behind and
@@ -8715,7 +8770,7 @@ function polPitOk(u){const I=POL.inc,a=u.a,T=POL.pt,P=PLAYER;if(POL.box||u.box||
   if(T.speed<(hot?6:8)||T.speed>(hot?40:22)||!T.onRoad||(TRAFFIC.pNodeD||0)<(hot?45:60)||a.surf!=='asphalt')return false;
   {const fx=Math.cos(P.psi),fz=-Math.sin(P.psi),rx=-fz,rz=fx,w=a.halfWid+(P.halfWid||0.9)+0.9;   // the slot beside his rear quarter must be pavement
     for(const al of [-3,-6])if(surfaceAt(P.x+fx*al-rx*w,P.z+fz*al-rz*w)!=='asphalt')return false;}
-  const r=MAP.roads[T.ri],Pp=r.pts,i0=T.idx,i1=Math.min(Pp.length-1,i0+T.T*30),i2=Math.max(0,Math.min(Pp.length-1,i0+T.T*60));
+  const r=MAP.roads[T.ri],Pp=r.pts,i0=T.idx,i1=Math.max(0,Math.min(Pp.length-1,i0+T.T*30)),i2=Math.max(0,Math.min(Pp.length-1,i0+T.T*60));
   const h1=Math.atan2(Pp[i1][1]-Pp[i0][1],Pp[i1][0]-Pp[i0][0]),h2=Math.atan2(Pp[i2][1]-Pp[i1][1],Pp[i2][0]-Pp[i1][0]);if(Math.abs(wrapPi(h1-h2))>(hot?0.16:0.12))return false;
   if(TRAFFIC.cars.some(o=>o!==a&&o.alive&&!(o.unit&&o.unit.role==='chase')&&Math.hypot(o.x-P.x,o.z-P.z)<(hot?30:45)))return false;
   return trOncomingFree(a,trAll(),hot?100:140,PLAYER);}
@@ -8800,7 +8855,7 @@ function polBoxPlan(B,taken){const P=PLAYER;
     for(let ui=0;ui<cands.length;ui++){if(used&(1<<ui)||!opt[ui][ki])continue;pick[ki]=ui;rec(ki+1,used|(1<<ui),v+W[kinds[ki]]-opt[ui][ki].r.cost);}pick[ki]=-1;};
   rec(0,0,0);if(!best)return 0;let n=0;
   best.forEach((ui,ki)=>{if(ui<0)return;const u=cands[ui],o=opt[ui][ki];polBoxGo(u,o.S,o.r);n++;});return n;}
-function polBoxGo(u,S,r){const a=u.a;u.ram=null;if(u.pit){u.pit=null;if(POL.pit===u)POL.pit=null;}a.pitAcc=null;a.pitLat=0;
+function polBoxGo(u,S,r){const a=u.a;u.ram=null;u.ovt=null;u.block=null;if(u.pit){u.pit=null;if(POL.pit===u)POL.pit=null;}a.pitAcc=null;a.pitLat=0;
   u.box={kind:S.kind,p:S.p,held:false,t:POL.t};u.holdStop=false;u.oncoming=false;u.chaseMode=null;u.why='boxing in ('+S.kind+')';
   if(!r.pts.length){polHold(a);u.box.held=true;return;}
   polManeuver(a,r.pts,()=>{if(u.box)u.box.held=true;},{stop:true});}
@@ -8842,7 +8897,7 @@ function polBoxUnit(u){const a=u.a;if(!POL.box){u.box=null;return;}
    standing box; if he speeds off, or turns away, they go back to chasing. */
 function polRBoxOpp(){const I=POL.inc,T=POL.pt;if(!I||POL.box||POL.arrest||(POL.stop&&POL.stop.ph!=='catch'))return false;
   return T.onRoad&&(T.crawlT||0)>2&&(TRAFFIC.pNodeD||99)>25;}
-function polRBoxCands(){const P=PLAYER;return POL.units.filter(u=>!u.box&&!u.rbox&&!u.pit&&!u.ram&&u.st==='pursuit'&&u.role==='chase'&&u.k.vis&&(u.health==null||u.health>20)&&u.a.alive&&u.a.sim==='phys'&&
+function polRBoxCands(){const P=PLAYER;return POL.units.filter(u=>!u.box&&!u.rbox&&!u.pit&&!u.ram&&!u.ovt&&!u.block&&u.st==='pursuit'&&u.role==='chase'&&u.k.vis&&(u.health==null||u.health>20)&&u.a.alive&&u.a.sim==='phys'&&
   u.a.mode!=='rev'&&u.a.mode!=='man'&&Math.hypot(u.a.x-P.x,u.a.z-P.z)<170).sort((p,q)=>Math.hypot(p.a.x-P.x,p.a.z-P.z)-Math.hypot(q.a.x-P.x,q.a.z-P.z));}
 function polRBoxFill(R){const have=POL.units.filter(u=>u.rbox).map(u=>u.rbox.kind),kinds=['front','rear','side'].filter(k=>!have.includes(k));let n=0;
   for(const u of polRBoxCands()){const k=kinds.shift();if(!k)break;u.rbox={kind:k,ph:k==='front'?'stage':'go',t:POL.t};u.holdStop=false;u.oncoming=false;u.why='rolling box ('+k+')';
@@ -8958,14 +9013,14 @@ function polStripsStep(){if(!POL.strips.length)return;const ALL=trAll();
 /* ---------------------------------------------------------------- damage */
 function polUnitHit(a,hit,by){const u=a.unit;if(!u||u.st==='wrecked'||u.netGhost)return;   // another game's unit: its own game scores the damage
   if(hit<2.2)return;
-  u.health=Math.max(0,u.health-0.33*Math.pow(hit-2.2,1.7)*(u.ram?0.45:0.8));a.health=u.health;   // a unit ramming on purpose hits with its push bar
+  u.health=Math.max(0,u.health-0.33*Math.pow(hit-2.2,1.7)*(u.ram?0.45:by===PLAYER?1.6:0.8));   // the suspect slamming into a cruiser does real damage to ita.health=u.health;   // a unit ramming on purpose hits with its push bar
   if(u.health<=0)polWreck(u,by===PLAYER);}
 function polPlayerHit(a,imp){const u=a.unit;if(!u)return;u.touchT=POL.t;polUnitHit(a,imp,PLAYER);
   if((u.pit&&u.pit.ph!=='approach')||u.ram)return;   // his own PIT or ram contact
   if(imp<3||POL.t-(u.ramT||-9)<2.5){u.ramT=POL.t;return;}u.ramT=POL.t;const I=POL.inc;
   if(I){I.rams++;if(u.k.vis)polSay(u.id,'Suspect rammed my unit!',3);}
   else if(u.st!=='parked'||imp>4){polSay(u.id,'Vehicle just struck a police unit on '+polWhere(PLAYER.x,PLAYER.z)+'. In pursuit.',3);if(POL.stop)POL.stop=null;polComm(null);polIncident(2,'struck a police vehicle',u);}}
-function polWreck(u,byPlayer){const a=u.a;u.st='wrecked';u.ram=null;u.box=null;u.rbox=null;a.pitAcc=null;u.role=null;u.holdNode=null;u.node=null;polLightsOff(u);a.acc=true;a.accT=TRAFFIC.t;a.hazard=true;
+function polWreck(u,byPlayer){const a=u.a;u.st='wrecked';u.ram=null;u.ovt=null;u.block=null;u.box=null;u.rbox=null;a.pitAcc=null;u.role=null;u.holdNode=null;u.node=null;polLightsOff(u);a.acc=true;a.accT=TRAFFIC.t;a.hazard=true;
   if(u.spikeJob)polSpikeCancel(u,true);if(POL.pit===u){POL.pit=null;u.pit=null;}if(POL.stop&&POL.stop.u===u){POL.stop=null;polComm(null);}
   if(POL.inc&&byPlayer)POL.inc.wrecked++;u.wreckT=POL.t;
   polSay(u.id,'My unit is disabled'+(POL.inc?', out of the pursuit.':'.'),3);
@@ -9160,17 +9215,17 @@ function polBrain(u,dt){const a=u.a;polSense(u,dt);if(u.st==='wrecked')return;
           trAll().some(o=>o!==a&&(Math.hypot(o.x-bx,o.z-bz)<4.5||Math.hypot(o.x-ex,o.z-ez)<4.5)&&!(o.unit&&o.unit.st==='parked'&&o.unit.bay));
         if(a.mode!=='parked'){u.departQ=false;}else if(!busy&&POL.t-(S.lastDep||-9)>2.5){u.departQ=false;S.lastDep=POL.t;polDepart(u);}else{u.why='waiting to pull out';break;}}
       // jammed: sat still behind another car for a while (two cruisers nose to nose, one boxed in at the station): back off and re-plan
-      if(a.mode!=='hold'&&a.mode!=='parked'&&a.mode!=='rev'&&!u.box&&!u.rbox&&!u.holdStop&&!(u.nodeWait>0)&&a.sim==='phys'&&Math.abs(a.u)<0.4&&u.role!=='intercept')u.stillT=(u.stillT||0)+dt;else u.stillT=0;
-      if(u.stillT>5&&POL.t>(u.unjamT||0)){u.stillT=0;u.unjamT=POL.t+8;const fx=Math.cos(a.psi),fz=-Math.sin(a.psi),rx=-fz,rz=fx;
+      if(a.mode!=='hold'&&a.mode!=='parked'&&a.mode!=='rev'&&!u.box&&!u.block&&!u.rbox&&!u.holdStop&&!(u.nodeWait>0)&&a.sim==='phys'&&Math.abs(a.u)<0.4&&u.role!=='intercept')u.stillT=(u.stillT||0)+dt;else u.stillT=0;
+      if(u.stillT>(POL.pt.speed>3?2.5:5)&&POL.t>(u.unjamT||0)){u.stillT=0;u.unjamT=POL.t+5;const fx=Math.cos(a.psi),fz=-Math.sin(a.psi),rx=-fz,rz=fx;
         const blocked=trAll().some(o=>{if(o===a)return false;const dx=o.x-a.x,dz=o.z-a.z,al=dx*fx+dz*fz,lt=dx*rx+dz*rz;return al>0&&al<a.halfLen+(o.halfLen||2.3)+3&&Math.abs(lt)<a.halfWid+(o.halfWid||0.95)+0.6;});
         u.manDone=null;u.merge=null;u.chaseMode='recover';u.why='jammed, backing off';POL.unjams=(POL.unjams||0)+1;
-        if(blocked)polReverse(a,4,a.psi,a2=>{polRejoin(a2);u.chaseMode=null;u.goalKey=null;});else{polRejoin(a);u.chaseMode=null;u.goalKey=null;}
+        if(blocked)polReverse(a,5.5,a.psi,a2=>{polRejoin(a2);u.chaseMode=null;u.goalKey=null;});else{polRejoin(a);u.chaseMode=null;u.goalKey=null;}
         break;}
-      if(u.role==='spike')polSpikeStep(u,dt);else if(u.rbox&&!u.box)polRBoxUnit(u,dt);else polRoleMove(u);if(u.role==='chase'&&!u.rbox){polRamStep(u,dt);if(!u.ram)polPitStep(u,dt);}break;}
+      if(u.role==='spike')polSpikeStep(u,dt);else if(u.rbox&&!u.box)polRBoxUnit(u,dt);else polRoleMove(u);if(u.block)polBlockStep(u);if(u.role==='chase'&&!u.rbox&&!u.block){polRamStep(u,dt);if(!u.ram)polPitStep(u,dt);if(!u.ram&&!u.pit)polOvertakeStep(u,dt);}break;}
   polEnforce(u,dt);polRecognize(u,dt);}
 /* driving, called by the traffic loop in place of the ordinary driver */
 function polThink(a,dt,ALL){const u=a.unit;polDriveParams(u);a.trailStop=null;a.nodeCap=null;a.nodeCapD=null;a.emStop=false;
-  if(u.pit||u.rbox||u.ram)a.pitAcc=a.pitAcc;else{a.pitAcc=null;a.pitLat=(a.pitLat||0)*Math.max(0,1-dt*1.5);}
+  if(u.pit||u.rbox||u.ram||u.ovt)a.pitAcc=a.pitAcc;else{a.pitAcc=null;a.pitLat=(a.pitLat||0)*Math.max(0,1-dt*1.5);}
   switch(a.mode){
     case 'parked':return;
     case 'hold':a.in.thr=0;a.in.brk=1;a.in.steer*=0.9;a.ad=-4;if(a.sim==='kin')a.vk=0;return;
@@ -10425,8 +10480,9 @@ function frame(now,bg){   // bg: a tick from the background worker while the tab
   if(MODE==='drive'||held){
     acc+=dt;
     car.surf=surfaceAt(car.x,car.z);
-    policeFrame(dt);trafficFrame(dt);
-    let n=0;while(acc>=H&&n<20){const u0=car.u;stepCar(H);collide();trafficCollide();t60Step(H,u0);acc-=H;n++;}
+    // a bug in the AI must never freeze the game: report it once and keep running
+    try{policeFrame(dt);trafficFrame(dt);}catch(e){if(!window.__simErr){window.__simErr=1;console.error('simulation error',e);}}
+    let n=0;while(acc>=H&&n<20){const u0=car.u;stepCar(H);collide();try{trafficCollide();}catch(e){if(!window.__colErr){window.__colErr=1;console.error('collision error',e);}}t60Step(H,u0);acc-=H;n++;}
     if(car.crash>0){if(!bg&&!held)crashSound(car.crash);car.crash=0;}
     if(bg)return;
     syncCar(dt);trafficVisuals(dt);healthFrame(dt);stepSmoke(dt);if(!held){driveCamera(dt);navFrame(dt);drawHud();audioFrame();trAudio();updateReflections(dt);}else if(MODE!=='map'){driveCamera(dt);updateReflections(dt);}   // paused online: keep showing the live world behind the menu
@@ -10446,17 +10502,41 @@ function frame(now,bg){   // bg: a tick from the background worker while the tab
 /* ---------------------------------------------------------------------------
    Boot
 --------------------------------------------------------------------------- */
-function boot(){
+/* loading: every step is real work (building the map, the traffic models, compiling shaders, decoding the engine
+   recording); the bar moves as each one finishes, and the menu only appears once it is all done */
+const LOAD={el:null,bar:null,txt:null,pct:null};
+function loadSet(f,label){if(!LOAD.el){LOAD.el=$('loading');LOAD.el.innerHTML='<div class="ld"><div class="ld-t">BACK ROADS</div><div class="ld-bar"><i></i></div><div class="ld-row"><span class="ld-s"></span><span class="ld-p"></span></div></div>';
+    LOAD.bar=LOAD.el.querySelector('.ld-bar i');LOAD.txt=LOAD.el.querySelector('.ld-s');LOAD.pct=LOAD.el.querySelector('.ld-p');}
+  f=clamp(f,0,1);LOAD.bar.style.width=(f*100).toFixed(1)+'%';LOAD.pct.textContent=Math.floor(f*100)+'%';if(label)LOAD.txt.textContent=label;}
+function loadYield(){return new Promise(r=>{let done=false;const go=()=>{if(!done){done=true;setTimeout(r,0);}};requestAnimationFrame(go);setTimeout(go,60);});}   // let the bar paint (works in a background tab too)
+async function boot(){
   if(!window.THREE){$('loading').textContent='The 3D view needs three.js from a CDN. Check your connection and reload.';return;}
-  try{
-    makeTextures();makeMats();initRenderer();defineMap();buildMap();trInitNet();initFx();drawMiniBase();bindOrbit();bindTouch();bindFullMap();bindSettings();applyGfx();syncHelp();initLampPool();applyTOD();setupReflections();
+  loadSet(0.02,'Starting');await loadYield();
+  const steps=[['Painting textures',makeTextures],['Mixing materials',makeMats],['Starting the 3D view',initRenderer],['Laying out the county',defineMap],
+    ['Building roads, towns and farms',buildMap],['Planning traffic routes',trInitNet],['Smoke and skid marks',initFx],['Drawing the minimap',drawMiniBase],
+    ['Controls',()=>{bindOrbit();bindTouch();bindFullMap();bindSettings();applyGfx();syncHelp();}],['Street lights',initLampPool],['Sky and light',()=>{applyTOD();setupReflections();}]];
+  try{for(let i=0;i<steps.length;i++){loadSet(0.03+0.32*i/steps.length,steps[i][0]);await loadYield();steps[i][1]();}
     $('mapnote').innerHTML='3.2 × 3.2 km · '+MAP.roads.length+' roads · '+MAP.nodes.length+' junctions · '+MAP.signals.length+' traffic signals<br>Town of Harlan · SR-12 · Tallgrass River · 2 bridges';
   }catch(e){$('loading').textContent='Could not start the 3D view: '+e.message;console.error(e);return;}
-  $('loading').hidden=true;show('menu');
-  requestAnimationFrame(t=>{last=t;frame(t);});
-  setTimeout(()=>{const C0=CARS[pick.i];try{spawnCar(C0.key,C0.colors[0]);carObj3.grp.visible=false;}catch(e){}
-    try{sndLoad(sndPackFor(carSpec(C0.key)));}catch(e){}},50);   // other cars' recordings load when picked
-  setTimeout(trBuildIdle,900);   // traffic models, one at a time in the background
+  // your car and its engine recording (fetched while the rest builds)
+  loadSet(0.36,'Your car');await loadYield();const C0=CARS[pick.i];let pack=null;
+  try{spawnCar(C0.key,C0.colors[0]);carObj3.grp.visible=false;}catch(e){}
+  try{pack=sndLoad(sndPackFor(carSpec(C0.key)));}catch(e){}
+  // every traffic and police model, one per step
+  const todo=TR_BUILD_Q.filter(k=>PRESETS[k]&&!TPL[k]).length;let built=0;
+  for(;;){loadSet(0.38+0.42*(todo?built/todo:1),'Traffic and police cars '+Math.min(built+1,todo)+' of '+todo);await loadYield();if(!trBuildNext())break;built++;}
+  loadSet(0.81,'Compiling shaders');await loadYield();
+  trWarm();try{menuCamera(0);renderer.compile(world,camera);}catch(e){}
+  // the engine recording: wait for it to decode (up to 10 s, so a slow or blocked connection can't hang the game)
+  loadSet(0.88,'Engine sounds');const t0=performance.now();
+  for(;;){const P=Object.values(SND.packs),n=P.length,ok=P.filter(q=>q.ready||q.failed).length,el=performance.now()-t0;
+    if((ok>=n&&(!pack||pack.ready||pack.failed))||el>12000)break;
+    loadSet(0.88+0.07*(n?ok/n:1),'Engine sounds '+ok+' of '+n);await new Promise(r=>setTimeout(r,100));}
+  // draw the first frames behind the screen so the first look at the menu doesn't stutter
+  loadSet(0.95,'First frames');show('menu');$('loading').hidden=false;
+  last=performance.now();requestAnimationFrame(t=>{last=t;frame(t);});
+  for(let i=0;i<4;i++)await loadYield();
+  loadSet(1,'Ready');await loadYield();$('loading').hidden=true;
 }
 boot();
 })();
