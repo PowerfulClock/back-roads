@@ -9462,8 +9462,78 @@ function brP2P(){if(BR_P2P_)return BR_P2P_;if(typeof Peer!=='function')return nu
     throw {code:'network'};}};
   return BR_P2P_;}
 
+/* ---- relay rooms for the standalone site: every player talks to public MQTT relays over a secure WebSocket (port 443-ish,
+   like any web page), so it works across different networks, mobile data, school/work Wi-Fi and strict NATs. Browser-to-
+   browser WebRTC (PeerJS) needed a TURN relay for that, and the free ones don't answer. Each player publishes their own
+   state to every relay that answers; everyone merges what comes back, newest message per player wins. ---- */
+const BR_RELAYS=['wss://broker.hivemq.com:8884/mqtt','wss://broker.emqx.io:8084/mqtt'];
+function brRelay(){
+  const qs=new URLSearchParams(location.search),urls=qs.get('relay')?[qs.get('relay')]:BR_RELAYS;
+  const TE=new TextEncoder(),TD=new TextDecoder();
+  const rnd=n=>{const ch='abcdefghijkmnpqrstuvwxyz23456789';let s='';for(let i=0;i<n;i++)s+=ch[Math.floor(Math.random()*ch.length)];return s;};
+  const vlen=n=>{const o=[];do{let b=n%128;n=Math.floor(n/128);if(n>0)b|=128;o.push(b);}while(n>0);return o;};
+  const str=s=>{const b=TE.encode(s);return [b.length>>8,b.length&255,...b];};
+  const pkt=(h,body)=>{const head=[h,...vlen(body.length)],out=new Uint8Array(head.length+body.length);out.set(head,0);out.set(body,head.length);return out;};
+  function open(code){
+    const me=rnd(12),base='backroads/v3/'+code+'/p/',myT=base+me;
+    let mine={},seq=0,closed=false,subs=[],snap=Object.freeze([]),beat=null,prune=null,lastPub=0;
+    const map={},cache={},conns=[];
+    function emit(){const ids=Object.keys(map).filter(id=>id===me||map[id].pr);
+      snap=Object.freeze(ids.map(id=>{const pr=id===me?mine:map[id].pr,c=cache[id];if(c&&c.pr===pr)return c.o;
+        const o=Object.freeze({peer:id,by:null,isMe:id===me,sameTab:id===me,kind:'viewer',guest:false,presence:Object.freeze(pr),updatedAt:Date.now()});cache[id]={pr,o};return o;}));
+      const ch={peers:snap,joined:[],left:[],updated:[]};subs.forEach(f=>{try{f(ch);}catch(e){}});}
+    function onMsg(topic,pl){if(topic.indexOf(base)!==0)return;const id=topic.slice(base.length);if(!id||id===me||id.length>20)return;
+      if(!pl.length){const m=map[id];if(m)m.seen=Math.min(m.seen,Date.now()-6000);return;}   // a relay saw them drop: gone soon unless the other relay still hears them
+      let d;try{d=JSON.parse(TD.decode(pl));}catch(e){return;}
+      if(!d||typeof d!=='object'||typeof d.q!=='number'||!d.p||typeof d.p!=='object'||typeof d.s!=='string')return;
+      if(Math.abs(Date.now()-(+d.t||0))>30000)return;   // a stale leftover
+      const m=map[id];if(m&&m.s===d.s&&d.q<=m.q){m.seen=Date.now();return;}   // an older or duplicate copy (the other relay)
+      map[id]={pr:d.p,q:d.q,s:d.s,seen:Date.now()};emit();}
+    const sess=rnd(6);
+    function connect(url,C){
+      C=C||{url,ok:false,ws:null,buf:new Uint8Array(0),tries:0};
+      let ws;try{ws=new WebSocket(url,['mqtt']);}catch(e){return C;}
+      ws.binaryType='arraybuffer';C.ws=ws;C.ok=false;C.buf=new Uint8Array(0);
+      ws.onopen=()=>{   // MQTT 3.1.1 CONNECT: clean session, keepalive 30 s, last will = empty retained message on our topic
+        ws.send(pkt(0x10,[...str('MQTT'),4,0x02|0x04|0x20,0,30,...str('br'+me+rnd(3)),...str(myT),0,0]));};
+      ws.onmessage=ev=>{const nb=new Uint8Array(ev.data),b=new Uint8Array(C.buf.length+nb.length);b.set(C.buf);b.set(nb,C.buf.length);C.buf=b;
+        for(;;){const B=C.buf;if(B.length<2)break;let mul=1,len=0,i=1,byte,ok=true;
+          do{if(i>=B.length){ok=false;break;}byte=B[i++];len+=(byte&127)*mul;mul*=128;}while(byte&128);
+          if(!ok||B.length<i+len)break;const type=B[0]>>4,body=B.subarray(i,i+len);C.buf=B.slice(i+len);
+          if(type===2){if(body[1]===0)ws.send(pkt(0x82,[0,1,...str(base+'+'),0]));else{try{ws.close();}catch(e){}}}   // CONNACK -> SUBSCRIBE
+          else if(type===9){C.ok=true;C.tries=0;if(C.ready)C.ready();if(seq)publish(C);}                       // SUBACK
+          else if(type===3){const tl=(body[0]<<8)|body[1],topic=TD.decode(body.subarray(2,2+tl));let p=2+tl;if((B[0]>>1)&3)p+=2;onMsg(topic,body.subarray(p));}}};
+      ws.onclose=ws.onerror=()=>{if(C.ws!==ws)return;C.ws=null;C.ok=false;
+        if(!closed){C.tries++;setTimeout(()=>{if(!closed&&!C.ws)connect(url,C);},Math.min(15000,1000*C.tries));}};
+      return C;}
+    function publish(C,empty){if(!C.ok||!C.ws||C.ws.readyState!==1)return;
+      const pl=empty?new Uint8Array(0):TE.encode(JSON.stringify({q:seq,s:sess,t:Date.now(),p:mine}));
+      const tp=str(myT),body=new Uint8Array(tp.length+pl.length);body.set(tp,0);body.set(pl,tp.length);
+      try{C.ws.send(pkt(0x31,body));}catch(e){}}   // PUBLISH, QoS 0, retained (a newcomer sees us straight away)
+    function send(){seq++;lastPub=Date.now();conns.forEach(C=>publish(C));}
+    const room={name:code,
+      presence(patch){mine=Object.assign({},mine,JSON.parse(JSON.stringify(patch)));Object.keys(patch).forEach(k=>{if(patch[k]===null)delete mine[k];});
+        map[me]={pr:mine,q:seq,seen:Date.now()};send();emit();return Promise.resolve();},
+      peers(){return snap;},
+      onPeers(f){subs.push(f);setTimeout(()=>f({peers:snap,joined:snap,left:[],updated:[]}),0);return()=>{subs=subs.filter(x=>x!==f);};},
+      connected(){return conns.some(C=>C.ok);},
+      leave(){if(closed)return Promise.resolve();closed=true;clearInterval(beat);clearInterval(prune);
+        conns.forEach(C=>{publish(C,true);try{if(C.ws&&C.ws.readyState===1)C.ws.send(new Uint8Array([0xE0,0]));}catch(e){}
+          const w=C.ws;C.ws=null;setTimeout(()=>{try{w&&w.close();}catch(e){}},250);});return Promise.resolve();}};
+    map[me]={pr:mine,q:0,seen:Date.now()};emit();
+    window.addEventListener('pagehide',()=>{room.leave();});
+    return new Promise((res,rej)=>{let done=false;
+      const ready=()=>{if(done)return;done=true;clearTimeout(to);send();
+        beat=setInterval(()=>{if(Date.now()-lastPub>1500)send();   // keep-alive for players sitting in the lobby
+          conns.forEach(C=>{if(C.ok&&C.ws&&C.ws.readyState===1&&Date.now()-(C.ping||0)>20000){C.ping=Date.now();try{C.ws.send(new Uint8Array([0xC0,0]));}catch(e){}}});},1000);
+        prune=setInterval(()=>{const now=Date.now();let ch=false;Object.keys(map).forEach(id=>{if(id!==me&&now-map[id].seen>7000){delete map[id];delete cache[id];ch=true;}});if(ch)emit();},1000);
+        setTimeout(()=>res(room),1200);};   // a moment for the retained messages, so the player list is right straight away
+      const to=setTimeout(()=>{if(done)return;done=true;room.leave();rej({code:'network'});},10000);
+      urls.forEach(u=>{const C=connect(u);C.ready=ready;conns.push(C);});});}
+  return {open};}
+
 /* ---- connection ---- */
-function netTransport(){if(typeof Peer==='function')return 'p2p';if(window.claude&&typeof window.claude.use==='function')return 'claude';return null;}
+function netTransport(){if(typeof Peer==='function'&&typeof WebSocket==='function'&&!NET.noRelay)return 'relay';if(typeof Peer==='function')return 'p2p';if(window.claude&&typeof window.claude.use==='function')return 'claude';return null;}
 function netErrText(e){const c=e&&e.code;
   if(c==='unavailable')return netTransport()==='claude'?'Online play needs this page opened in Claude while signed in, and shared with the other players.':'Online play is not available in this browser.';
   return 'Could not reach the server. Check your internet connection and try again.';}
@@ -9471,7 +9541,8 @@ async function netOpen(srv){
   if(NET.room&&NET.srv===srv.id&&NET.status==='open')return NET.room;
   await netClose();const tag=++NET.openSeq;NET.srv=srv.id;NET.status='connecting';NET.err='';netRenderServers();
   try{let room=null;const t=netTransport();
-    if(t==='p2p')room=await brP2P().open(srv.id);
+    if(t==='relay'){try{room=await brRelay().open(srv.id);}catch(e){if(tag!==NET.openSeq)return null;throw e;}}
+    else if(t==='p2p')room=await brP2P().open(srv.id);
     else if(t==='claude'){const lobby=await window.claude.use('room');if(!lobby)throw {code:'unavailable'};room=await lobby.join('br-'+srv.id);}
     else throw {code:'unavailable'};
     if(tag!==NET.openSeq){try{room.leave();}catch(e){}return null;}
@@ -9532,7 +9603,7 @@ function netFrame(dt){if(!NET.on)return;
       const pr=Object.assign({n:NET.name,jt:NET.jt,d:1,w:POL.inc?POL.inc.level:0,ch:CHAT.mine,c:c.key,col:pick.color||C.colors[0],
         s:[nr(c.x,100),nr(c.z,100),nr(c.psi,1000),nr(c.u,100),nr(c.v,100),nr(c.yr,100),nr(c.steer||0,1000),nr(c.brk||0,100),nr(c.thr||0,100),c.gear|0,c.state,Math.round(c.rpm||0)]},nwPayload());
       // the Claude room carries at most 4 KB per player: send the nearest traffic that fits
-      if(netTransport()==='claude'){let L=JSON.stringify(pr).length;while(L>3800&&pr.tr&&pr.tr.length){pr.tr=pr.tr.slice(0,Math.floor(pr.tr.length*0.7));L=JSON.stringify(pr).length;}}
+      {const lim=netTransport()==='claude'?3800:6000;let L=JSON.stringify(pr).length;while(L>lim&&pr.tr&&pr.tr.length){pr.tr=pr.tr.slice(0,Math.floor(pr.tr.length*0.7));L=JSON.stringify(pr).length;}}
       NET.room.presence(pr).catch(()=>{});}
     else NET.room.presence({n:NET.name,jt:NET.jt,d:0,ch:CHAT.mine,s:null,cl:null,pu:null,tr:null,sp:null}).catch(()=>{});}
   chatPoll();
