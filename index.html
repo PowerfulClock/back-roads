@@ -9469,7 +9469,7 @@ function netFrame(dt){if(!NET.on)return;
   NET.sendT-=dt;
   if(NET.sendT<=0){NET.sendT=0.1;
     if(MODE==='drive'||MODE==='pause'||MODE==='map'){const c=car,C=CARS[pick.i];
-      const pr=Object.assign({n:NET.name,jt:NET.jt,d:1,c:c.key,col:pick.color||C.colors[0],
+      const pr=Object.assign({n:NET.name,jt:NET.jt,d:1,w:POL.inc?POL.inc.level:0,c:c.key,col:pick.color||C.colors[0],
         s:[nr(c.x,100),nr(c.z,100),nr(c.psi,1000),nr(c.u,100),nr(c.v,100),nr(c.yr,100),nr(c.steer||0,1000),nr(c.brk||0,100),nr(c.thr||0,100),c.gear|0,c.state,Math.round(c.rpm||0)]},nwPayload());
       // the Claude room carries at most 4 KB per player: send the nearest traffic that fits
       if(netTransport()==='claude'){let L=JSON.stringify(pr).length;while(L>3800&&pr.tr&&pr.tr.length){pr.tr=pr.tr.slice(0,Math.floor(pr.tr.length*0.7));L=JSON.stringify(pr).length;}}
@@ -9486,11 +9486,17 @@ function netMakeCar(key,col,x,z,psi){
   const a=trCreate(key,{parked:true,x,z,psi,instant:true,color:col});if(!a)return null;
   Object.assign(a,{parked:false,awake:true,remote:true,state:'D',alpha:1,fade:1,sim:'phys',mode:'remote'});a.in={thr:0,brk:0,steer:0,hand:0};
   return a;}
-function netTag(name){const cv=document.createElement('canvas');cv.width=256;cv.height=64;const x=cv.getContext('2d');
+function netTag(name,stars){stars=Math.max(0,Math.min(5,stars|0));const H=stars?112:64,top=stars?48:0;
+  const cv=document.createElement('canvas');cv.width=256;cv.height=H;const x=cv.getContext('2d');
   x.font='600 30px "Barlow Condensed","Arial Narrow",sans-serif';const w=Math.min(240,x.measureText(name).width+28);
-  x.fillStyle='rgba(18,20,23,.78)';x.fillRect((256-w)/2,10,w,44);x.fillStyle='#ffa219';x.fillRect((256-w)/2,10,4,44);
-  x.fillStyle='#ece8df';x.textAlign='center';x.textBaseline='middle';x.fillText(name,128,33);
-  const t=new TH.CanvasTexture(cv);const s=new TH.Sprite(new TH.SpriteMaterial({map:t,depthTest:true,depthWrite:false,transparent:true,sizeAttenuation:true,fog:false}));s.renderOrder=20;s.scale.set(2.4,0.6,1);world.add(s);return s;}   // a fixed size in the world: shrinks with distance like the car, and buildings or hills in front hide it
+  x.fillStyle='rgba(18,20,23,.78)';x.fillRect((256-w)/2,top+10,w,44);x.fillStyle='#ffa219';x.fillRect((256-w)/2,top+10,4,44);
+  x.fillStyle='#ece8df';x.textAlign='center';x.textBaseline='middle';x.fillText(name,128,top+33);
+  if(stars){   // wanted level, same type size as the name: lit stars for the level, dim ones for the rest of the five
+    x.font='600 30px "Barlow Condensed","Arial Narrow",sans-serif';const sw=30,x0=128-sw*2;
+    x.fillStyle='rgba(18,20,23,.78)';x.fillRect(x0-sw/2-6,8,sw*5+12,40);
+    for(let i=0;i<5;i++){x.fillStyle=i<stars?'#ffcf3a':'rgba(236,232,223,.28)';x.fillText('\u2605',x0+i*sw,29);}}
+  const t=new TH.CanvasTexture(cv);const s=new TH.Sprite(new TH.SpriteMaterial({map:t,depthTest:true,depthWrite:false,transparent:true,sizeAttenuation:true,fog:false}));
+  s.renderOrder=20;s.scale.set(2.4,0.6*H/64,1);s.userData.lift=(0.6*H/64-0.6)/2;world.add(s);return s;}   // a fixed size in the world: shrinks with distance like the car, and buildings or hills in front hide it
 function netDropRemote(R){if(R.car&&R.car.alive)trRemove(R.car);R.car=null;
   if(R.tag){world.remove(R.tag);R.tag.material.map.dispose();R.tag.material.dispose();R.tag=null;}
   R.cops.forEach(G=>{if(G.car&&G.car.alive)trRemove(G.car);});R.cops.clear();}
@@ -9508,12 +9514,13 @@ function netRemoteFrame(dt){const now=performance.now(),seen=new Set();
   netOthers().forEach(p=>{const P=p.presence;if(P.d!==1||!Array.isArray(P.s)||P.s.length<12)return;seen.add(p.peer);
     let R=NET.rem.get(p.peer);if(!R){R={buf:[],last:null,car:null,key:null,col:null,tag:null,name:'',cops:new Map()};NET.rem.set(p.peer,R);}
     if(P!==R.last){R.last=P;const prev=R.buf[R.buf.length-1];if(!prev||prev.s.join()!==P.s.join()){R.buf.push({t:now,s:P.s});if(R.buf.length>24)R.buf.shift();}}
-    if(R.name!==P.n||!R.tag){if(R.tag){world.remove(R.tag);R.tag.material.map.dispose();R.tag.material.dispose();}R.tag=netTag(P.n);R.name=P.n;}
+    const ws=Math.max(0,Math.min(5,P.w|0));
+    if(R.name!==P.n||!R.tag||R.stars!==ws){if(R.tag){world.remove(R.tag);R.tag.material.map.dispose();R.tag.material.dispose();}R.tag=netTag(P.n,ws);R.name=P.n;R.stars=ws;}
     const s=netSample(R.buf,now);if(!s)return;
     if(!R.car||!R.car.alive||R.key!==P.c||R.col!==P.col){if(R.car&&R.car.alive)trRemove(R.car);R.car=netMakeCar(P.c,P.col,s[0],s[1],s[2]);R.key=P.c;R.col=P.col;if(!R.car)return;}
     netApply(R.car,s);
     const d=Math.hypot(s[0]-camera.position.x,s[1]-camera.position.z);R.tag.visible=d<300;
-    R.tag.position.set(s[0],(R.car&&R.car.alive&&R.car.root?R.car.root.position.y:GROUND_Y)+2.25,s[1]);
+    R.tag.position.set(s[0],(R.car&&R.car.alive&&R.car.root?R.car.root.position.y:GROUND_Y)+2.25+(R.tag.userData.lift||0),s[1]);   // the name stays where it was; the stars sit above it
     });
   NET.rem.forEach((R,id)=>{if(!seen.has(id)){netDropRemote(R);NET.rem.delete(id);}});}
 
