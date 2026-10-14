@@ -7350,9 +7350,13 @@ function trChooseExit(a,node,app){
   // a police unit heading for a point on a road: at the junction before it, take that road
   if(a.goal&&node===a.goal.node&&a.goal.exit&&opts.indexOf(a.goal.exit)>=0){a.choice[node.id]=a.goal.exit;return a.goal.exit;}
   if(a.goal&&a.goal.stay){const sx=opts.find(e=>e.ri===a.goal.ri&&e.w===a.goal.T);if(sx){a.choice[node.id]=sx;return sx;}}
-  if(node===a.dest){if(a.unit){a.unit.legs=(a.unit.legs||0)+1;if(a.unit.st==='patrol'){polPatrolDest(a.unit);}else a.dest=trPickDest(a);}else a.dest=trPickDest(a);a.route=null;}
-  if(!a.route||!a.route.length||a.route[0].from!==node)a.route=trRoute(node,a.dest,app.ri,-app.w,a.routePen);
+  const hunt=a.unit&&a.unit.st==='pursuit';
+  // a pursuing unit that has reached its junction never picks a random destination: it asks for a fresh target (next brain
+  // tick) and meanwhile takes the exit toward him
+  if(node===a.dest){if(hunt){a.dest=null;a.unit.tgtNode=null;}else if(a.unit){a.unit.legs=(a.unit.legs||0)+1;if(a.unit.st==='patrol'){polPatrolDest(a.unit);}else a.dest=trPickDest(a);}else a.dest=trPickDest(a);a.route=null;}
+  if(!a.route||!a.route.length||a.route[0].from!==node)a.route=a.dest?trRoute(node,a.dest,app.ri,-app.w,a.routePen):null;
   if(a.route&&a.route.length&&(a.unit||Math.random()>0.06)){const r=a.route[0];ex=opts.find(e=>e.ri===r.ri&&e.w===r.T)||null;if(ex)a.route.shift();}
+  if(!ex&&hunt){a.route=null;ex=polExitToward(a,node,app,opts);a.choice[node.id]=ex;return ex;}
   if(!ex){a.route=null;const town=node.town;
     const w=opts.map(e=>{const t=trTurnType(app,e);return t==='S'?(town?0.5:0.76):t==='R'?(town?0.27:0.13):(town?0.23:0.11);});
     let r=Math.random()*w.reduce((s,x)=>s+x,0);for(let i=0;i<opts.length;i++){r-=w[i];if(r<=0){ex=opts[i];break;}}ex=ex||opts[0];}
@@ -8457,6 +8461,63 @@ function polRoleMove(u){const a=u.a,k=u.k,P=PLAYER,I=POL.inc;
 function polLead(){if(POL._leadT===POL.t)return POL._lead;POL._leadT=POL.t;let best=null,bd=1e9;
   for(const u of POL.units){if(u.role!=='chase'||u.st!=='pursuit'||!u.k.vis||u.netGhost||!u.a.alive)continue;const d=Math.hypot(u.a.x-PLAYER.x,u.a.z-PLAYER.z);if(d<bd){bd=d;best=u;}}
   POL._lead=best;if(best&&POL.inc)POL.inc.primary=best;return best;}
+/* ---------------------------------------------------------------- PURSUIT NAVIGATION
+   One target and one route at a time. The target is the junction the suspect is heading for: from what this unit sees, or
+   what the pursuit last knew (position, road, direction, speed), carried forward only as far as he could have driven since
+   (never more than 250 m: past that he may have turned). The route to it comes from the road graph (trRoute, Dijkstra over
+   junctions and road segments), so every turn is a real road. The target changes only when he reaches that junction or
+   changes road, so the route isn't swapped every few metres. At junctions without a route a pursuing unit takes the exit
+   with the shortest network distance to the target, never a random one. */
+const _ndc=new Map();
+function polDistFrom(n){const c=_ndc.get(n.id);if(c&&POL.t-c.t<5)return c.d;const d=polNodeDist(n);_ndc.set(n.id,{t:POL.t,d});return d;}
+// the first real junction at least minD metres ahead along a road, following bends (corner nodes) onto the next road
+function polNodeAhead(ri,idx,T,minD){let dist=0,last=null;
+  for(let k=0;k<8;k++){const nx=trNextNode(ri,idx,T);if(!nx)return last;dist+=nx.d*2;const n=nx.e.n;
+    if(n.control!=='corner'){last={n,dist};if(dist>=minD)return last;}
+    let ex=nx.e.ex[T];if(n.control==='corner'||!ex){const o=n.approaches.filter(e=>e!==nx.a&&e.idx!=null);if(o.length===1)ex=o[0];}
+    if(!ex)return last||{n,dist};ri=ex.ri;idx=ex.idx;T=ex.w;}
+  return last;}
+// the junctions ahead of a point on a road, in order, following straight-on exits and bends (up to n of them)
+function polNodesAhead(ri,idx,T,n){const out=[];let dist=0;
+  for(let k=0;k<12&&out.length<n;k++){const nx=trNextNode(ri,idx,T);if(!nx)break;dist+=nx.d*2;const nd=nx.e.n;
+    if(nd.control!=='corner')out.push({n:nd,dist});
+    let ex=nx.e.ex[T];if(nd.control==='corner'||!ex){const o=nd.approaches.filter(e=>e!==nx.a&&e.idx!=null);if(o.length===1)ex=o[0];}
+    if(!ex)break;ri=ex.ri;idx=ex.idx;T=ex.w;}
+  return out;}
+/* where to go: of the junctions ahead of him, the first this unit can reach before he does (so it gets in front of him or
+   right onto his tail), else the first one. Built only from what the unit sees or what the pursuit last knew, carried forward
+   no further than he could have driven since. The current target is kept while it is still workable, so the route isn't
+   replaced by an equally good one every few seconds. */
+function polChaseTarget(u){const I=POL.inc,T=POL.pt,a=u.a;let src=null;
+  if((u.k.vis||(I&&I.vis))&&T.onRoad)src={ri:T.ri,idx:T.idx,T:T.T,x:PLAYER.x,z:PLAYER.z,speed:T.speed,age:0};
+  else if(I&&I.lkp&&I.lkp.ri!=null){const l=I.lkp;src={ri:l.ri,idx:l.idx,T:l.T,x:l.x,z:l.z,speed:l.speed||0,age:Math.max(0,POL.t-(l.t||POL.t))};}
+  else if(I&&I.lkp){const l=I.lkp;return {node:polNearNode(l.x,l.z),src:{ri:null,x:l.x,z:l.z,age:POL.t-(l.t||POL.t)}};}
+  if(!src)return null;
+  const gone=Math.min(250,src.speed*src.age),chain=polNodesAhead(src.ri,src.idx,src.T,5).filter(c=>c.dist>=gone-5);
+  if(!chain.length){const n=polNearNode(src.x,src.z);return {node:n,src};}
+  const un=polUnitNode(u);if(!un.n)return {node:chain[0].n,src};
+  const D=polDistFrom(un.n),vU=Math.max(18,Math.min(polTopV(a)*0.8,32)),vS=Math.max(8,src.speed);
+  const slack=c=>(un.d+D[c.n.id])/vU-(c.dist-gone)/vS;   // < 0: we get there first
+  const cur=chain.find(c=>c.n===u.tgtNode);if(cur&&slack(cur)<4)return {node:cur.n,src};
+  const pick=chain.find(c=>slack(c)<0)||chain[0];return {node:pick.n,src};}
+// the exit that gets this unit to the target soonest (shortest network distance); straight on wins a tie, nothing random
+function polExitToward(a,node,app,opts){const straight=opts.find(e=>trTurnType(app,e)==='S');
+  const tg=a.unit&&polChaseTarget(a.unit);if(!tg||!tg.node)return straight||opts[0];
+  const tn=tg.node;let best=null,bc=1e18;
+  for(const e of opts){const nx=trNextNode(e.ri,e.idx,e.w);let c=null;
+    if(tg.src.ri===e.ri){const dd=(tg.src.idx-e.idx)*e.w;if(dd>=0&&(!nx||dd<=nx.d))c=dd*2;}   // he is on this road, just along this exit
+    if(c==null)c=(!nx||nx.e.n===node)?1e9:nx.d*2+polDistFrom(nx.e.n)[tn.id];
+    if(trTurnType(app,e)!=='S')c+=8;
+    if(c<bc){bc=c;best=e;}}
+  return best||straight||opts[0];}
+// drive the road graph to the target; replan only when the target junction changes or the unit has left its path
+function polChaseRoad(u,why){const a=u.a,tg=polChaseTarget(u);if(!tg||!tg.node)return false;
+  if(a.mode!=='road'){polRejoin(a);u.tgtNode=null;}
+  if(a.mode==='road'&&a.path.length){const p=a.path[Math.min(a.k,a.path.length-1)],off=Math.hypot(p.x-a.x,p.z-a.z);u.offPathT=off>9?(u.offPathT||0)+0.2:0;
+    if(u.offPathT>1.5){u.offPathT=0;polRejoin(a);u.tgtNode=null;POL.missed=(POL.missed||0)+1;}}   // overshot a turn: back onto the nearest road and replan from there
+  if(u.tgtNode!==tg.node||u.chaseMode!=='road'){u.tgtNode=tg.node;u.chaseMode='road';polRouteTo(a,tg.node);}
+  u.why=why;polRouteTurnCheck(u,tg.node);return true;}
+
 /* chasing: decided at 5 Hz from what this officer can see (or last saw) */
 function polChaseMove(u){const a=u.a,k=u.k,P=PLAYER,I=POL.inc,T=POL.pt;
   const d=Math.hypot(P.x-a.x,P.z-a.z),cp=Math.cos(a.psi),sp=Math.sin(a.psi),fu=((P.x-a.x)*cp-(P.z-a.z)*sp)/Math.max(d,1);
@@ -8473,7 +8534,8 @@ function polChaseMove(u){const a=u.a,k=u.k,P=PLAYER,I=POL.inc,T=POL.pt;
     const headOn=T.speed>4&&d<450&&fu>0.5&&fp>0.5&&along<-3&&latP<14&&(onHis||d<80);
     if(headOn||(u.headOn&&fu>0.3&&d<450&&POL.t-u.headOn<1.2)){if(headOn)u.headOn=POL.t;u.oncoming=true;
       // he has just swung round close in front of us, still slow: swing round with him now instead of waiting for him to go by
-      if(d<50&&Math.abs(a.u)<9&&T.speed<14){u.turnCool=0;u.turnLog=[];u.mirrorTurn=true;const ok=polTurnAround(u,'turning with him');u.mirrorTurn=false;if(ok)return;}
+      // (only with room to spare: he must not be in our turning space or coming through it, or we swing into him)
+      if(d>22&&d<50&&Math.abs(a.u)<9&&T.speed<14&&polUTurnSafeQuick(u)){u.turnCool=0;u.turnLog=[];const ok=polTurnAround(u,'turning with him');if(ok)return;}
       if(I&&I.level>=4&&polBlockTry(u,d,T))return;
       u.why='oncoming, holding course';if(a.mode==='trail')polRejoin(a);return;}
     if(!headOn&&!(u.headOn&&POL.t-u.headOn<1.2))u.oncoming=false;   // only while he is actually coming at us: a stale flag held units to a crawl
@@ -8493,38 +8555,23 @@ function polChaseMove(u){const a=u.a,k=u.k,P=PLAYER,I=POL.inc,T=POL.pt;
       // he doubled back on himself: running round his loop is pointless, start the track again from where he is now
       if(polTrailLeft(u)>1.7*d+90){k.trail=[{x:P.x,z:P.z}];k.ti=0;}
       u.chaseMode='trail';u.why='following';return;}
-    // another road: over the road network to a point ahead of him on his road
-    if(T.onRoad){const lead=Math.round(clamp(T.speed*1.5,8,60)/2),key=T.ri+':'+T.T;
-      // keep heading for the same stretch of his road until he changes road or has gone well past it: re-aiming every few
-      // metres makes a unit zig-zag round town blocks
-      if(u.chaseMode!=='road'||a.mode!=='road'||u.goalKey!==key||(POL.t-(u.goalT||0)>4&&Math.abs(T.idx-(u.goalIdx||0))*2>140)){
-        u.chaseMode='road';u.goalKey=key;u.goalIdx=T.idx;u.goalT=POL.t;if(a.mode!=='road')polRejoin(a);polGoal(a,T.ri,T.idx+T.T*lead,T.T,0,null);}
-      u.why='routing to his road';polRouteTurnCheck(u,{x:P.x,z:P.z});return;}
+    // another road: the road graph to the junction he's heading for
+    if(T.onRoad&&polChaseRoad(u,'routing to his road'))return;
     if(a.mode!=='trail'){k.trail=k.trail.length?k.trail:[{x:P.x,z:P.z}];a.mode='trail';}u.chaseMode='trail';u.why='following off-road';return;}
   // out of sight: run down his track to where he was last seen, then the road network from there
   const ahead=k.trail.length-1-k.ti;
   if(a.mode==='trail'&&ahead>2&&!u.needTurn){u.why='running his track';return;}
   const l=I?I.lkp:(k.seen?Object.assign({ri:null},k.seen):null);if(!l)return;
   u.oncoming=false;
-  // the pursuit has him right now (another unit sees him, or he was seen moments ago): close on him over the road network,
-  // aiming a little ahead of him on his road the way he is going, and turn round promptly if he is behind us
-  const fresh=I&&(I.vis||POL.t-(l.t||-99)<3)&&l.ri!=null;
-  if(fresh){const sp0=Math.max(8,l.speed||0),lead=Math.round(clamp(sp0*1.8,10,90)/2),key='F'+l.ri+':'+l.T;
-    if(u.chaseMode!=='road'||a.mode!=='road'||u.goalKey!==key||(POL.t-(u.goalT||0)>2.5&&Math.abs(l.idx-(u.goalIdx||0))*2>50)){
-      u.chaseMode='road';u.goalKey=key;u.goalIdx=l.idx;u.goalT=POL.t;if(a.mode!=='road')polRejoin(a);polGoal(a,l.ri,l.idx+l.T*lead,l.T,0,null);}
-    u.why='closing in on him';u.eager=true;polRouteTurnCheck(u,{x:l.x,z:l.z});u.eager=false;return;}
-  const key=l.ri+':'+Math.round((l.idx||0)/60);
-  if(u.chaseMode!=='road'||a.mode!=='road'||(u.goalKey!==key&&(POL.t-(u.goalT||0)>4||String(u.goalKey).split(':')[0]!==String(l.ri)))){u.chaseMode='road';u.goalKey=key;u.goalT=POL.t;if(a.mode!=='road')polRejoin(a);
-    // already on that road: go along it the way we are facing (insisting on his direction loops round a block)
-    let gT=l.T;if(l.ri!=null){const q=polRoadAt(a.x,a.z);if(q&&q.ri===l.ri&&q.d<q.r.width/2+3){const Pp=MAP.roads[l.ri].pts,j=Math.min(Pp.length-1,q.i+1),tx=Pp[j][0]-Pp[q.i][0],tz=Pp[j][1]-Pp[q.i][1];
-      gT=(Math.cos(a.psi)*tx-Math.sin(a.psi)*tz)>=0?1:-1;}}
-    if(l.ri!=null)polGoal(a,l.ri,l.idx+gT*4,gT,0,()=>{u.goalKey='done';if(I&&!k.vis&&u.role==='chase'){const sn=polSearchNode(I,new Set());if(sn)polAssign(u,'search',sn);}});
-    else polRouteTo(a,polNearNode(l.x,l.z));}
-  u.why='to last known position';polRouteTurnCheck(u,{x:l.x,z:l.z});}
+  const age=POL.t-(l.t||POL.t),fresh=I&&(I.vis||age<3);
+  // reached the junction he was heading for and still nothing: hand over to searching the area
+  if(!fresh&&age>8&&u.tgtNode&&Math.hypot(a.x-u.tgtNode.x,a.z-u.tgtNode.z)<u.tgtNode.R+10&&u.role==='chase'){const sn=polSearchNode(I,new Set());if(sn){polAssign(u,'search',sn);return;}}
+  polChaseRoad(u,fresh?'closing in on him':'to last known position');}
+function polUTurnSafeQuick(u){const a=u.a,q=polRoadAt(a.x,a.z);return !!q&&q.d<q.r.width/2+3&&polUTurnSafe(a,q);}
 /* is the road clear enough to turn round here? oncoming traffic, anything closing from behind, anything parked where we'd swing */
 function polUTurnSafe(a,q){const r=q.r,Pp=r.pts,j=Math.min(Pp.length-1,q.i+1);let tx=Pp[j][0]-Pp[q.i][0],tz=Pp[j][1]-Pp[q.i][1];const l=Math.hypot(tx,tz)||1;tx/=l;tz/=l;
   if(Math.cos(a.psi)*tx-Math.sin(a.psi)*tz<0){tx=-tx;tz=-tz;}const v=Math.max(0,a.u),lead=Math.max(6,(v*v-16)/12.4),hw=r.width/2;
-  for(const o of trAll()){if(o===a||!o.alive&&o!==PLAYER)continue;if(o===PLAYER&&a.unit&&a.unit.mirrorTurn)continue;const rx=o.x-a.x,rz=o.z-a.z,al=rx*tx+rz*tz,lat=-rx*tz+rz*tx;if(Math.abs(lat)>hw+4)continue;
+  for(const o of trAll()){if(o===a||!o.alive&&o!==PLAYER)continue;const rx=o.x-a.x,rz=o.z-a.z,al=rx*tx+rz*tz,lat=-rx*tz+rz*tx;if(Math.abs(lat)>hw+4)continue;
     const vw=trVel(o),ov=vw[0]*tx+vw[1]*tz;
     if(ov<-2&&al>-6&&al<lead+30+(-ov)*4)return false;                       // coming the other way
     if(ov>v+1&&al<4&&al>-45&&(-al)/(ov-v+0.1)<3.5)return false;              // closing from behind
@@ -8568,7 +8615,8 @@ function polStuckCheck(u){const a=u.a;if(a.sim!=='phys'||(a.mode!=='road'&&a.mod
 /* not in sight / on the road network: if the target is behind and the way back is shorter than carrying on to the next junction, turn round */
 const _pnd=new Map();
 function polRouteTurnCheck(u,tg){const a=u.a;if(a.mode!=='road'||POL.t<(u.turnCool||0)||POL.t<(u.rtcAt||0)||(u.headOn&&POL.t-u.headOn<3))return;u.rtcAt=POL.t+0.7;
-  const d=Math.hypot(tg.x-a.x,tg.z-a.z);if(d<60)return;const fu=((tg.x-a.x)*Math.cos(a.psi)-(tg.z-a.z)*Math.sin(a.psi))/d;if(fu>-0.15)return;
+  // the decision is made on network distances alone (onward via the next junction against back via the last one), wherever
+  // the target lies: a target off to one side can still be far shorter the other way, and one just behind still needs turning for
   const p=a.path[Math.min(a.path.length-1,a.k+1)];if(!p||p.ri<0)return;
   const tn=tg.id!=null?tg:polNearNode(tg.x,tg.z),extra=tg.id!=null?0:Math.hypot(tn.x-tg.x,tn.z-tg.z);
   const D=n=>{if(_pnd.get(n.id)&&_pnd.get(n.id).t>POL.t-3)return _pnd.get(n.id).d;const dd=polNodeDist(n);_pnd.set(n.id,{t:POL.t,d:dd});return dd;};
@@ -8577,7 +8625,10 @@ function polRouteTurnCheck(u,tg){const a=u.a;if(a.mode!=='road'||POL.t<(u.turnCo
   // the target on this same road, behind us before the junction back there
   const tq=polRoadAt(tg.x,tg.z);if(tq&&tq.ri===p.ri){const ti=polRoadIdx(p.ri,tg.x,tg.z),bd=(p.idx-ti)*p.T;if(bd>0&&(!nb||bd<nb.d))db=Math.min(db,bd*2);}
   u.rtc={df:Math.round(df),db:Math.round(db)};
-  if(db+(u.eager?Math.max(40,df*0.15):Math.max(120,df*0.3))<df)polTurnAround(u,'shorter way back');}   // only when turning round clearly wins: in a grid of streets the next junction is never far
+  // turn round only when going back is clearly shorter, and on two checks in a row (0.7 s apart): one noisy estimate
+  // mustn't flip the car round, and the next one flip it back
+  const win=db+Math.max(60,df*0.2)<df;u.rtcHits=win?(u.rtcHits||0)+1:0;
+  if(u.rtcHits>=2){u.rtcHits=0;polTurnAround(u,'shorter way back');}}   // only when turning round clearly wins: in a grid of streets the next junction is never far
 
 /* driving style for the current job */
 /* passing on the right, over the shoulder / verge, on a country road: only when the strip is free of vehicles (cars that
