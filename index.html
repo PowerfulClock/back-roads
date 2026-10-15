@@ -6892,9 +6892,9 @@ function initFx(){
 /* ---- vehicle health: 100 = undamaged, 0 = disabled. Police rams and traffic will call damageCar too. ---- */
 function damageCar(amount,source){if(!(amount>0)||car.health<=0)return;
   car.health=Math.max(0,car.health-amount);car.lastHit={amount,source,t:performance.now()};
-  if(car.health<=0){car.disabled=true;toast('Vehicle disabled');}}
+  if(car.health<=0){car.disabled=true;toast('Vehicle destroyed');if(carObj3)carExplode(car,carObj3.grp);}}
 window.BACKROADS_DAMAGE=(a,src)=>damageCar(a,src||'external');
-function repairCar(){car.health=100;car.disabled=false;car.flat=null;}
+function repairCar(){car.health=100;car.disabled=false;car.flat=null;if(car.burnt){car.burnt=false;if(carObj3)boomUnchar(carObj3.grp);}}
 function spawnCar(key,color){
   if(carObj3){world.remove(carObj3.grp);carObj3=null;}
   makeCar(key,color);
@@ -6910,7 +6910,7 @@ function spawnCar(key,color){
   car.x=MAP.spawn.x;car.z=MAP.spawn.z;car.psi=MAP.spawn.psi;
   skidPool.forEach(m=>m.visible=false);smokePool.forEach(m=>m.visible=false);
   car.lastWheel=[null,null,null,null];
-  car.health=100;car.disabled=false;car.flat=null;car.boost=0;car.boostPsi=0;car.smoke=0;   // a fresh car: nothing carried over from the last one (flat tyres, boost, smoke)
+  car.health=100;car.disabled=false;car.burnt=false;car.flat=null;car.boost=0;car.boostPsi=0;car.smoke=0;   // a fresh car: nothing carried over from the last one (flat tyres, boost, smoke)
   buildLightRig();
   syncCar(0);
 }
@@ -7476,16 +7476,23 @@ function trToKin(a){a.sim='kin';a.vk=Math.max(0,a.u);a.v=0;a.yr=0;}
 function trRemove(a){a.alive=false;world.remove(a.root);a.mats.forEach(m=>m.dispose());
   MAP.nodes.forEach(n=>{if(n.q.length)n.q=n.q.filter(q=>q.a!==a);});
   const i=TRAFFIC.cars.indexOf(a);if(i>=0)TRAFFIC.cars.splice(i,1);}
-function trClear(){trAudioStop();polSirenStop();TRAFFIC.cars.slice().forEach(trRemove);TRAFFIC.station=null;}
+function trClear(){trAudioStop();polSirenStop();boomClear();TRAFFIC.cars.slice().forEach(trRemove);TRAFFIC.station=null;}
 
-/* accident: the car stops where the hit left it, hazards on, and stays there */
+/* accident: the car stops where the hit left it, hazards on; 30 s after the last hit it drives on, unless it was wrecked */
 function aiCrashed(a,hit,by){if(!a||!a.ai)return;
   if(!a.acc&&!a.parked){(TRAFFIC.log=TRAFFIC.log||[]).push(Math.round(TRAFFIC.t)+'s #'+a.id+' '+(a.pers.kind)+' hit '+hit.toFixed(1)+' by '+(by?(by===PLAYER?'player':by.id?'#'+by.id+(by.sim||''):by):'static')+' at '+a.x.toFixed(0)+','+a.z.toFixed(0)+' psi'+a.psi.toFixed(2)+' v'+a.u.toFixed(1)+(by&&by.psi!=null?' other psi'+by.psi.toFixed(2)+' v'+by.u.toFixed(1):'')+(a.av?' av'+a.av.ph:'')+(a.lc?' lc'+a.lc.ph:'')+' onConn'+(a.path[a.k]&&a.path[a.k].ri<0?1:0));if(TRAFFIC.log.length>40)TRAFFIC.log.shift();}
   if(a.unit){polUnitHit(a,hit,by);return;}
   if(a.parked){a.awake=true;return;}
-  if(a.acc)return;a.acc=true;a.accT=TRAFFIC.t;a.hazard=true;a.lc=null;a.av=null;a.sigL=a.sigR=false;
-  a.in.thr=0;a.in.brk=0.2;a.in.steer=a.steer*0.4;if(a.sim!=='phys')trToPhys(a);
+  // the hit hurts the car (same scale as the player's car); one that is used up explodes and stays a burnt-out wreck
+  if(hit>2.2&&!a.burnt){a.health=Math.max(0,(a.health==null?100:a.health)-0.33*Math.pow(hit-2.2,1.7));if(a.health<=0){if(!a.acc)trAccident(a);carExplode(a,a.root);return;}}
+  if(a.acc){a.accT=TRAFFIC.t;return;}   // hit again: the 30 seconds start over
+  trAccident(a);}
+function trAccident(a){a.acc=true;a.accT=TRAFFIC.t;a.hazard=true;a.lc=null;a.av=null;a.sigL=a.sigR=false;
+  a.in.thr=0;a.in.brk=0.2;a.in.steer=(a.steer||0)*0.4;if(a.sim!=='phys')trToPhys(a);
   MAP.nodes.forEach(n=>{if(n.q.length)n.q=n.q.filter(q=>q.a!==a);});}
+/* 30 seconds after its last hit a crashed (but still drivable) car shakes it off and drives on */
+function trRecover(a){a.acc=false;a.hazard=false;a.in={thr:0,brk:0,steer:0,hand:0};a.state='D';a.gear=0;a.stuckT=0;a.v0=null;a.dest=null;a.route=null;
+  try{polRejoin(a);}catch(e){}}
 const trIsObstacle=o=>o&&(o.acc||o.parked||(o===PLAYER&&TRAFFIC.pStill>6&&TRAFFIC.pNodeD>30&&!TRAFFIC.pBlocked));
 
 /* ======================= what a driver sees ======================= */
@@ -7604,7 +7611,10 @@ function trThink(a,dt,ALL){
   const P=a.pers,t=TRAFFIC.t;
   trCursor(a);if(!a.path.length)return;trGen(a,a.s+Math.max(170,a.u*9));
   if(a.acc){a.in.thr=0;a.in.hand=0;const age=t-a.accT;a.in.brk=age<0.7?0.25:1;a.in.steer*=0.9;
-    if(age>1.5&&Math.hypot(a.u,a.v)<0.3){a.state='P';a.in.hand=1;}return;}
+    if(age>1.5&&Math.hypot(a.u,a.v)<0.3){a.state='P';a.in.hand=1;}
+    // (not with another car or the player pressed right against it)
+    if(age>30&&!a.burnt&&!a.unit&&a.ai&&!ALL.some(o=>o!==a&&Math.hypot(o.x-a.x,o.z-a.z)<a.halfLen+(o.halfLen||2.3)*0.6))trRecover(a);
+    return;}
   const v=Math.max(0,a.u),L=a.path,here=L[a.k];
   /* desired speed: zone limit, the driver's own habit, drifting a little; blends between zones */
   a.wander+=(trG()*P.wander-a.wander)*Math.min(1,dt*0.08);
@@ -7859,10 +7869,10 @@ function trSync(a,dt,force){
     const s=a.susp,sh=a.shell;sh.rotation.order='YXZ';sh.rotation.z=(s.r-s.f)/(2*a.tpl.S.wx);sh.rotation.x=s.roll;sh.position.y=-(s.f+s.r)/2*0.7;sh.position.z=-11.4*Math.sin(s.roll);}
   if(full&&dt){a.spin+=(a.u/(a.r||0.33))*dt;a.wheels.forEach((w,i)=>{w.rotation.order='YXZ';w.rotation.z=-a.spin;w.rotation.y=i<2?(a.steer||0):0;
     if(w.userData.y0==null)w.userData.y0=w.position.y;w.position.y=w.userData.y0-(a.flat&&a.flat[i]?0.05/U:0);});}
-  const lit=LIGHTS.on&&!a.parked,braking=(a.brk>0.1&&Math.abs(a.u)>0.05)||(a.sim==='kin'&&a.brk>0)||(a.state==='P'&&!a.parked&&!a.acc);
+  const lit=LIGHTS.on&&!a.parked&&!a.burnt,braking=!a.burnt&&((a.brk>0.1&&Math.abs(a.u)>0.05)||(a.sim==='kin'&&a.brk>0)||(a.state==='P'&&!a.parked&&!a.acc));
   if(a.brakeM)a.brakeM.emissiveIntensity=braking?2.8:(lit?1.4:0.5);
   if(a.headM)a.headM.emissiveIntensity=lit?(a.high?5:3):1.15;
-  const on=((TRAFFIC.t*1.5+a.blink)%1)<0.5;const L=(a.sigL||a.hazard)&&on,R=(a.sigR||a.hazard)&&on;
+  const on=((TRAFFIC.t*1.5+a.blink)%1)<0.5;const L=(a.sigL||a.hazard)&&on&&!a.burnt,R=(a.sigR||a.hazard)&&on&&!a.burnt;
   if(a.ambM[0])a.ambM[0].emissiveIntensity=L?3.4:0.45;if(a.ambM[1])a.ambM[1].emissiveIntensity=R?3.4:0.45;
   const night=LIGHTS.on,gl=a.glow,near=dc<320;
   gl.head.forEach(s=>{s.visible=lit&&near;s.scale.setScalar(a.high?1.7:0.9);});
@@ -7978,6 +7988,86 @@ function trAudio(){
 }
 function trafficVisuals(dt){TRAFFIC.cars.forEach(a=>{if(a.alive)trSync(a,dt);});
   const k=LIGHTS.on?0.35:0;TR_RETRO.forEach(m=>m.emissiveIntensity=k);}
+
+
+/* ======================= explosions and burning wrecks =======================
+   A vehicle that is completely disabled blows up: a flash that lights the area, a fireball, a shock that shoves
+   anything close and shakes the camera, debris, a deep bang, then the shell burns (charred, flames and black smoke)
+   for a while. Used for traffic, police units, the player's car and other players' cars online. */
+const BOOM={list:[],debris:[],fires:[],light:null,shake:0,tex:null,charM:new Map()};
+function boomInit(){if(BOOM.light||typeof world==='undefined'||!world)return;
+  BOOM.light=new TH.PointLight(0xff8a3a,0,45,2);world.add(BOOM.light);   // in the scene from the start: no shader recompile at the first bang
+  const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,2,64,64,63);
+  g.addColorStop(0,'rgba(255,250,225,1)');g.addColorStop(0.22,'rgba(255,210,110,0.95)');g.addColorStop(0.5,'rgba(255,120,30,0.55)');g.addColorStop(1,'rgba(160,30,0,0)');
+  x.fillStyle=g;x.fillRect(0,0,128,128);BOOM.tex=new TH.CanvasTexture(c);}
+function boomSprite(col,op){const m=new TH.SpriteMaterial({map:BOOM.tex,color:col,transparent:true,depthWrite:false,blending:TH.AdditiveBlending,opacity:op,fog:true});return new TH.Sprite(m);}
+/* char every material on the car: near-black, matte, no glow (originals kept for a repair) */
+function boomChar(root){root.traverse(o=>{if(!o.isMesh||o.isInstancedMesh)return;if(o.userData.preChar)return;
+  const one=m=>{if(!m||!m.color)return m;let c=BOOM.charM.get(m);if(c)return c;c=m.clone();
+    c.color.setRGB(0.05+m.color.r*0.05,0.045+m.color.g*0.04,0.04+m.color.b*0.035);if(c.emissive){c.emissive.setHex(0);c.emissiveIntensity=0;}
+    if(c.metalness!=null)c.metalness=0.15;if(c.roughness!=null)c.roughness=0.95;if(c.opacity<1){c.opacity=Math.min(1,c.opacity+0.35);}BOOM.charM.set(m,c);return c;};
+  o.userData.preChar=o.material;o.material=Array.isArray(o.material)?o.material.map(one):one(o.material);});
+  root.traverse(o=>{if(o.isInstancedMesh||o.isPoints)o.visible=false;});}
+function boomUnchar(root){root.traverse(o=>{if(o.isMesh&&o.userData.preChar){o.material=o.userData.preChar;o.userData.preChar=null;}});}
+function boomSound(x,z){const ctx=typeof AC!=='undefined'&&AC;if(!ctx||muted||ctx.state!=='running')return;const d=Math.hypot(x-camera.position.x,z-camera.position.z);if(d>700)return;
+  const t=ctx.currentTime+d/343,vol=1.1/(1+d/25),out=audioOut(ctx);
+  const n=ctx.sampleRate*2.2,b=ctx.createBuffer(1,n,ctx.sampleRate),D=b.getChannelData(0);for(let i=0;i<n;i++)D[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.2);
+  const src=ctx.createBufferSource();src.buffer=b;const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(2400/(1+d/120),t);f.frequency.exponentialRampToValueAtTime(180,t+1.6);
+  const g=ctx.createGain();g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.001,t+2.1);src.connect(f);f.connect(g);g.connect(out);src.start(t);
+  const o=ctx.createOscillator(),og=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(70,t);o.frequency.exponentialRampToValueAtTime(28,t+0.9);
+  og.gain.setValueAtTime(vol*1.2,t);og.gain.exponentialRampToValueAtTime(0.001,t+1.0);o.connect(og);og.connect(out);o.start(t);o.stop(t+1.1);}
+/* blow the vehicle up. obj: the car's state (x, z, psi, u, v...), root: its 3-D model. quiet: char it and set it burning without the bang (joining a game late) */
+function carExplode(obj,root,quiet){if(!obj||obj.burnt)return;obj.burnt=true;obj.burnT=performance.now();boomInit();
+  const x=obj.x,z=obj.z;if(root)boomChar(root);
+  if(!quiet){
+    for(let i=0;i<14;i++){const s=boomSprite(i<4?0xfff2cc:0xff8c2a,1);const r=Math.random()*1.4,a=Math.random()*6.28;
+      s.position.set(x+Math.cos(a)*r,0.8+Math.random()*1.2,z+Math.sin(a)*r);s.scale.setScalar(0.6);world.add(s);
+      BOOM.list.push({s,age:-Math.random()*0.12,life:0.9+Math.random()*0.7,size:3+Math.random()*3.5,vy:1.5+Math.random()*3});}
+    // debris
+    const dm=new TH.MeshLambertMaterial({color:0x1a1715});
+    for(let i=0;i<10;i++){const m=new TH.Mesh(new TH.BoxGeometry(0.15+Math.random()*0.5,0.05+Math.random()*0.12,0.12+Math.random()*0.4),dm);m.position.set(x,1,z);world.add(m);
+      const a=Math.random()*6.28,sp=4+Math.random()*9;BOOM.debris.push({m,vx:Math.cos(a)*sp,vz:Math.sin(a)*sp,vy:5+Math.random()*8,rx:(Math.random()-0.5)*14,ry:(Math.random()-0.5)*14,age:0});}
+    // black smoke billowing up
+    for(let k=0;k<16;k++){const p=smokePool[smokeI++%smokePool.length];p.visible=true;Object.assign(p.userData,{life:4+Math.random()*3,age:-Math.random()*0.5,grow:2.6,op:0.75,vx:(Math.random()-0.5)*2,vz:(Math.random()-0.5)*2});
+      p.position.set(x+(Math.random()-0.5)*2,1+Math.random()*1.5,z+(Math.random()-0.5)*2);p.scale.setScalar(1.6);p.material.color.setHex(0x1b1a19);p.material.opacity=0;}
+    BOOM.flash={x,z,t:0};
+    // the blast shoves anything close, the camera shakes, and it hurts the player if he is right there
+    const R=10;
+    for(const o of (typeof trAll==='function'?trAll():[])){if(o===obj)continue;const dx=o.x-x,dz=o.z-z,d=Math.hypot(dx,dz);if(d>R||d<0.01)continue;
+      const k=(1-d/R)*7,wx=dx/d*k,wz=dz/d*k,cp=Math.cos(o.psi),sp=Math.sin(o.psi);   // world push -> body frame (forward (cos,-sin), left (-sin,-cos))
+      if(o.sim==='kin'&&o!==PLAYER)continue;o.u+=wx*cp-wz*sp;o.v+=-wx*sp-wz*cp;o.yr+=(Math.random()-0.5)*k*0.25;
+      if(o===PLAYER)damageCar((1-d/R)*30,'explosion');}
+    obj.yr=(obj.yr||0)+(Math.random()-0.5)*1.4;
+    const dc=Math.hypot(x-camera.position.x,z-camera.position.z);BOOM.shake=Math.max(BOOM.shake,clamp(1.3-dc/55,0,1.2));
+    boomSound(x,z);}
+  // the shell burns for about a minute: flames on the body, smoke rising
+  const fl=[];if(root){for(let i=0;i<5;i++){const s=boomSprite(0xff7a22,0.9);const hl=(obj.halfLen||2.3);s.position.set((i/4-0.5)*hl*1.3,1.0+Math.random()*0.4,(Math.random()-0.5)*0.9);s.userData.base=0.9+Math.random()*0.9;root.add(s);fl.push(s);}}
+  BOOM.fires.push({obj,root,fl,age:0,life:55+Math.random()*25,smT:0});}
+function boomFrame(dt){if(!BOOM.light)return;
+  const dark=typeof polDark==='function'?polDark():0.5;
+  BOOM.list=BOOM.list.filter(b=>{b.age+=dt;if(b.age<0){b.s.visible=false;return true;}b.s.visible=true;const k=b.age/b.life;if(k>=1){world.remove(b.s);b.s.material.dispose();return false;}
+    b.s.scale.setScalar(0.6+b.size*Math.pow(Math.min(1,k*2.5),0.5));b.s.position.y+=b.vy*dt;b.vy*=0.96;b.s.material.opacity=Math.pow(1-k,1.4);
+    b.s.material.color.lerp(new TH.Color(0x5a1a05),dt*1.2);return true;});
+  BOOM.debris=BOOM.debris.filter(d=>{d.age+=dt;const m=d.m;if(m.position.y>0.06||d.vy>0){d.vy-=G*dt;m.position.x+=d.vx*dt;m.position.y=Math.max(0.05,m.position.y+d.vy*dt);m.position.z+=d.vz*dt;m.rotation.x+=d.rx*dt;m.rotation.y+=d.ry*dt;
+      if(m.position.y<=0.05&&d.vy<0){d.vy=-d.vy*0.25;d.vx*=0.5;d.vz*=0.5;d.rx*=0.4;d.ry*=0.4;if(Math.abs(d.vy)<1)d.vy=0;}}
+    if(d.age>40){world.remove(m);m.geometry.dispose();return false;}return true;});
+  // fires: flicker, smoke; a burnt car that is gone takes its fire with it
+  let near=null,nd=1e9;
+  BOOM.fires=BOOM.fires.filter(F=>{const o=F.obj;F.age+=dt;const gone=(o.alive===false)||(F.root&&!F.root.parent)||!o.burnt;
+    const k=F.age/F.life;if(gone||k>=1){F.fl.forEach(s=>{if(s.parent)s.parent.remove(s);s.material.dispose();});return false;}
+    const fade=k>0.7?1-(k-0.7)/0.3:1;
+    F.fl.forEach((s,i)=>{const f=0.75+0.25*Math.sin(F.age*(9+i*2.3)+i)+0.15*Math.random();s.scale.set(s.userData.base*f*(0.8+fade*0.4),s.userData.base*1.5*f*(0.6+fade*0.6),1);s.material.opacity=0.85*fade;});
+    F.smT-=dt;if(F.smT<=0){F.smT=0.16+k*0.3;const p=smokePool[smokeI++%smokePool.length];p.visible=true;Object.assign(p.userData,{life:3.5+Math.random()*2,age:0,grow:2.2,op:0.55*fade+0.15,vx:(Math.random()-0.5)*0.6,vz:(Math.random()-0.5)*0.6});
+      p.position.set(o.x+(Math.random()-0.5)*1.5,1.4,o.z+(Math.random()-0.5)*1.5);p.scale.setScalar(1.1);p.material.color.setHex(0x222120);}
+    const d=Math.hypot(o.x-camera.position.x,o.z-camera.position.z);if(d<nd){nd=d;near={F,fade};}return true;});
+  // one light: the flash of the latest blast, otherwise the flicker of the nearest fire
+  const L=BOOM.light,fs=BOOM.flash;
+  if(fs&&fs.t<1.2){fs.t+=dt;L.position.set(fs.x,3,fs.z);L.color.setHex(0xffa04a);L.intensity=(5+dark*7)*Math.pow(1-fs.t/1.2,2);L.distance=35+dark*25;}
+  else if(near&&nd<120){const o=near.F.obj;L.position.set(o.x,2.2,o.z);L.color.setHex(0xff7a2a);L.intensity=(0.4+dark*2.4)*near.fade*(0.8+0.2*Math.sin(performance.now()/60)+0.1*Math.random());L.distance=14+dark*10;}
+  else L.intensity=0;
+  BOOM.shake=Math.max(0,BOOM.shake-dt*1.1);}
+function boomClear(){BOOM.list.forEach(b=>world.remove(b.s));BOOM.debris.forEach(d=>world.remove(d.m));BOOM.fires.forEach(F=>F.fl.forEach(s=>s.parent&&s.parent.remove(s)));
+  BOOM.list=[];BOOM.debris=[];BOOM.fires=[];BOOM.shake=0;BOOM.flash=null;if(BOOM.light)BOOM.light.intensity=0;}
 /* ===========================================================================
    POLICE
    Two agencies (State Police Post 7, Harlan Police Department), a fixed roster
@@ -8046,7 +8136,7 @@ function polCreateUnit(dept,bay,opt){
   const a=trCreate(key,{parked:true,x:bay.x+trG()*0.2,z:bay.z+trG()*0.15+(nose?0:0),psi,instant:true,unitText:id});if(!a)return null;
   a.persist=true;a.pers.dv=1+Math.random()*2;a.pers.sigP=0.97;a.pers.rollP=0;a.pers.T=1.5;
   const u={id,dept,a,st:'parked',bay,home:S,role:null,lights:false,siren:false,sirenMode:'wail',health:100,
-    departAt:POL.t+(opt&&opt.now?2:(Math.random()<0.7?6+Math.random()*240:240+Math.random()*420)),shiftEnd:0,restUntil:0,
+    departAt:POL.t+(opt&&opt.now?2:(n%5===1||n%5===3?240+Math.random()*360:6+Math.random()*180)),shiftEnd:0,restUntil:0,parkT:-1e9,
     radar:dept==='state'?Math.random()<0.6:Math.random()<0.35,attn:0.65+Math.random()*0.35,
     k:{vis:false,q:0,visT:0,lostT:999,conf:0,trail:[],ti:0,seen:null,radT:0,eyeT:0,paceT:0},cool:0,brainT:Math.random()*0.2,
     mode:'parked',msgT:{},say:{},retire:false};
@@ -8135,14 +8225,18 @@ function polDepart(u,Twant){const a=u.a,S=u.home,bay=u.bay,ri=S.ri;if(ri<0)retur
   else{   // nose in: back out until the tail is in the road, swing the nose round toward T, then drive off
     const psiT=Math.atan2(-tz,tx);
     polReverse(a,4.5,psiT,a2=>polRoadStart(a2,ri,polRoadIdx(ri,a2.x,a2.z)+T*3,T,polLaneOff(ri,T,false)));}
-  u.st='patrol';u.shiftEnd=POL.t+420+Math.random()*480;polPatrolDest(u);}
+  u.st='patrol';u.shiftEnd=POL.t+300+Math.random()*360;if(S)S.lastDep=POL.t;polPatrolDest(u);}
 function polReturn(u){const S=u.home,bay=polFreeBay(S,false);if(!bay||S.ri<0){u.shiftEnd=POL.t+300;return;}
   u.st='return';bay.unit=u;u.bay=bay;const a=u.a,T=S.nearT,bi=polRoadIdx(S.ri,bay.x,bay.z);
   polGoal(a,S.ri,bi-T*6,T,0,a2=>{   // 12 m short of the bay: turn in nose first
     const q=[bay.x,bay.z],h=[Math.cos(bay.psiNoseIn),-Math.sin(bay.psiNoseIn)];
-    polManeuver(a2,polBez([a2.x,a2.z],[Math.cos(a2.psi),-Math.sin(a2.psi)],[q[0]-h[0]*0.4,q[1]-h[1]*0.4],h,6,4),a3=>{polPark(a3);u.st='parked';u.restUntil=POL.t+60+Math.random()*240;u.departAt=u.restUntil;
+    polManeuver(a2,polBez([a2.x,a2.z],[Math.cos(a2.psi),-Math.sin(a2.psi)],[q[0]-h[0]*0.4,q[1]-h[1]*0.4],h,6,4),a3=>{polPark(a3);u.st='parked';u.parkT=POL.t;u.restUntil=POL.t+150+Math.random()*270;u.departAt=u.restUntil;
       if(u.retire&&!trSeen(a3.x,a3.z,3)){polRemoveUnit(u);}},{stop:true});});
   polLightsOff(u);}
+/* how many of a department's units are out on the road (anything but parked at the station, heading back, or wrecked),
+   and the band the shifts keep it in: at least 40% out, at most 75%, so some cruisers are always resting at the station */
+function polOnDuty(dept){return POL.units.filter(u=>u.dept===dept&&!u.retire&&u.st!=='parked'&&u.st!=='return'&&u.st!=='wrecked').length;}
+function polDutyBand(dept){const n=POL.units.filter(u=>u.dept===dept&&!u.retire&&u.st!=='wrecked').length;return [Math.max(1,Math.ceil(n*0.4)),Math.max(1,Math.ceil(n*0.75))];}
 function polRemoveUnit(u){if(u.bay)u.bay.unit=null;const i=POL.units.indexOf(u);if(i>=0)POL.units.splice(i,1);if(u.a.alive)trRemove(u.a);}
 function polPatrolDest(u){const a=u.a,town=u.dept==='city';
   const L=MAP.nodes.filter(n=>n.out.length&&n.town===town&&Math.hypot(n.x-a.x,n.z-a.z)>(town?120:350));
@@ -9127,7 +9221,7 @@ function polPlayerHit(a,imp){const u=a.unit;if(!u)return;u.touchT=POL.t;polUnitH
   if(imp<3||POL.t-(u.ramT||-9)<2.5){u.ramT=POL.t;return;}u.ramT=POL.t;const I=POL.inc;
   if(I){I.rams++;if(u.k.vis)polSay(u.id,'Suspect rammed my unit!',3);}
   else if(u.st!=='parked'||imp>4){polSay(u.id,'Vehicle just struck a police unit on '+polWhere(PLAYER.x,PLAYER.z)+'. In pursuit.',3);if(POL.stop)POL.stop=null;polComm(null);polIncident(2,'struck a police vehicle',u);}}
-function polWreck(u,byPlayer){const a=u.a;u.st='wrecked';u.ram=null;u.ovt=null;u.block=null;u.box=null;u.rbox=null;a.pitAcc=null;u.role=null;u.holdNode=null;u.node=null;polLightsOff(u);a.acc=true;a.accT=TRAFFIC.t;a.hazard=true;
+function polWreck(u,byPlayer){const a=u.a;u.st='wrecked';u.ram=null;u.ovt=null;u.block=null;u.box=null;u.rbox=null;a.pitAcc=null;u.role=null;u.holdNode=null;u.node=null;polLightsOff(u);a.acc=true;a.accT=TRAFFIC.t;a.hazard=true;carExplode(a,a.root);
   if(u.spikeJob)polSpikeCancel(u,true);if(POL.pit===u){POL.pit=null;u.pit=null;}if(POL.stop&&POL.stop.u===u){POL.stop=null;polComm(null);}
   if(POL.inc&&byPlayer)POL.inc.wrecked++;u.wreckT=POL.t;
   polSay(u.id,'My unit is disabled'+(POL.inc?', out of the pursuit.':'.'),3);
@@ -9328,8 +9422,14 @@ function polBrain(u,dt){const a=u.a;polSense(u,dt);if(u.st==='wrecked')return;
   if(u.netGhost){if(!netBusy(u)){polEnforce(u,dt);polRecognize(u,dt);}return;}   // driven by another player's game: only watch our own driver
   if(u.replan&&a.mode==='road')polReplan(a);
   switch(u.st){
-    case 'parked':if(!u.retire&&POL.t>u.departAt&&!POL.inc)polDepart(u);break;
-    case 'patrol':if(POL.t>u.shiftEnd&&!POL.inc){polReturn(u);break;}
+    case 'parked':if(!u.retire&&!POL.inc&&u.bay){const [lo,hi]=polDutyBand(u.dept),on=polOnDuty(u.dept),S=u.home;
+        // break over (or too few out and this one has rested a minute), unless enough are out already; one car out of the lot at a time
+        const go=(POL.t>u.departAt&&on<hi)||(on<lo&&POL.t-u.parkT>60);
+        if(POL.t>u.departAt&&on>=hi)u.departAt=POL.t+45+Math.random()*60;
+        if(go&&POL.t-(S.lastDep||-99)>8)polDepart(u);}break;
+    case 'patrol':if(POL.t>u.shiftEnd&&!POL.inc){const [lo]=polDutyBand(u.dept);
+        if(polOnDuty(u.dept)-1<lo){u.shiftEnd=POL.t+60+Math.random()*90;}   // someone has to stay out: wait for a relief
+        else{polReturn(u);break;}}
       if(u.legs!==u.legsSeen){u.legsSeen=u.legs;const f={off:0,low:0.12,normal:0.28,high:0.5}[polCfg().traps]||0;if(u.dept==='state'&&Math.random()<f&&polToTrap(u))break;}
       if(a.mode!=='road'&&a.mode!=='man'&&a.mode!=='rev'){polRejoin(a);polPatrolDest(u);}break;
     case 'trap':if(POL.t>u.trapUntil){u.st='leaving';polLeaveTrap(u,Math.random()<0.5?1:-1,()=>{u.st='patrol';polPatrolDest(u);});}break;
@@ -9620,7 +9720,7 @@ function netFrame(dt){if(!NET.on)return;
   NET.sendT-=dt;
   if(NET.sendT<=0){NET.sendT=0.1;
     if(MODE==='drive'||MODE==='pause'||MODE==='map'){const c=car,C=CARS[pick.i];
-      const pr=Object.assign({n:NET.name,jt:NET.jt,d:1,w:POL.inc?POL.inc.level:0,ch:CHAT.mine,c:c.key,col:pick.color||C.colors[0],
+      const pr=Object.assign({n:NET.name,jt:NET.jt,d:1,bx:car.burnt?1:0,w:POL.inc?POL.inc.level:0,ch:CHAT.mine,c:c.key,col:pick.color||C.colors[0],
         s:[nr(c.x,100),nr(c.z,100),nr(c.psi,1000),nr(c.u,100),nr(c.v,100),nr(c.yr,100),nr(c.steer||0,1000),nr(c.brk||0,100),nr(c.thr||0,100),c.gear|0,c.state,Math.round(c.rpm||0)]},nwPayload());
       // the Claude room carries at most 4 KB per player: send the nearest traffic that fits
       {const lim=netTransport()==='claude'?3800:6000;let L=JSON.stringify(pr).length;while(L>lim&&pr.tr&&pr.tr.length){pr.tr=pr.tr.slice(0,Math.floor(pr.tr.length*0.7));L=JSON.stringify(pr).length;}}
@@ -9671,6 +9771,7 @@ function netRemoteFrame(dt){const now=performance.now(),seen=new Set();
     const s=netSample(R.buf,now);if(!s)return;
     if(!R.car||!R.car.alive||R.key!==P.c||R.col!==P.col){if(R.car&&R.car.alive)trRemove(R.car);R.car=netMakeCar(P.c,P.col,s[0],s[1],s[2]);R.key=P.c;R.col=P.col;if(!R.car)return;}
     netApply(R.car,s);
+    if(P.bx&&!R.car.burnt)carExplode(R.car,R.car.root,!R.seenBx);else if(!P.bx&&R.car.burnt){R.car.burnt=false;boomUnchar(R.car.root);}R.seenBx=true;
     const d=Math.hypot(s[0]-camera.position.x,s[1]-camera.position.z);R.tag.visible=d<300;
     R.tag.position.set(s[0],(R.car&&R.car.alive&&R.car.root?R.car.root.position.y:GROUND_Y)+2.25+(R.tag.userData.lift||0),s[1]);   // the name stays where it was; the stars sit above it
     });
@@ -9805,7 +9906,7 @@ function nwPayload(){const out={},me=nwMePeer(),others=nwDrivers().filter(p=>!p.
     for(const a of TRAFFIC.cars){if(!a.alive||a.remote||a.unit||a.fade<=0)continue;
       let near=1e9;for(const s of ops)near=Math.min(near,Math.hypot(a.x-s[0],a.z-s[1]));if(near>330)continue;
       tr.push([near,[a.id,a.key,a.paintHex||'#888888',nr1(a.x),nr1(a.z),Math.round(a.psi*100)/100,nr1(a.u||a.vk||0),
-        (a.sigL?1:0)|(a.sigR?2:0)|(a.hazard?4:0)|(a.in&&a.in.brk>0.3?8:0)]]);}
+        (a.sigL?1:0)|(a.sigR?2:0)|(a.hazard?4:0)|(a.in&&a.in.brk>0.3?8:0)|(a.burnt?16:0)]]);}
     tr.sort((p,q)=>p[0]-q[0]);out.tr=tr.slice(0,32).map(q=>q[1]);}
   else out.tr=[];
   out.sp=POL.strips.filter(S=>!S.remote).map(S=>{if(!S.nid)S.nid=++NW.sid;return [S.nid,nr1(S.x),nr1(S.z),Math.round(S.ax*1000)/1000,Math.round(S.az*1000)/1000,nr1(S.len)];});
@@ -9845,12 +9946,14 @@ function nwFrame(dt){if(!nwActive())return;const now=performance.now(),wall=Date
   // the other games' units
   POL.units.forEach(u=>{if(!u.netGhost)return;const B=NW.ub[u.id];if(!B||!B.buf.length)return;const s=netSample(B.buf,now);if(!s)return;const a=u.a;
     netApply(a,s);a.remote=true;a.alpha=1;u.st=B.st;u.lights=!!(B.fl&1);u.siren=!!(B.fl&2);a.emerg=u.lights;u.health=B.h;a.health=B.h;
-    if(u.st==='wrecked'){a.acc=true;a.hazard=true;}
+    if(u.st==='wrecked'){a.acc=true;a.hazard=true;if(!a.burnt)carExplode(a,a.root,!B.seen);}
+    B.seen=true;
     const S=u.home;if(u.st==='parked'&&B.bay>=0&&S&&S.bays[B.bay]){const bay=S.bays[B.bay];if(u.bay!==bay){if(u.bay&&u.bay.unit===u)u.bay.unit=null;u.bay=bay;bay.unit=u;}a.state='P';}
     else if(u.bay&&u.st!=='return'){if(u.bay.unit===u)u.bay.unit=null;u.bay=null;}});
   // the other games' traffic
   NW.rtr.forEach((R,key)=>{if(!seenTr.has(key)){R.miss=(R.miss||0)+dt;if(R.miss>1.5){if(R.car&&R.car.alive)trRemove(R.car);NW.rtr.delete(key);}return;}R.miss=0;
-    if(!R.car||!R.car.alive)return;const s=netSample(R.buf,now);if(!s)return;netApply(R.car,s);R.car.sigL=!!(R.fl&1);R.car.sigR=!!(R.fl&2);R.car.hazard=!!(R.fl&4);});
+    if(!R.car||!R.car.alive)return;const s=netSample(R.buf,now);if(!s)return;netApply(R.car,s);R.car.sigL=!!(R.fl&1);R.car.sigR=!!(R.fl&2);R.car.hazard=!!(R.fl&4);
+    if((R.fl&16)&&!R.car.burnt)carExplode(R.car,R.car.root,!R.seenOk);R.seenOk=true;});
   NW.strips.forEach((S,key)=>{if(seenSp.has(key))return;world.remove(S.mesh);POL.strips=POL.strips.filter(x=>x!==S);NW.strips.delete(key);});
   NW.tickT-=dt;if(NW.tickT<=0){NW.tickT=0.2;nwTick(0.2);}}
 function nwClear(){NW.rtr.forEach(R=>{if(R.car&&R.car.alive)trRemove(R.car);});NW.rtr.clear();
@@ -10103,7 +10206,8 @@ function renderMain(){
     renderer.setRenderTarget(rt);renderer.render(world,camera);renderer.setRenderTarget(null);
     MB.mat.uniforms.tDiffuse.value=rt.texture;MB.mat.uniforms.amt.value=MB.amt;renderer.render(MB.scene,MB.cam);}
   catch(e){MB.ok=false;console.warn('motion blur off:',e);renderer.setRenderTarget(null);renderer.render(world,camera);}}
-function shakeCam(o,m){camera.position.x+=o.x*m;camera.position.y+=o.y*m;camera.position.z+=o.z*m;camera.rotateZ(o.roll);camera.rotateX(o.pitch);}
+function shakeCam(o,m){camera.position.x+=o.x*m;camera.position.y+=o.y*m;camera.position.z+=o.z*m;camera.rotateZ(o.roll);camera.rotateX(o.pitch);
+  if(BOOM.shake>0.01){const s=BOOM.shake*m;camera.position.x+=(Math.random()-0.5)*s*0.5;camera.position.y+=(Math.random()-0.5)*s*0.35;camera.position.z+=(Math.random()-0.5)*s*0.5;camera.rotateZ((Math.random()-0.5)*s*0.05);camera.rotateX((Math.random()-0.5)*s*0.04);}}
 function driveCamera(dt){
   const FX=speedFx(dt);
   const lookBack=PAD.lookBack||kbHeld('lookBack');
@@ -10515,7 +10619,7 @@ function applyTODCycle(m,cycle){const half=cycle/2,th=Math.PI*m/half,e=Math.sin(
   if(STARS){STARS.visible=nightW>0.02;STARS.material.opacity=0.85*nightW;}
   SKYC.cur.sunPos=pos;SKYC.cur.lamps=lamps;SKYC.cur.dark=0.12+0.88*clamp((lamps-0)/1,0,1);todNow=SKYC.cur;}
 const LAMP_POOL=[];
-function initLampPool(){for(let i=0;i<6;i++){const l=new TH.PointLight(0xffd59a,0,36,2);world.add(l);LAMP_POOL.push(l);}}
+function initLampPool(){boomInit();for(let i=0;i<6;i++){const l=new TH.PointLight(0xffd59a,0,36,2);world.add(l);LAMP_POOL.push(l);}}
 function updateLamps(){const T=todNow;if(!T||!T.lamps||MODE==='menu'){LAMP_POOL.forEach(l=>l.intensity=0);return;}
   const cx=car.x,cz=car.z;
   // the same number of lights every frame (nearest lamps first), so the shaders never recompile
@@ -10756,7 +10860,7 @@ function frame(now,bg){   // bg: a tick from the background worker while the tab
     let n=0;while(acc>=H&&n<20){const u0=car.u;stepCar(H);collide();try{trafficCollide();}catch(e){if(!window.__colErr){window.__colErr=1;console.error('collision error',e);}}t60Step(H,u0);acc-=H;n++;}
     if(car.crash>0){if(!bg&&!held)crashSound(car.crash);car.crash=0;}
     if(bg)return;
-    syncCar(dt);trafficVisuals(dt);healthFrame(dt);stepSmoke(dt);if(!held){driveCamera(dt);navFrame(dt);drawHud();audioFrame();trAudio();updateReflections(dt);}else if(MODE!=='map'){driveCamera(dt);updateReflections(dt);}   // paused online: keep showing the live world behind the menu
+    syncCar(dt);trafficVisuals(dt);healthFrame(dt);stepSmoke(dt);boomFrame(dt);if(!held){driveCamera(dt);navFrame(dt);drawHud();audioFrame();trAudio();updateReflections(dt);}else if(MODE!=='map'){driveCamera(dt);updateReflections(dt);}   // paused online: keep showing the live world behind the menu
     if(MODE==='map')drawFullMap();
   }else if(bg)return;
   else if(MODE==='map'){drawFullMap();if(FM.prevMode==='select')previewCamera(dt);}
