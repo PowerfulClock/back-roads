@@ -6955,7 +6955,8 @@ function syncCar(dt){
     const isFront=i<2,driven=dr==='awd'||(dr==='fwd'&&isFront)||(dr==='rwd'&&!isFront);
     const tgt=-(driven?car.spinD:car.spinU),ud=w.userData;
     if(ud.prevT===undefined){ud.prevT=tgt;ud.vis=tgt;}
-    const dA=tgt-ud.prevT;ud.prevT=tgt;
+    // the handbrake locks the rear wheels: they stop turning while the car slides
+    const dA=(!isFront&&car.hand&&!car.disabled)?0:tgt-ud.prevT;ud.prevT=tgt;
     ud.vis+=clamp(dA,-0.33,0.33);
     w.rotation.order='YXZ';w.rotation.z=ud.vis;w.rotation.y=isFront?car.steer:0;
     if(ud.y0==null)ud.y0=w.position.y;w.position.y=ud.y0-(car.flat&&car.flat[i]?0.05/U:0);
@@ -9149,14 +9150,14 @@ function polReplaceStep(){
    that cycle like a real controller; an additive glow per side so the flash reads at a distance and by day; a coloured
    wash on the road under each lit cruiser; and a small fixed pool of real point lights handed to the nearest cruisers,
    so nearby cars, buildings and the road pick up the red and blue. Everything scales with darkness. */
-function polDark(){const t=CFG.play&&CFG.play.tod;return t==='night'?1:(t==='sunset'||t==='sunrise')?0.62:0.12;}
+function polDark(){if(todNow&&todNow.dark!=null)return todNow.dark;const t=CFG.play&&CFG.play.tod;return t==='night'?1:(t==='sunset'||t==='sunrise')?0.62:0.12;}
 function polMatBox(root,mat,keep){root.updateMatrixWorld(true);const b=new TH.Box3(),v=new TH.Vector3();let n=0;
   root.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const same=m=>m===mat||(m&&m.color&&mat.color&&m.color.getHex()===mat.color.getHex());   // the same lens colour (a model may use separate instances)
     const ms=Array.isArray(o.material)?o.material:[o.material];if(!ms.some(same))return;
     const g=o.geometry,P=g.attributes.position,I=g.index,grs=Array.isArray(o.material)&&g.groups.length?g.groups.filter(q=>same(ms[q.materialIndex])):[{start:0,count:I?I.count:P.count}];
     for(const q of grs)for(let k=q.start;k<q.start+q.count;k++){const vi=I?I.getX(k):k;v.fromBufferAttribute(P,vi).applyMatrix4(o.matrixWorld);if(keep&&!keep(v))continue;b.expandByPoint(v);n++;}});
   return n?b:null;}
-const LED_ON={b:new TH.Color(0.05,0.2,1.0),r:new TH.Color(1.0,0.04,0.02),w:new TH.Color(1,1,1)},LED_OFF={b:new TH.Color(0.035,0.05,0.12),r:new TH.Color(0.13,0.025,0.025),w:new TH.Color(0.16,0.16,0.16)};
+const LED_ON={b:new TH.Color(0.32,0.55,1.0),r:new TH.Color(1.0,0.26,0.2),w:new TH.Color(1,1,1)},LED_OFF={b:new TH.Color(0.035,0.05,0.12),r:new TH.Color(0.13,0.025,0.025),w:new TH.Color(0.16,0.16,0.16)};
 function polLedLayout(T){if(T.ledL!==undefined)return T.ledL;const L=T.lens||{},mods=[];
   // only lens geometry up at the roof bar (some models use the same colours elsewhere on the body)
   const yb=(T.lbY||1.5)-0.3,xb=T.lbX||0,inBar=v=>v.y>yb&&Math.abs(v.x-xb)<0.55&&Math.abs(v.z)<0.75;
@@ -9188,51 +9189,69 @@ const PAT={
 function polPattern(u){const t=POL.t+(u.id.charCodeAt(1)*0.37+u.id.charCodeAt(2)*0.11);
   if(u.st==='stop'&&POL.stop&&POL.stop.ph!=='catch')return ['park',t];        // at the roadside: a calmer pattern
   const set=u.dept==='state'?['quad','cross']:['wigwag','sweep'];return [set[Math.floor(t/6)%2],t];}
+/* LED flares: one point sprite per module, drawn additively with a white-hot core and a coloured halo */
+const POL_FLARE_MAT=new TH.ShaderMaterial({uniforms:{uScale:{value:400}},transparent:true,depthWrite:false,blending:TH.AdditiveBlending,
+  vertexShader:'attribute vec3 col;attribute float al;attribute float sz;varying vec3 vC;varying float vA;uniform float uScale;'+
+    'void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);gl_Position=projectionMatrix*mv;vC=col;vA=al;'+
+    'float px=sz*uScale/max(0.1,-mv.z);gl_PointSize=al>0.001?clamp(px,3.0,220.0):0.0;}',
+  fragmentShader:'varying vec3 vC;varying float vA;void main(){vec2 c=gl_PointCoord-0.5;float r=length(c)*2.0;if(r>1.0)discard;'+
+    'float core=exp(-r*r*40.0),halo=exp(-r*r*7.0)*(1.0-r);vec3 o=vC*halo*0.9+mix(vC,vec3(1.0),0.5)*core*1.4;gl_FragColor=vec4(o*vA,1.0);}'});
+const FLARE_COL={b:[0.12,0.32,1.0],r:[1.0,0.1,0.05],w:[1,1,1]};
+function polFlareBuild(mods,root){const n=mods.length,g=new TH.BufferGeometry(),P=new Float32Array(n*3),C=new Float32Array(n*3);
+  mods.forEach((d,i)=>{P[i*3]=d.x+d.face*0.03;P[i*3+1]=d.y;P[i*3+2]=d.z;C.set(FLARE_COL[d.c],i*3);});
+  g.setAttribute('position',new TH.BufferAttribute(P,3));g.setAttribute('col',new TH.BufferAttribute(C,3));
+  g.setAttribute('al',new TH.BufferAttribute(new Float32Array(n),1));g.setAttribute('sz',new TH.BufferAttribute(new Float32Array(n),1));
+  const pts=new TH.Points(g,POL_FLARE_MAT);pts.frustumCulled=false;pts.renderOrder=4;root.add(pts);return pts;}
+const _flV=new TH.Vector3();
+function polFlareStep(a,dark,near){const L=a.led,pts=L.fl,show=a.led.im.visible&&a.alpha>0.3;pts.visible=show;if(!show)return;
+  const sz0=(0.42+dark*0.42)*(1+Math.min(1.5,near/140));
+  POL_FLARE_MAT.uniforms.uScale.value=renderer.domElement.height*camera.projectionMatrix.elements[5]*0.5;
+  _flV.copy(camera.position);a.root.worldToLocal(_flV);
+  const A=pts.geometry.attributes.al,S=pts.geometry.attributes.sz;
+  L.mods.forEach((d,i)=>{if(!L.on||!L.on[i]){A.array[i]=0;return;}
+    const dx=_flV.x-d.x,dy=_flV.y-d.y,dz=_flV.z-d.z,m=Math.hypot(dx,dy,dz)||1;
+    const face=Math.max(0,dx/m*d.face),side=Math.max(0,d.side?dz/m*d.side:Math.abs(dz/m)),top=Math.max(0,dy/m);
+    A.array[i]=0.15+0.85*Math.max(face,side*0.75,top*0.5);S.array[i]=sz0*(d.c==='w'?1.1:1);});
+  A.needsUpdate=true;S.needsUpdate=true;}
 function polLights(a){const u=a.unit||a.ghostUnit,L=a.lensM||{},dark=polDark();
   const near=Math.hypot(a.x-camera.position.x,a.z-camera.position.z);
   let lvB=0,lvR=0,lvW=0;
   if(u&&u.lights){if(!a.led&&a.led!==false)a.led=polLedBuild(a)||false;
     const [pn,t]=polPattern(u),f=PAT[pn];
     if(a.led){const {im,mods}=a.led;im.visible=near<220&&a.alpha>0.3;let nb=0,nr=0,nw=0;
-      mods.forEach((d,i)=>{const on=f(d,t);if(on){if(d.c==='b')nb++;else if(d.c==='r')nr++;else nw++;}if(im.visible)im.setColorAt(i,on?LED_ON[d.c]:LED_OFF[d.c]);});
+      if(!a.led.on)a.led.on=new Uint8Array(mods.length);mods.forEach((d,i)=>{const on=f(d,t);a.led.on[i]=on?1:0;if(on){if(d.c==='b')nb++;else if(d.c==='r')nr++;else nw++;}if(im.visible)im.setColorAt(i,on?LED_ON[d.c]:LED_OFF[d.c]);});
       if(im.visible&&im.instanceColor)im.instanceColor.needsUpdate=true;
       const cb=mods.filter(d=>d.c==='b').length||1,cr=mods.filter(d=>d.c==='r').length||1,cw=mods.filter(d=>d.c==='w').length||1;lvB=nb/cb;lvR=nr/cr;lvW=nw/cw;}
     else{const ph=t%1/1;lvB=ph<0.5?1:0;lvR=1-lvB;}}
-  else if(a.led){a.led.im.visible=false;}
+  else if(a.led){a.led.im.visible=false;if(a.led.fl)a.led.fl.visible=false;}
   // the lens housings glow with their side, so the bar reads from above and from the side too
   if(!L._tint){L._tint=1;[[L.blue,0x0b1530,0x0a36ff],[L.red,0x2e0a0a,0xff1206],[L.clear,0x2a2a2a,0xffffff]].forEach(([m,c,e])=>{if(m){m.color.setHex(c);if(m.emissive)m.emissive.setHex(e);}});}   // dark tinted lens, saturated when lit
-  if(L.blue)L.blue.emissiveIntensity=0.1+lvB*1.4;if(L.red)L.red.emissiveIntensity=0.1+lvR*1.4;if(L.clear)L.clear.emissiveIntensity=0.1+lvW*2;
+  if(L.blue)L.blue.emissiveIntensity=0.08+lvB*2.4;if(L.red)L.red.emissiveIntensity=0.08+lvR*2.4;if(L.clear)L.clear.emissiveIntensity=0.08+lvW*2.6;
   if(!u)return;
-  // glow sprites, one per side: bigger and stronger in the dark, a tight bright core by day
-  if(!a.barGlow){const T=a.tpl,G=trGlowTex(),mk=(col,z)=>{const m=new TH.SpriteMaterial({map:G.head.map,color:col,transparent:true,depthWrite:false,blending:TH.AdditiveBlending,opacity:0});
-      const s=new TH.Sprite(m);s.position.set(T.lbX||0,(T.lbY||1.5)+0.06,z);s.visible=false;a.root.add(s);return s;};
-    a.barGlow=[mk(0x3a70ff,-0.32),mk(0xff2a22,0.32),mk(0xffffff,0)];}
-  const gs=0.8+dark*1.3+Math.min(2.5,near/90);
-  [[a.barGlow[0],lvB],[a.barGlow[1],lvR],[a.barGlow[2],lvW*0.8]].forEach(([s,l])=>{s.visible=l>0.05&&a.alpha>0.2;if(s.visible){s.material.opacity=Math.min(1,l*(0.5+dark*0.4));s.scale.setScalar(gs*(0.6+0.4*l));}});
-  // the road under and around the car picks up the flash
-  if(!a.lbWash){const G=polWashTex(),m=new TH.MeshBasicMaterial({map:G,color:0xffffff,transparent:true,depthWrite:false,blending:TH.AdditiveBlending,opacity:0,toneMapped:false});
-    const w=new TH.Mesh(POL_WASH_GEO,m);w.position.set(T_x(a),0.07,0);w.renderOrder=3;w.visible=false;a.root.add(w);a.lbWash=w;}
-  const lv=Math.max(lvB,lvR),wv=u.lights&&near<260&&lv>0.05&&a.alpha>0.3;a.lbWash.visible=wv;
-  if(wv){const m=a.lbWash.material;m.color.setRGB(lvR+lvW*0.3,lvR*0.04+lvB*0.14+lvW*0.3,lvB+lvW*0.3);m.opacity=Math.min(0.7,(0.07+dark*0.4)*lv);
-    const sz=8+dark*8;a.lbWash.scale.set(sz,1,sz*0.85);}
+  // each lit LED module gets its own tight neon flare (white-hot core, coloured halo), brightest when it faces you
+  if(a.led&&a.led.mods){if(!a.led.fl)a.led.fl=polFlareBuild(a.led.mods,a.root);polFlareStep(a,dark,near);}
   a.lbLevel={b:lvB,r:lvR,w:lvW};}
 function T_x(a){return (a.tpl&&a.tpl.lbX)||0;}
-const POL_WASH_GEO=(()=>{const g=new TH.PlaneGeometry(1,1);g.rotateX(-Math.PI/2);return g;})();
-let POL_WASH_T=null;
-function polWashTex(){if(POL_WASH_T)return POL_WASH_T;const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),gr=x.createRadialGradient(64,64,4,64,64,63);
-  gr.addColorStop(0,'rgba(255,255,255,0.95)');gr.addColorStop(0.35,'rgba(255,255,255,0.45)');gr.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gr;x.fillRect(0,0,128,128);
-  POL_WASH_T=new TH.CanvasTexture(c);return POL_WASH_T;}
-/* real point lights: a fixed pool (a fixed count, so the scene's shaders never recompile), handed each frame to the nearest
-   flashing cruisers, coloured by whichever side is lit right now */
-const POL_PL=[];
-function polLightPool(){if(!POL_PL.length&&typeof world!=='undefined'&&world){for(let i=0;i<3;i++){const l=new TH.PointLight(0xffffff,0,30,2);l.visible=true;world.add(l);POL_PL.push(l);}}
+/* real lights: a fixed pool (a fixed count, so the scene's shaders never recompile) of spot lights, two per cruiser for the
+   two nearest flashing cruisers. Each one sits just outside its side of the bar and points outward and down, so the blue
+   side lights only the road, cars and walls on its side and the red side only on the other, out to a realistic range. */
+const POL_PL=[],POL_PL_N=2;
+function polLightPool(){if(!POL_PL.length&&typeof world!=='undefined'&&world){for(let i=0;i<POL_PL_N*2;i++){const l=new TH.SpotLight(0xffffff,0,20,1.2,0.85,2);l.visible=true;world.add(l);world.add(l.target);POL_PL.push(l);}}
   if(!POL_PL.length)return;const dark=polDark(),cx=camera.position.x,cz=camera.position.z;
   const lit=POL.units.filter(u=>u.lights&&u.a.alive&&u.a.lbLevel&&u.a.alpha>0.3).map(u=>[Math.hypot(u.a.x-cx,u.a.z-cz),u])
     .concat(TRAFFIC.cars.filter(a=>a.ghostUnit&&a.ghostUnit.lights&&a.alive&&a.lbLevel).map(a=>[Math.hypot(a.x-cx,a.z-cz),{a}]))   // another player's pursuit
-    .filter(q=>q[0]<160).sort((p,q)=>p[0]-q[0]);
-  POL_PL.forEach((l,i)=>{const q=lit[i];if(!q){l.intensity=0;return;}const a=q[1].a,L=a.lbLevel,v=Math.max(L.b,L.r,L.w*0.7);
-    const cp=Math.cos(a.psi),sp=Math.sin(a.psi),lx=T_x(a);l.position.set(a.x+cp*lx,(a.tpl.lbY||1.5)+0.4,a.z-sp*lx);
-    const sm=L.r+L.b+L.w*0.25||1;l.color.setRGB((L.r+L.w*0.25)/sm,(L.r*0.03+L.b*0.12+L.w*0.25)/sm,(L.b+L.w*0.25)/sm);l.intensity=v*(0.25+dark*0.85);l.distance=14+dark*10;});}
+    .filter(q=>q[0]<180).sort((p,q)=>p[0]-q[0]);
+  for(let k=0;k<POL_PL_N;k++){const q=lit[k];
+    for(let sd=0;sd<2;sd++){const l=POL_PL[k*2+sd];if(!q){l.intensity=0;continue;}
+      const a=q[1].a,L=a.lbLevel,side=sd?1:-1,c=sd?L.r:L.b,w=L.w*0.6,v=Math.min(1,c+w);
+      if(v<0.02){l.intensity=0;continue;}
+      const cp=Math.cos(a.psi),sp=Math.sin(a.psi),lx=T_x(a),y=(a.tpl.lbY||1.5)+0.08;
+      // local (forward f, right r) -> world: f*(cos,-sin) + r*(sin,cos)
+      l.position.set(a.x+cp*lx+sp*side*1.05,y,a.z-sp*lx+cp*side*1.05);
+      l.target.position.set(a.x+cp*lx+sp*side*8,0,a.z-sp*lx+cp*side*8);l.target.updateMatrixWorld();
+      const cr=sd?1:0.06,cg=sd?0.06:0.16,cb=sd?0.03:1;const sm=c+w||1;
+      l.color.setRGB((cr*c+w)/sm,(cg*c+w)/sm,(cb*c+w)/sm);
+      l.intensity=v*(sd?1:1.5)*(0.45+dark*3.4);l.distance=10+dark*14;}}}
 const SIREN={v:[]};
 function polSiren(u,mode){if(mode==='burst'){polSirenBurst(u);return;}}
 function polSirenBurst(u){const ctx=AC;if(!ctx||muted||ctx.state!=='running')return;const a=u.a,d=Math.hypot(a.x-camera.position.x,a.z-camera.position.z);if(d>260)return;
@@ -9363,7 +9382,7 @@ function policeVisual(a){if(a.unit||a.ghostUnit||a.lensM&&Object.keys(a.lensM).l
 --------------------------------------------------------------------------- */
 const NET={on:false,room:null,unsub:null,srv:null,status:'off',err:'',peers:[],rem:new Map(),sendT:0,saved:null,name:'',jt:0,openSeq:0,todT:0,hudT:0,busy:false};
 const NET_SERVERS=[{id:'s1',name:'Server 1',where:'Harlan County'}];
-const NET_MAX=4,NET_CYCLE=30*60*1000;
+const NET_MAX=4,NET_CYCLE=40*60*1000;
 const NET_RULES={density:50,state:10,city:10};
 
 /* ---- browser-to-browser rooms for the standalone build (only when PeerJS is on the page) ---- */
@@ -9583,9 +9602,10 @@ function netLeaveGame(){if(!NET.on)return;NET.on=false;CHAT.mine=[];CHAT.log=[];
 async function netExit(){netLeaveGame();await netClose();}
 
 /* ---- server rules: default settings, medium traffic, 10 + 10 police, the day/night clock ---- */
-function netTodName(t){const m=((t==null?Date.now():t)%NET_CYCLE)/60000;   // minutes into the 30-minute cycle
-  return m<14?'day':m<15?'sunset':m<29?'night':'sunrise';}
-function netCycleText(){const m=(Date.now()%NET_CYCLE)/60000;return m<15?'Day · night in '+Math.max(1,Math.ceil(15-m))+' min':'Night · day in '+Math.max(1,Math.ceil(30-m))+' min';}
+function netCycleNow(t){return ((t==null?Date.now():t)%NET_CYCLE)/60000;}   // minutes since sunrise: 0-20 day, 20-40 night
+function netTodName(t){const m=netCycleNow(t);
+  return m<2||m>=38?'sunrise':m<18?'day':m<22?'sunset':'night';}
+function netCycleText(){const m=netCycleNow();return m<20?'Day · sunset in '+Math.max(1,Math.ceil(20-m))+' min':'Night · sunrise in '+Math.max(1,Math.ceil(40-m))+' min';}
 function netApplyRules(){if(!NET.saved)NET.saved={play:CFG.play,police:CFG.police};
   CFG.play=Object.assign({},PLAY_DEFAULT,{density:NET_RULES.density,tod:netTodName()});
   CFG.police=Object.assign({},POLICE_DEFAULT,{state:NET_RULES.state,city:NET_RULES.city});applyTOD();}
@@ -9594,7 +9614,7 @@ function netRestoreRules(){if(!NET.saved)return;CFG.play=NET.saved.play;CFG.poli
 /* ---- every frame while on a server ---- */
 const nr=(v,k)=>Math.round(v*k)/k;
 function netFrame(dt){if(!NET.on)return;
-  NET.todT-=dt;if(NET.todT<=0){NET.todT=1;const n=netTodName();if(n!==CFG.play.tod){CFG.play.tod=n;applyTOD();
+  NET.todT-=dt;if(NET.todT<=0){NET.todT=0.25;applyTOD();const n=netTodName();if(n!==CFG.play.tod){CFG.play.tod=n;
     if(MODE==='drive')toast(n==='sunset'?'The sun is going down':n==='night'?'Night falls':n==='sunrise'?'The sun is coming up':'Daytime');}}
   if(!NET.room)return;
   NET.sendT-=dt;
@@ -10444,7 +10464,8 @@ const TOD={
   sunset:{sky:()=>gradSky([[0,'#283c6e'],[0.42,'#6d5c8e'],[0.7,'#e0806a'],[0.86,'#f2a066'],[1,'#f6c48a']]),sun:[0xff9a5e,0.9],sunPos:[-95,14,30],hemi:[0xa596b8,0x4a3a30,0.3],fog:0xd5a088,exp:0.98,lamps:0.75,windows:0.55,carLights:true},
   night:{sky:()=>gradSky([[0,'#03060f'],[0.55,'#0a1226'],[0.85,'#141d33'],[1,'#1d2740']]),sun:[0x9fb4e6,0.1],sunPos:[-50,80,-60],hemi:[0x2a3a5c,0x0a0a10,0.11],fog:0x0a0f1c,exp:1.0,lamps:1,windows:1,carLights:true,stars:true}};
 const SKYCACHE={};let todNow=null;
-function applyTOD(){const name=TOD[CFG.play.tod]?CFG.play.tod:'day',T=TOD[name];todNow=T;
+function applyTOD(){if(NET.on&&typeof netCycleNow==='function'){if(!STARS)applyTODPreset();applyTODCycle(netCycleNow(),NET_CYCLE/60000);return;}applyTODPreset();}
+function applyTODPreset(){const name=TOD[CFG.play.tod]?CFG.play.tod:'day',T=TOD[name];todNow=T;
   const sky=SKYCACHE[name]||(SKYCACHE[name]=T.sky());skyDome.material.map=sky;skyDome.material.needsUpdate=true;
   sun.color.setHex(T.sun[0]);sun.intensity=T.sun[1];hemi.color.setHex(T.hemi[0]);hemi.groundColor.setHex(T.hemi[1]);hemi.intensity=T.hemi[2];
   world.fog.color.setHex(T.fog);renderer.toneMappingExposure=T.exp;
@@ -10453,8 +10474,46 @@ function applyTOD(){const name=TOD[CFG.play.tod]?CFG.play.tod:'day',T=TOD[name];
   LIGHTS.on=T.carLights;LIGHTS.dim=name==='night'?1:0.75;
   if(!STARS){const g=new TH.BufferGeometry(),P=[];for(let i=0;i<1600;i++){const a=Math.random()*Math.PI*2,e=Math.asin(0.08+Math.random()*0.92);P.push(Math.cos(a)*Math.cos(e)*1500,Math.sin(e)*1500,Math.sin(a)*Math.cos(e)*1500);}
     g.setAttribute('position',new TH.Float32BufferAttribute(P,3));STARS=new TH.Points(g,new TH.PointsMaterial({color:0xdfe6ff,size:1.6,sizeAttenuation:false,fog:false,transparent:true,opacity:0.85}));world.add(STARS);}
-  STARS.visible=!!T.stars;}
+  STARS.visible=!!T.stars;STARS.material.opacity=0.85;T.dark=name==='night'?1:(name==='sunset'||name==='sunrise')?0.62:0.12;}
 let STARS=null;
+/* continuous sun cycle (online): the sun rises in the east, crosses the sky and sets in the west; the light, sky,
+   fog, street lamps, windows and stars all blend smoothly with the sun's height. m = minutes since sunrise. */
+const SKYK={stops:[0,0.42,0.7,0.86,1],
+  day:{sky:['#2f6fc4','#62a3dc','#a8cdea','#c8ddee','#dfe7e4'],sun:0xffeacd,si:1.25,hs:0xa8c4dd,hg:0x4a4436,hi:0.38,fog:0xd2dfe8,exp:0.92,lamps:0,win:0},
+  rise:{sky:['#2c4a7e','#788cb4','#e6a98a','#f7c88d','#f3d9b6'],sun:0xffb983,si:0.95,hs:0x9fb0cf,hg:0x4d4036,hi:0.32,fog:0xe0c3ab,exp:0.98,lamps:0.6,win:0.35},
+  set:{sky:['#283c6e','#6b5b8d','#e0806a','#f2a066','#f6c48a'],sun:0xff9a5e,si:0.9,hs:0xa596b8,hg:0x4a3a30,hi:0.3,fog:0xd5a088,exp:0.98,lamps:0.75,win:0.55},
+  night:{sky:['#03060f','#08101f','#0f1830','#141d33','#1d2740'],sun:0x9fb4e6,si:0.1,hs:0x2a3a5c,hg:0x0a0a10,hi:0.11,fog:0x0a0f1c,exp:1.0,lamps:1,win:1}};
+const SKYC={cv:null,tex:null,key:'',cur:{sunPos:[0,90,0],lamps:0,dark:0.12}};
+const _tca=new TH.Color(),_tcb=new TH.Color();
+function lerpHex(a,b,t){_tca.setHex(a);_tcb.setHex(b);return _tca.lerp(_tcb,t).getHex();}
+function smooth01(x){x=clamp(x,0,1);return x*x*(3-2*x);}
+function applyTODCycle(m,cycle){const half=cycle/2,th=Math.PI*m/half,e=Math.sin(th),morning=Math.cos(th)>0;
+  const K=SKYK,G=morning?K.rise:K.set;let A,B,t;
+  if(e>=0.06){A=G;B=K.day;t=smooth01((e-0.06)/0.26);}else{A=K.night;B=G;t=smooth01((e+0.2)/0.26);}
+  const L=(x,y)=>x+(y-x)*t;
+  // sky gradient, redrawn into one small canvas (only when it visibly changes)
+  const cols=A.sky.map((c,i)=>'#'+lerpHex(parseInt(c.slice(1),16),parseInt(B.sky[i].slice(1),16),t).toString(16).padStart(6,'0'));
+  const key=cols.join('');
+  if(!SKYC.cv){SKYC.cv=document.createElement('canvas');SKYC.cv.width=8;SKYC.cv.height=512;SKYC.tex=new TH.CanvasTexture(SKYC.cv);if(TH.sRGBEncoding!==undefined)SKYC.tex.encoding=TH.sRGBEncoding;}
+  if(key!==SKYC.key){SKYC.key=key;const x=SKYC.cv.getContext('2d'),g=x.createLinearGradient(0,0,0,512);K.stops.forEach((p,i)=>g.addColorStop(p,cols[i]));x.fillStyle=g;x.fillRect(0,0,8,512);SKYC.tex.needsUpdate=true;}
+  if(skyDome.material.map!==SKYC.tex){skyDome.material.map=SKYC.tex;skyDome.material.needsUpdate=true;}
+  // the sun light fades out just below the horizon, then the moon (opposite side of the sky) takes over
+  const sunI=e>0.06?L(A.si,B.si):(B===G?G.si:0)*smooth01((e+0.1)/0.16);
+  const moonI=0.1*smooth01((-e-0.1)/0.12);
+  const sx=100*Math.cos(th),sy=95*e,sz=-32*Math.cos(th)+30*Math.abs(e);
+  let pos,col,I;
+  if(sunI>=moonI){pos=[sx,Math.max(10,sy),sz];col=e>0.06?lerpHex(A.sun,B.sun,t):G.sun;I=sunI;}
+  else{pos=[-sx,Math.max(10,-sy),-sz+40];col=K.night.sun;I=moonI;}
+  sun.color.setHex(col);sun.intensity=I;
+  hemi.color.setHex(lerpHex(A.hs,B.hs,t));hemi.groundColor.setHex(lerpHex(A.hg,B.hg,t));hemi.intensity=L(A.hi,B.hi);
+  world.fog.color.setHex(lerpHex(A.fog,B.fog,t));renderer.toneMappingExposure=L(A.exp,B.exp);
+  const lamps=L(A.lamps,B.lamps),win=L(A.win,B.win);
+  Object.values(MAT.facade).forEach(mm=>mm.emissiveIntensity=win);
+  MAT.lampHead.emissiveIntensity=lamps>0.05?2.4*lamps:0;
+  LIGHTS.on=lamps>0.3;LIGHTS.dim=0.75+0.25*clamp((lamps-0.6)/0.4,0,1);
+  const nightW=A===K.night?1-t:0;
+  if(STARS){STARS.visible=nightW>0.02;STARS.material.opacity=0.85*nightW;}
+  SKYC.cur.sunPos=pos;SKYC.cur.lamps=lamps;SKYC.cur.dark=0.12+0.88*clamp((lamps-0)/1,0,1);todNow=SKYC.cur;}
 const LAMP_POOL=[];
 function initLampPool(){for(let i=0;i<6;i++){const l=new TH.PointLight(0xffd59a,0,36,2);world.add(l);LAMP_POOL.push(l);}}
 function updateLamps(){const T=todNow;if(!T||!T.lamps||MODE==='menu'){LAMP_POOL.forEach(l=>l.intensity=0);return;}
@@ -10546,7 +10605,7 @@ function renderSettings(){
     h+='<p class="snote">Auto resolution lowers the pixel count when frames run slow and raises it again when there is headroom.</p>';
   }else if((settingsTab==='gameplay'||settingsTab==='police')&&NET.on){
     h+='<p class="snote" style="color:var(--paper)">You are on an online server, which uses fixed settings. They go back to yours when you leave.</p>';
-    if(settingsTab==='gameplay'){h+='<div class="srow"><span class="slab">Time of day</span><div class="segs"><button type="button" class="seg on" disabled>15 min day / 15 min night</button></div></div>';
+    if(settingsTab==='gameplay'){h+='<div class="srow"><span class="slab">Time of day</span><div class="segs"><button type="button" class="seg on" disabled>20 min day / 20 min night</button></div></div>';
       h+='<p class="snote">'+netCycleText()+'.</p>';
       h+='<div class="srow"><span class="slab">Overall traffic density</span><div class="segs"><button type="button" class="seg on" disabled>Medium</button></div></div>';}
     else{h+='<div class="srow"><span class="slab">State Police on duty</span><div class="segs"><button type="button" class="seg on" disabled>'+NET_RULES.state+'</button></div></div>';
