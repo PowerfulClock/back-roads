@@ -458,7 +458,7 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
       <div><kbd data-k="throttle">W</kbd>Accelerate · <kbd data-k="brake">S</kbd>Brake / reverse</div>
       <div><kbd data-k="left">A</kbd><kbd data-k="right">D</kbd>Steer · <kbd data-k="handbrake">Space</kbd>Handbrake</div>
       <div><kbd data-k="gearUp">X</kbd><kbd data-k="gearDown">Z</kbd>Gear up / down · <kbd data-k="driveMode">Q</kbd>Drive mode</div>
-      <div>Launch: hold <kbd data-k="brake">S</kbd>+<kbd data-k="throttle">W</kbd> at a stop, let go of <kbd data-k="brake">S</kbd> (set it up when choosing a car)</div>
+      <div>Launch: hold <kbd data-k="brake">S</kbd>+<kbd data-k="throttle">W</kbd> together at a stop for a moment, then let go of <kbd data-k="brake">S</kbd> (set it up when choosing a car)</div>
       <div><kbd data-k="tc">T</kbd>Traction control · <kbd data-k="camera">C</kbd>Camera · <kbd data-k="timer">G</kbd>0-60 timer</div>
       <div><kbd data-k="lookBack">B</kbd>Look behind (hold) · <kbd data-k="map">M</kbd>Map</div>
       <div><kbd data-k="mute">N</kbd>Mute · <kbd data-k="help">H</kbd>Help</div>
@@ -9038,8 +9038,12 @@ function playerPedals(h){
        at the converter stall); let go of the brake with the throttle still down to launch */
     const lcOn=car.launchMode&&car.launchMode!=='off'&&!(IND[c0().ind]||{}).electric;
     const brkIn=kbB||padB>0.5,thrIn=kbF||padT>0.5;
-    if(lcOn&&Math.abs(speed)<0.8&&brkIn&&thrIn&&!car.disabled){car.lcStage=true;car.lcGo=null;wantThr=Math.max(1,padT);wantBrk=1;car.revT=0;}
-    else{if(car.lcStage&&thrIn&&!brkIn){car.lcGo=car.t||0;car.lcSnap=true;}car.lcStage=false;
+    // armed only on purpose: both pedals held together at a standstill for a moment (a quick overlap while pulling
+    // away from a stop is just a normal start)
+    if(lcOn&&Math.abs(speed)<0.8&&brkIn&&thrIn&&!car.disabled){car.lcHold=(car.lcHold||0)+h;wantBrk=1;car.revT=0;
+      if(car.lcHold>0.35){car.lcStage=true;car.lcGo=null;wantThr=Math.max(1,padT);}else wantThr=0;}
+    else{if(car.lcStage&&thrIn&&!brkIn){car.lcGo=car.t||0;car.lcSnap=true;}car.lcStage=false;car.lcHold=0;
+      if(!thrIn)car.lcGo=null;
     if(kbB){if(speed>0.6)wantBrk=1;else{car.revT+=h;wantBrk=1;if(car.revT>(lcOn?0.5:0.18)&&speed<0.6){car.state='R';car.revT=0;}}}else car.revT=0;}
   }else{ // reverse
     wantThr=Math.max(kbB?1:0,padT);wantBrk=padB;
