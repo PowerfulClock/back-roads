@@ -18,7 +18,7 @@
 <title>Back Roads</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:ital,wght@0,400;0,500;0,600;1,500&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 /* Layout: full-bleed 3D stage; menus sit in a left rail over the flyover, the HUD hugs the bottom corners.
    One committed look (dusk-dark instrument panel over a daylight world), so a single palette. */
@@ -89,6 +89,11 @@ h1 span{display:block;color:transparent;-webkit-text-stroke:2px var(--paper)}
 .swrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .swrow label{font:500 11px var(--mono);letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
 #swatches{display:flex;gap:8px;flex-wrap:wrap}
+.lcrow{margin-top:2px}.lcsegs .seg{font-size:13px;padding:4px 9px}
+.lcrpm{display:flex;align-items:center;gap:8px;flex:1;min-width:180px}
+.lcrpm input{flex:1;accent-color:var(--amber);height:24px;min-width:100px}
+.lcrpm span{font:600 12px var(--mono);color:var(--paper);min-width:74px;text-align:right}
+.lcrpm.off{opacity:.35;pointer-events:none}
 .sw{width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,.18);padding:0}
 .sw.on{border-color:var(--amber);box-shadow:0 0 0 2px var(--ink)}
 .row{display:flex;gap:10px}
@@ -247,6 +252,76 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
 #pradio{position:absolute;left:16px;bottom:calc(212px + env(safe-area-inset-bottom,0px));max-width:min(560px,60vw);display:grid;gap:3px;pointer-events:none;
   font:500 13px var(--mono);color:#eef1f4;text-shadow:0 1px 2px #000,0 0 6px rgba(0,0,0,.8)}
 #pradio b{color:#9cc3ff;font-weight:700}
+#qmc{--asphalt:#17191c;--asphalt-2:#1f2226;--asphalt-3:#282c31;--line:#3a3f46;
+--paint:#e8e6e1;--dim:#8b9099;--amber:#ffa219;--go:#38d07a;--foul:#e5484d;
+--laneA:#4a9fe0;--laneB:#e07a4a;}
+#qmc .centerread{flex:0 0 92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+#qmc .bigmph{font-family:'Roboto Mono',monospace;font-size:38px;font-weight:700;line-height:1}
+#qmc .qmc-card{background:var(--asphalt-2);border:1px solid var(--line);padding:16px}
+#qmc .cluster-muscle{background:linear-gradient(160deg,#141416 0%,#0c0c0e 100%);
+  border:1px solid #2a2a2c;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04)}
+#qmc .cluster-muscle h3{color:#e8e6e1}
+#qmc .qmc-card h3{font-size:20px;font-weight:500;margin-bottom:4px}
+#qmc .dials{display:flex;gap:12px}
+#qmc .dial{flex:1;text-align:center}
+#qmc .dial svg{width:100%;max-width:180px;height:auto}
+#qmc .dial .unit{font-family:'Roboto Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:0.12em}
+#qmc .gearbig{font-family:'Roboto Mono',monospace;font-size:28px;font-weight:700;line-height:1}
+#qmc .dials.aucl{align-items:center;gap:8px}
+#qmc .aucl .dial{flex:1}
+#qmc .aucl .dial svg{max-width:210px}
+#qmc .au-screen{flex:1.05;align-self:center}
+#qmc .au-screen svg{width:100%;height:auto;display:block;border-radius:4px;box-shadow:0 0 0 1px #2b2d30}
+#qmc .au-gear{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:26px;fill:#fff}
+#qmc .au-mph{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:32px;fill:#fff}
+#qmc .au-small{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:9px;letter-spacing:.6px;fill:#e8e8e8}
+#qmc .au-tiny{font-family:'Barlow Condensed',sans-serif;font-size:7.5px;fill:#cfcfcf}
+#qmc .au-bar{font-family:'Barlow Condensed',sans-serif;font-size:9px;fill:#fff;font-weight:500}
+#qmc .bmcl{margin:4px 0 2px}
+#qmc .nccl{margin:4px 0 2px}
+#qmc .nc-svg{width:100%;height:auto;display:block}
+#qmc .dg-num{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;fill:#f4f4f4}
+#qmc .dg-spd{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;fill:#fff}
+#qmc .dg-spd2{font-family:'Barlow Condensed',sans-serif;font-size:8.5px;font-weight:600;fill:#e8e8e8}
+#qmc .dg-cap{font-family:'Barlow Condensed',sans-serif;font-size:7.5px;font-weight:600;fill:#e8e8e8}
+#qmc .dg-dig{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:600;fill:#fff}
+#qmc .dg-gear{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;fill:#fff}
+#qmc .dg-sm{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;fill:#f0f0f0}
+#qmc .c8-num{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;fill:#f2f7ff}
+#qmc .c8-dig{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-style:italic;font-weight:500;fill:#fff}
+#qmc .c8-gear{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:600;fill:#fff}
+#qmc .c8-sm{font-family:'Barlow Condensed',sans-serif;font-size:8.5px;font-weight:600;fill:#dbe9ff}
+#qmc .c8-tiny{font-family:'Barlow Condensed',sans-serif;font-size:6.5px;fill:#dbe9ff}
+#qmc .c8-hd{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;fill:#9fd0ff}
+#qmc .c8-val{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;fill:#fff}
+#qmc .c7-num{font-family:'Barlow Condensed',sans-serif;font-size:8.5px;font-weight:600;fill:#f0f0f0}
+#qmc .c7-tn{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:600;fill:#fafafa}
+#qmc .c7-cap{font-family:'Barlow Condensed',sans-serif;font-size:6.5px;font-weight:600;fill:#d8d8d8}
+#qmc .c7-dig{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-style:italic;font-weight:500;fill:#fff}
+#qmc .c7-gear{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;fill:#fff}
+#qmc .c7-mode{font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:700;fill:#e8c14a}
+#qmc .lb-num{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-style:italic;font-weight:700;fill:#f4f4f4}
+#qmc .lb-gear{font-family:'Barlow Condensed',sans-serif;font-size:60px;font-style:italic;font-weight:700;fill:#ff2a2a}
+#qmc .lb-mode{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-style:italic;font-weight:700;letter-spacing:1px;fill:#ff3a2a}
+#qmc .lb-dig{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-style:italic;font-weight:600;fill:#fff}
+#qmc .lb-sm{font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:600;fill:#dfe3ea}
+#qmc .bm-svg{width:100%;height:auto;display:block}
+#qmc .bm-num{font-family:'Barlow Condensed',sans-serif;font-size:8.5px;font-weight:600;fill:#dbe6ff}
+#qmc .bm-cap{font-family:'Barlow Condensed',sans-serif;font-size:8px;fill:#9fb4ea}
+#qmc .bm-big{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;fill:#fff}
+#qmc .bm-sm{font-family:'Roboto Mono',monospace;font-size:7.5px;fill:#eef2ff}
+#qmc .bm-mode{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:1.5px;font-weight:600;fill:#1a2a5a}
+#qmc{position:absolute;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(470px,46vw);pointer-events:none;z-index:2}
+#qmc .qmc-card{padding:6px 10px 4px;background:rgba(12,13,15,.82);border:1px solid #2a2a2c;box-shadow:0 6px 24px rgba(0,0,0,.45)}
+#qmc .qmc-card.cluster-muscle{background:linear-gradient(160deg,rgba(20,20,22,.9) 0%,rgba(12,12,14,.9) 100%)}
+#qmc svg{display:block}
+#qmc .nccl svg,#qmc .bmcl svg{width:100%;height:auto}
+#hud.qmc-on .cluster .spdwrap,#hud.qmc-on .cluster .gearbox,#hud.qmc-on .cluster .rpmbar,#hud.qmc-on .cluster .rpmline>span:first-child{display:none}
+#hud.qmc-on #pcomm{bottom:calc(min(470px,46vw)*0.44 + 40px + env(safe-area-inset-bottom,0px))}
+#lcbar{position:absolute;left:50%;bottom:calc(min(470px,46vw)*0.44 + 34px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);font:700 12px var(--mono);letter-spacing:.16em;color:#fff;background:rgba(18,20,23,.86);border:1px solid var(--amber);padding:5px 12px;pointer-events:none;white-space:nowrap}
+#lcbar.armed{border-color:#38d07a;color:#7dffb0}
+#hud:not(.qmc-on) #lcbar{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+@media (max-width:700px){#qmc{width:min(330px,62vw);bottom:calc(64px + env(safe-area-inset-bottom,0px))}}
 #pcomm{position:absolute;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(460px,70vw);text-align:center;pointer-events:none}
 #pcomm span{display:block;font:700 13px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:#fff;text-shadow:0 1px 3px #000;margin-bottom:6px}
 #pcomm .pbar{height:8px;background:rgba(10,12,15,.7);border:1px solid rgba(255,255,255,.35);display:flex;justify-content:center}
@@ -347,6 +422,8 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
     <div class="pk-search"><input id="carSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search cars (make, model, engine…)" aria-label="Search cars"><span id="carCount"></span></div>
     <div id="carList"></div>
     <div class="swrow"><label>Paint</label><div id="swatches"></div></div>
+    <div class="swrow lcrow" id="lcRow"><label>Launch</label><div class="segs lcsegs" id="lcSegs"></div>
+      <div class="lcrpm" id="lcRpmBox"><input type="range" id="lcRpm" min="1500" max="7000" step="100" aria-label="Launch rpm"><span id="lcRpmV">3000 rpm</span></div></div>
     <div class="spawnsec"><label>Start at</label><div id="spawnList"></div></div>
     <div class="row">
       <button class="btn" id="btnBack" type="button">Back</button>
@@ -368,6 +445,7 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
       <div><kbd data-k="throttle">W</kbd>Accelerate · <kbd data-k="brake">S</kbd>Brake / reverse</div>
       <div><kbd data-k="left">A</kbd><kbd data-k="right">D</kbd>Steer · <kbd data-k="handbrake">Space</kbd>Handbrake</div>
       <div><kbd data-k="gearUp">X</kbd><kbd data-k="gearDown">Z</kbd>Gear up / down · <kbd data-k="driveMode">Q</kbd>Drive mode</div>
+      <div>Launch: hold <kbd data-k="brake">S</kbd>+<kbd data-k="throttle">W</kbd> at a stop, let go of <kbd data-k="brake">S</kbd> (set it up when choosing a car)</div>
       <div><kbd data-k="tc">T</kbd>Traction control · <kbd data-k="camera">C</kbd>Camera · <kbd data-k="timer">G</kbd>0-60 timer</div>
       <div><kbd data-k="lookBack">B</kbd>Look behind (hold) · <kbd data-k="map">M</kbd>Map</div>
       <div><kbd data-k="mute">N</kbd>Mute · <kbd data-k="help">H</kbd>Help</div>
@@ -391,6 +469,8 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
   <div id="pcomm" hidden><span id="pcommL">Communicating</span><div class="pbar"><i id="pcommF"></i></div></div>
   <div id="precog"></div>
   <div id="hitflash"></div>
+  <div id="qmc" hidden></div>
+  <div id="lcbar" hidden></div>
   <div class="cluster">
     <div id="hp" class="hp" data-lvl="ok"><span class="hpl">VEHICLE</span><div class="hpbar"><i id="hpFill"></i></div><span id="hpTxt">100%</span></div>
     <div class="spdwrap"><span id="spd">0</span><span class="unit">MPH</span></div>
@@ -5790,6 +5870,1541 @@ function suspProfile(c){
   P.kick=/dct|pdk|dual/.test((c.trans||'').toLowerCase())?0.5:/auto/.test((c.trans||'').toLowerCase())?0.8:1.2;
   return P;
 }
+/* gauge clusters, extracted from the drag strip game (Quarter Mile): one builder per car family */
+function ambient(){return 72;}
+function timeOfDay(){const t=(typeof CFG!=='undefined'&&CFG.play&&CFG.play.tod)||'day';return t==='night'?'night':(t==='sunset'||t==='sunrise')?'dusk':'day';}
+function dialSvg(id,ticks,redFrac,color,labels){
+  const A0=-125,SPAN=250,cx=100,cy=100,Rr=80,p=[];
+  for(let i=0;i<=ticks;i++){
+    const ang=(A0+SPAN*i/ticks)*Math.PI/180,major=(i%1===0),inner=Rr-13;
+    p.push('<line x1="'+(cx+inner*Math.sin(ang)).toFixed(1)+'" y1="'+(cy-inner*Math.cos(ang)).toFixed(1)+
+      '" x2="'+(cx+Rr*Math.sin(ang)).toFixed(1)+'" y2="'+(cy-Rr*Math.cos(ang)).toFixed(1)+
+      '" stroke="#8b9099" stroke-width="2"/>');
+    for(let k=1;k<2&&i<ticks;k++){
+      const a2=(A0+SPAN*(i+0.5)/ticks)*Math.PI/180;
+      p.push('<line x1="'+(cx+(Rr-7)*Math.sin(a2)).toFixed(1)+'" y1="'+(cy-(Rr-7)*Math.cos(a2)).toFixed(1)+
+        '" x2="'+(cx+Rr*Math.sin(a2)).toFixed(1)+'" y2="'+(cy-Rr*Math.cos(a2)).toFixed(1)+
+        '" stroke="#3a3f46" stroke-width="1.3"/>');
+    }
+    if(labels){
+      const lr=Rr-26,lx=cx+lr*Math.sin(ang),ly=cy-lr*Math.cos(ang);
+      p.push('<text x="'+lx.toFixed(1)+'" y="'+(ly+3.6).toFixed(1)+'" text-anchor="middle" '+
+        'font-family="Roboto Mono, monospace" font-size="10.5" fill="#c3c8cf">'+labels(i)+'</text>');
+    }
+  }
+  let red='';
+  if(redFrac>0&&redFrac<1){
+    const a1=(A0+SPAN*redFrac)*Math.PI/180,a2=(A0+SPAN)*Math.PI/180;
+    red='<path d="M '+(cx+Rr*Math.sin(a1)).toFixed(1)+' '+(cy-Rr*Math.cos(a1)).toFixed(1)+
+      ' A '+Rr+' '+Rr+' 0 0 1 '+(cx+Rr*Math.sin(a2)).toFixed(1)+' '+(cy-Rr*Math.cos(a2)).toFixed(1)+
+      '" fill="none" stroke="#e5484d" stroke-width="4"/>';}
+  return '<svg viewBox="0 0 200 132" role="img" aria-label="gauge">'+
+    '<circle cx="100" cy="100" r="88" fill="none" stroke="#3a3f46" stroke-width="1"/>'+p.join('')+red+
+    '<g id="'+id+'"><line x1="100" y1="100" x2="100" y2="30" stroke="'+color+
+    '" stroke-width="3.5" stroke-linecap="round"/></g>'+
+    '<circle cx="100" cy="100" r="7" fill="#282c31" stroke="#8b9099" stroke-width="1.5"/></svg>';
+}
+function dialChallenger(id,ticks,redFrac,labels,isTach){
+  const A0=-140,SPAN=280,cx=100,cy=100,Rr=82,p=[];
+  const numR=Rr-13;        // numerals ring radius
+  const hubR=52;           // big central textured disc
+  // minor + major ticks just inside the red ring
+  const minorsPer=(isTach?5:4), totalMinor=ticks*minorsPer;
+  for(let m=0;m<=totalMinor;m++){
+    const isMajor=(m%minorsPer===0);
+    const ang=(A0+SPAN*m/totalMinor)*Math.PI/180;
+    const len=isMajor?9:5;
+    const inRed=redFrac>0&&(m/totalMinor)>=redFrac;
+    p.push('<line x1="'+(cx+(Rr-len)*Math.sin(ang)).toFixed(1)+'" y1="'+(cy-(Rr-len)*Math.cos(ang)).toFixed(1)+
+      '" x2="'+(cx+Rr*Math.sin(ang)).toFixed(1)+'" y2="'+(cy-Rr*Math.cos(ang)).toFixed(1)+
+      '" stroke="'+(inRed?'#e23b32':(isMajor?'#f4f2ee':'#a6aaaf'))+'" stroke-width="'+(isMajor?1.8:0.9)+'"/>');
+  }
+  // numerals ring
+  for(let i=0;i<=ticks;i++){
+    const ang=(A0+SPAN*i/ticks)*Math.PI/180;
+    const lx=cx+numR*Math.sin(ang),ly=cy-numR*Math.cos(ang);
+    const redNum=redFrac>0&&(i/ticks)>=redFrac-0.001;
+    p.push('<text x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" text-anchor="middle" '+
+      'font-family="Barlow Condensed, sans-serif" font-weight="600" font-size="12.5" fill="'+
+      (redNum?'#e23b32':'#f4f2ee')+'">'+labels(i)+'</text>');
+  }
+  // speaker-grille texture: concentric dot rings inside the hub
+  let grille='';
+  for(let ring=8;ring<=hubR-6;ring+=6){
+    const dots=Math.round(2*Math.PI*ring/6);
+    for(let dch=0;dch<dots;dch++){
+      const a=dch/dots*2*Math.PI;
+      grille+='<circle cx="'+(cx+ring*Math.cos(a)).toFixed(1)+'" cy="'+(cy+ring*Math.sin(a)).toFixed(1)+
+        '" r="1.15" fill="#000" opacity="0.55"/>';
+    }
+  }
+  let red='';
+  if(redFrac>0&&redFrac<1){
+    const a1=(A0+SPAN*redFrac)*Math.PI/180,a2=(A0+SPAN)*Math.PI/180,rR=Rr+3;
+    red='<path d="M '+(cx+rR*Math.sin(a1)).toFixed(1)+' '+(cy-rR*Math.cos(a1)).toFixed(1)+
+      ' A '+rR+' '+rR+' 0 0 1 '+(cx+rR*Math.sin(a2)).toFixed(1)+' '+(cy-rR*Math.cos(a2)).toFixed(1)+
+      '" fill="none" stroke="#cc1f22" stroke-width="2.5"/>';
+  }
+  const cap=isTach?'RPM x1000':'MPH';
+  // needle geometry: a SHORT pointer from the hub edge to just past the numerals
+  const nInner=hubR+1, nOuter=numR+9;
+  return '<svg viewBox="0 0 200 140" role="img" aria-label="gauge">'+
+    '<defs>'+
+    '<radialGradient id="cf'+id+'" cx="50%" cy="46%" r="58%">'+
+      '<stop offset="0%" stop-color="#161719"/><stop offset="75%" stop-color="#0d0e10"/>'+
+      '<stop offset="100%" stop-color="#070708"/></radialGradient>'+
+    '<radialGradient id="hb'+id+'" cx="42%" cy="36%" r="72%">'+
+      '<stop offset="0%" stop-color="#2a2c2f"/><stop offset="65%" stop-color="#161719"/>'+
+      '<stop offset="100%" stop-color="#0b0c0d"/></radialGradient>'+
+    '<linearGradient id="bz'+id+'" x1="0" y1="0" x2="0" y2="1">'+
+      '<stop offset="0%" stop-color="#4a4c4f"/><stop offset="100%" stop-color="#141517"/></linearGradient>'+
+    '</defs>'+
+    // red outermost ring
+    '<circle cx="100" cy="100" r="94" fill="#0a0b0c"/>'+
+    '<circle cx="100" cy="100" r="92" fill="none" stroke="#c11c20" stroke-width="3"/>'+
+    // thin inner bezel + matte face
+    '<circle cx="100" cy="100" r="87" fill="url(#bz'+id+')"/>'+
+    '<circle cx="100" cy="100" r="85" fill="url(#cf'+id+')"/>'+
+    p.join('')+red+
+    // big central textured disc
+    '<circle cx="100" cy="100" r="'+hubR+'" fill="url(#hb'+id+')" stroke="#000" stroke-width="1.5"/>'+
+    grille+
+    '<text x="100" y="'+(cy+hubR-8)+'" text-anchor="middle" font-family="Barlow Condensed, sans-serif" '+
+      'font-size="7.5" letter-spacing="1" fill="#8a8d91">'+cap+'</text>'+
+    // short needle
+    '<g id="'+id+'" data-muscle="1">'+
+      '<polygon points="'+(cx-2.6)+','+(cy-nInner)+' '+(cx+2.6)+','+(cy-nInner)+' '+
+        (cx+1.1)+','+(cy-nOuter)+' '+(cx-1.1)+','+(cy-nOuter)+'" fill="#ec6a2a"/>'+
+    '</g>'+
+    '<circle cx="100" cy="100" r="6" fill="#0d0e10" stroke="#5a5d60" stroke-width="1.2"/></svg>';
+}
+function dialCamaro(id,ticks,redFrac,labels,isTach){
+  const A0=-140,SPAN=280,cx=100,cy=100,Rr=86,p=[];
+  const numR=Rr-9;         // numerals near the outer edge
+  const accentR=Rr-20;     // blue accent ring
+  const minorsPer=(isTach?5:5), totalMinor=ticks*minorsPer;
+  // tick marks between the accent ring and numerals
+  for(let m=0;m<=totalMinor;m++){
+    const isMajor=(m%minorsPer===0);
+    const ang=(A0+SPAN*m/totalMinor)*Math.PI/180;
+    const r1=accentR+2, r2=isMajor?accentR+11:accentR+7;
+    const inRed=redFrac>0&&(m/totalMinor)>=redFrac;
+    p.push('<line x1="'+(cx+r1*Math.sin(ang)).toFixed(1)+'" y1="'+(cy-r1*Math.cos(ang)).toFixed(1)+
+      '" x2="'+(cx+r2*Math.sin(ang)).toFixed(1)+'" y2="'+(cy-r2*Math.cos(ang)).toFixed(1)+
+      '" stroke="'+(inRed?'#d8352e':(isMajor?'#eef0f2':'#aeb2b6'))+'" stroke-width="'+(isMajor?1.8:0.9)+'"/>');
+  }
+  // outer numerals
+  for(let i=0;i<=ticks;i++){
+    const ang=(A0+SPAN*i/ticks)*Math.PI/180;
+    const lx=cx+numR*Math.sin(ang),ly=cy-numR*Math.cos(ang);
+    const redNum=redFrac>0&&(i/ticks)>=redFrac-0.001;
+    p.push('<text x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" text-anchor="middle" '+
+      'font-family="Barlow Condensed, sans-serif" font-weight="600" font-size="11.5" fill="'+
+      (redNum?'#d8352e':'#eef0f2')+'">'+labels(i)+'</text>');
+  }
+  // red band at the redline, on the accent-ring radius
+  let red='';
+  if(redFrac>0&&redFrac<1){
+    const a1=(A0+SPAN*redFrac)*Math.PI/180,a2=(A0+SPAN)*Math.PI/180;
+    red='<path d="M '+(cx+accentR*Math.sin(a1)).toFixed(1)+' '+(cy-accentR*Math.cos(a1)).toFixed(1)+
+      ' A '+accentR+' '+accentR+' 0 0 1 '+(cx+accentR*Math.sin(a2)).toFixed(1)+' '+(cy-accentR*Math.cos(a2)).toFixed(1)+
+      '" fill="none" stroke="#d8352e" stroke-width="3.5"/>';
+  }
+  // cool-blue accent ring (drawn under the red band)
+  const a1=(A0)*Math.PI/180, a2=(A0+SPAN)*Math.PI/180;
+  const blue='<path d="M '+(cx+accentR*Math.sin(a1)).toFixed(1)+' '+(cy-accentR*Math.cos(a1)).toFixed(1)+
+    ' A '+accentR+' '+accentR+' 0 1 1 '+(cx+accentR*Math.sin(a2)).toFixed(1)+' '+(cy-accentR*Math.cos(a2)).toFixed(1)+
+    '" fill="none" stroke="#3b6ea5" stroke-width="1.6" opacity="0.85"/>';
+  const cap=isTach?'RPM x1000':'MPH';
+  return '<svg viewBox="0 0 200 140" role="img" aria-label="gauge">'+
+    '<defs>'+
+    '<radialGradient id="cf'+id+'" cx="50%" cy="45%" r="62%">'+
+      '<stop offset="0%" stop-color="#202225"/><stop offset="60%" stop-color="#141518"/>'+
+      '<stop offset="100%" stop-color="#0b0c0e"/></radialGradient>'+
+    '<radialGradient id="hub'+id+'" cx="45%" cy="38%" r="70%">'+
+      '<stop offset="0%" stop-color="#2c2f33"/><stop offset="100%" stop-color="#131417"/></radialGradient>'+
+    '<linearGradient id="bz'+id+'" x1="0" y1="0" x2="0" y2="1">'+
+      '<stop offset="0%" stop-color="#3a3c3f"/><stop offset="100%" stop-color="#0d0e10"/></linearGradient>'+
+    '</defs>'+
+    '<circle cx="100" cy="100" r="94" fill="url(#bz'+id+')"/>'+
+    '<circle cx="100" cy="100" r="90" fill="url(#cf'+id+')"/>'+
+    blue+p.join('')+red+
+    // soft raised centre hub, no texture
+    '<circle cx="100" cy="100" r="30" fill="url(#hub'+id+')"/>'+
+    '<text x="100" y="'+(cy+20)+'" text-anchor="middle" font-family="Barlow Condensed, sans-serif" '+
+      'font-size="8" letter-spacing="1" fill="#9a9da1">'+cap+'</text>'+
+    // long thin red needle
+    '<g id="'+id+'" data-muscle="1">'+
+      '<line x1="100" y1="100" x2="100" y2="112" stroke="#7a1c17" stroke-width="2.2"/>'+
+      '<polygon points="98.4,100 101.6,100 100.6,'+(cy-accentR-1)+' 99.4,'+(cy-accentR-1)+'" fill="#e0342b"/>'+
+    '</g>'+
+    '<circle cx="100" cy="100" r="6.5" fill="#161719" stroke="#7d8083" stroke-width="1.2"/>'+
+    '<circle cx="100" cy="100" r="2.2" fill="#e0342b"/></svg>';
+}
+function dialMustang(id,ticks,redFrac,labels,isTach){
+  const A0=-135,SPAN=270,cx=100,cy=100,Rr=84,p=[];
+  const numR=Rr-15;
+  const minorsPer=(isTach?5:4), totalMinor=ticks*minorsPer;
+  // fine hash marks
+  for(let m=0;m<=totalMinor;m++){
+    const isMajor=(m%minorsPer===0);
+    const ang=(A0+SPAN*m/totalMinor)*Math.PI/180;
+    const len=isMajor?10:5;
+    const inRed=redFrac>0&&(m/totalMinor)>=redFrac;
+    p.push('<line x1="'+(cx+(Rr-len)*Math.sin(ang)).toFixed(1)+'" y1="'+(cy-(Rr-len)*Math.cos(ang)).toFixed(1)+
+      '" x2="'+(cx+Rr*Math.sin(ang)).toFixed(1)+'" y2="'+(cy-Rr*Math.cos(ang)).toFixed(1)+
+      '" stroke="'+(inRed?'#e23b32':(isMajor?'#f0ede8':'#7a7d82'))+'" stroke-width="'+(isMajor?1.6:0.7)+'"/>');
+  }
+  // numerals
+  for(let i=0;i<=ticks;i++){
+    const ang=(A0+SPAN*i/ticks)*Math.PI/180;
+    const lx=cx+numR*Math.sin(ang),ly=cy-numR*Math.cos(ang);
+    const redNum=redFrac>0&&(i/ticks)>=redFrac-0.001;
+    p.push('<text x="'+lx.toFixed(1)+'" y="'+(ly+4.5).toFixed(1)+'" text-anchor="middle" '+
+      'font-family="Barlow Condensed, sans-serif" font-weight="500" font-size="13" fill="'+
+      (redNum?'#e23b32':'#f0ede8')+'">'+labels(i)+'</text>');
+  }
+  // red band
+  let red='';
+  if(redFrac>0&&redFrac<1){
+    const a1=(A0+SPAN*redFrac)*Math.PI/180,a2=(A0+SPAN)*Math.PI/180,rR=Rr+2;
+    red='<path d="M '+(cx+rR*Math.sin(a1)).toFixed(1)+' '+(cy-rR*Math.cos(a1)).toFixed(1)+
+      ' A '+rR+' '+rR+' 0 0 1 '+(cx+rR*Math.sin(a2)).toFixed(1)+' '+(cy-rR*Math.cos(a2)).toFixed(1)+
+      '" fill="none" stroke="#cc1f22" stroke-width="3.5"/>';
+  }
+  const capMain=isTach?'REVOLUTIONS MIN':'';
+  const capSub=isTach?'x1000':'MPH';
+  return '<svg viewBox="0 0 200 140" role="img" aria-label="gauge">'+
+    '<defs>'+
+    '<radialGradient id="mf'+id+'" cx="50%" cy="46%" r="60%">'+
+      '<stop offset="0%" stop-color="#1a1c1f"/><stop offset="70%" stop-color="#101214"/>'+
+      '<stop offset="100%" stop-color="#090a0c"/></radialGradient>'+
+    '</defs>'+
+    '<circle cx="100" cy="100" r="92" fill="#0a0b0d"/>'+
+    '<circle cx="100" cy="100" r="90" fill="url(#mf'+id+')"/>'+
+    '<circle cx="100" cy="100" r="88" fill="none" stroke="#2a2d31" stroke-width="0.8"/>'+
+    p.join('')+red+
+    (isTach?'<text x="100" y="'+(cy+28)+'" text-anchor="middle" font-family="Barlow Condensed, sans-serif" '+
+      'font-size="6" letter-spacing="0.8" fill="#7a7d82">'+capMain+'</text>'+
+      '<text x="100" y="'+(cy+36)+'" text-anchor="middle" font-family="Barlow Condensed, sans-serif" '+
+      'font-size="7" letter-spacing="1" fill="#9a9da1">'+capSub+'</text>'
+    :'<text x="100" y="'+(cy+32)+'" text-anchor="middle" font-family="Barlow Condensed, sans-serif" '+
+      'font-size="8" letter-spacing="1" fill="#9a9da1">'+capSub+'</text>')+
+    // needle: thin red, from near center to just past numerals
+    '<g id="'+id+'" data-muscle="1">'+
+      '<line x1="100" y1="100" x2="100" y2="110" stroke="#5a1510" stroke-width="2"/>'+
+      '<polygon points="99,100 101,100 100.5,'+(cy-numR-5)+' 99.5,'+(cy-numR-5)+'" fill="#e0342b"/>'+
+    '</g>'+
+    '<circle cx="100" cy="100" r="6" fill="#111315" stroke="#555" stroke-width="1"/>'+
+    '<circle cx="100" cy="100" r="2" fill="#e0342b"/></svg>';
+}
+function dialPorsche(id,ticks,redFrac,labels,isTach){
+  const A0=-135,SPAN=270,cx=100,cy=100,Rr=84,p=[];
+  const numR=Rr-(isTach?17:16);
+  const minorsPer=isTach?5:5,totalMinor=ticks*minorsPer;
+  for(let m=0;m<=totalMinor;m++){
+    const isMajor=(m%minorsPer===0);
+    const ang=(A0+SPAN*m/totalMinor)*Math.PI/180;
+    const len=isMajor?9:4.5;
+    const inRed=redFrac>0&&(m/totalMinor)>=redFrac;
+    p.push('<line x1="'+(cx+(Rr-len)*Math.sin(ang)).toFixed(1)+'" y1="'+(cy-(Rr-len)*Math.cos(ang)).toFixed(1)+
+      '" x2="'+(cx+Rr*Math.sin(ang)).toFixed(1)+'" y2="'+(cy-Rr*Math.cos(ang)).toFixed(1)+
+      '" stroke="'+(inRed?'#ff3b2f':(isMajor?'#d6ebff':'#6f9ccc'))+'" stroke-width="'+(isMajor?2.2:1)+'"/>');
+  }
+  for(let i=0;i<=ticks;i++){
+    const ang=(A0+SPAN*i/ticks)*Math.PI/180;
+    const lx=cx+numR*Math.sin(ang),ly=cy-numR*Math.cos(ang);
+    const redNum=redFrac>0&&(i/ticks)>=redFrac-0.001;
+    p.push('<text x="'+lx.toFixed(1)+'" y="'+(ly+(isTach?5.5:4)).toFixed(1)+'" text-anchor="middle" '+
+      'font-family="Barlow Condensed, sans-serif" font-weight="700" font-size="'+(isTach?16:11)+'" '+
+      'fill="'+(redNum?'#ff4a3d':'#cfe6ff')+'" filter="url(#pg'+id+')">'+labels(i)+'</text>');
+  }
+  let red='';
+  if(redFrac>0&&redFrac<1){
+    const a1=(A0+SPAN*redFrac)*Math.PI/180,a2=(A0+SPAN)*Math.PI/180,rR=Rr+3;
+    red='<path d="M '+(cx+rR*Math.sin(a1)).toFixed(1)+' '+(cy-rR*Math.cos(a1)).toFixed(1)+
+      ' A '+rR+' '+rR+' 0 0 1 '+(cx+rR*Math.sin(a2)).toFixed(1)+' '+(cy-rR*Math.cos(a2)).toFixed(1)+
+      '" fill="none" stroke="#ff2d20" stroke-width="4" stroke-linecap="round"/>';
+  }
+  const cap=isTach?'1/min x1000':'MPH';
+  return '<svg viewBox="0 0 200 200" role="img" aria-label="gauge">'+
+    '<defs>'+
+    '<radialGradient id="pf'+id+'" cx="50%" cy="50%" r="50%">'+
+      '<stop offset="0%" stop-color="#07090c"/><stop offset="78%" stop-color="#0a0e14"/>'+
+      '<stop offset="93%" stop-color="#16324f"/><stop offset="100%" stop-color="#0b1520"/></radialGradient>'+
+    '<filter id="pg'+id+'" x="-30%" y="-30%" width="160%" height="160%">'+
+      '<feGaussianBlur stdDeviation="0.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'+
+    '</defs>'+
+    '<circle cx="100" cy="100" r="95" fill="#050608" stroke="#1d2530" stroke-width="2"/>'+
+    '<circle cx="100" cy="100" r="92" fill="url(#pf'+id+')"/>'+
+    p.join('')+red+
+    '<text x="100" y="'+(cy+(isTach?-30:-24))+'" text-anchor="middle" font-family="Barlow Condensed, sans-serif" '+
+      'font-size="7" letter-spacing="1" fill="#6f9ccc">'+cap+'</text>'+
+    '<g id="'+id+'" data-muscle="1">'+
+      '<line x1="100" y1="100" x2="100" y2="112" stroke="#8a4a00" stroke-width="2.4"/>'+
+      '<polygon points="98.6,100 101.4,100 100.5,'+(cy-numR-2)+' 99.5,'+(cy-numR-2)+'" fill="#ffa11a"/>'+
+    '</g>'+
+    '<circle cx="100" cy="100" r="8" fill="#0b0d10" stroke="#2c3440" stroke-width="1.2"/>'+
+    '</svg>';
+}
+function dialAudi(id,ticks,redFrac,labels,isTach,lane,modeTxt){
+  const A0=-135,SPAN=270,cx=100,cy=100,Ro=86,p=[];
+  const per=isTach?5:4,tot=ticks*per;
+  for(let m=0;m<=tot;m++){
+    const major=m%per===0,a=(A0+SPAN*m/tot)*Math.PI/180,len=major?11:5;
+    const red=redFrac>0&&m/tot>=redFrac-0.0001;
+    p.push('<line x1="'+(cx+(Ro-len)*Math.sin(a)).toFixed(1)+'" y1="'+(cy-(Ro-len)*Math.cos(a)).toFixed(1)+
+      '" x2="'+(cx+Ro*Math.sin(a)).toFixed(1)+'" y2="'+(cy-Ro*Math.cos(a)).toFixed(1)+
+      '" stroke="'+(red?'#e3261f':'#f2f2f2')+'" stroke-width="'+(major?2.4:1.1)+'"/>');
+  }
+  const nr=Ro-24;
+  for(let i=0;i<=ticks;i++){
+    const lbl=labels(i);if(lbl===''||(isTach&&i===0))continue;
+    const a=(A0+SPAN*i/ticks)*Math.PI/180,red=redFrac>0&&i/ticks>=redFrac-0.001;
+    p.push('<text x="'+(cx+nr*Math.sin(a)).toFixed(1)+'" y="'+(cy-nr*Math.cos(a)+5).toFixed(1)+
+      '" text-anchor="middle" font-family="Barlow Condensed, sans-serif" font-weight="600" font-size="'+(isTach?17:13)+
+      '" fill="'+(red?'#ff3b30':'#ffffff')+'">'+lbl+'</text>');
+  }
+  const centre=isTach
+    ?'<text x="100" y="110" text-anchor="middle" class="au-gear" id="cl-gear2-'+lane+'" data-pre="D">D1</text>'+
+     '<text x="100" y="164" text-anchor="middle" class="au-small">'+modeTxt+'</text>'+
+     '<text x="100" y="175" text-anchor="middle" class="au-tiny">1/min x 1000</text>'
+    :'<text x="100" y="109" text-anchor="middle" class="au-mph" id="cl-mph-'+lane+'">0</text>'+
+     '<text x="100" y="124" text-anchor="middle" class="au-tiny">MPH</text>';
+  return '<svg viewBox="0 0 200 200" role="img" aria-label="gauge">'+
+    '<circle cx="100" cy="100" r="96" fill="#040404" stroke="#9aa0a6" stroke-width="2.2"/>'+
+    '<circle cx="100" cy="100" r="92" fill="none" stroke="#2a2c2f" stroke-width="1"/>'+
+    p.join('')+
+    '<circle cx="100" cy="100" r="48" fill="#070707" stroke="#8d9297" stroke-width="1.6"/>'+
+    centre+
+    '<g id="'+id+'" data-muscle="1"><polygon points="98.9,'+(cy-47)+' 101.1,'+(cy-47)+' 100.5,'+(cy-Ro-2)+' 99.5,'+(cy-Ro-2)+'" fill="#e3261f"/></g>'+
+    '</svg>';
+}
+const BMW_SPD=[0,10,20,40,60,80,100,120,140,160,180,200];
+function bmwSpdPos(mph){
+  if(mph<=0)return 0;
+  for(let i=1;i<BMW_SPD.length;i++)if(mph<=BMW_SPD[i])
+    return (i-1+(mph-BMW_SPD[i-1])/(BMW_SPD[i]-BMW_SPD[i-1]))/(BMW_SPD.length-1);
+  return 1;
+}
+function displayBMW(l,tachK,redFrac,modeTxt){
+  const Y0=138,Y1=12,H=Y0-Y1;
+  const lx=y=>y>=75?72-(Y0-y)/63*28:44+(75-y)/63*28;   // left scale path x at height y
+  const rx=y=>420-lx(y);
+  let lab='';
+  BMW_SPD.forEach((v,i)=>{const y=Y0-H*i/(BMW_SPD.length-1);
+    lab+='<text x="'+(lx(y)-12).toFixed(1)+'" y="'+(y+3.5).toFixed(1)+'" text-anchor="end" class="bm-num">'+v+'</text>';});
+  for(let i=0;i<=tachK;i++){const y=Y0-H*i/tachK,red=redFrac>0&&i/tachK>=redFrac-0.001;
+    if(tachK>12&&i%2)continue;
+    lab+='<text x="'+(rx(y)+12).toFixed(1)+'" y="'+(y+3.5).toFixed(1)+'" class="bm-num" fill="'+(red?'#ff4d3d':'#f3d7c4')+'">'+i+'</text>';}
+  const band=(side)=>side==='L'?'M72 '+Y0+' L44 75 L72 '+Y1:'M348 '+Y0+' L376 75 L348 '+Y1;
+  const redY=Y0-H*redFrac;
+  return '<svg viewBox="0 0 420 150" class="bm-svg" role="img" aria-label="instrument display">'+
+    '<defs>'+
+      '<linearGradient id="bmbg'+l+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16295a"/><stop offset="1" stop-color="#0a1330"/></linearGradient>'+
+      '<linearGradient id="bmmid'+l+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b9c6f0"/><stop offset="0.55" stop-color="#8d9fdc"/><stop offset="1" stop-color="#6c7fc4"/></linearGradient>'+
+      '<linearGradient id="bmrpm'+l+'" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff9a2e"/>'+
+        '<stop offset="'+Math.max(0,redFrac-0.05).toFixed(2)+'" stop-color="#ff6a1f"/><stop offset="'+redFrac.toFixed(2)+'" stop-color="#ff2a1a"/><stop offset="1" stop-color="#d0101a"/></linearGradient>'+
+      '<clipPath id="bmcs'+l+'"><rect id="bmcr-spd-'+l+'" x="0" y="'+Y0+'" width="420" height="0"/></clipPath>'+
+      '<clipPath id="bmcrp'+l+'"><rect id="bmcr-rpm-'+l+'" x="0" y="'+Y0+'" width="420" height="0"/></clipPath>'+
+    '</defs>'+
+    '<path d="M40 6 H380 L412 75 L380 144 H40 L8 75 Z" fill="url(#bmbg'+l+')" stroke="#3558a8" stroke-width="1.5"/>'+
+    '<path d="M118 30 H302 L322 75 L302 120 H118 L98 75 Z" fill="url(#bmmid'+l+')" opacity="0.92"/>'+
+    // perspective lane lines in the centre panel
+    '<g stroke="#eef2ff" stroke-width="1" opacity="0.55"><line x1="210" y1="34" x2="140" y2="118"/><line x1="210" y1="34" x2="280" y2="118"/>'+
+      '<line x1="210" y1="34" x2="185" y2="118" stroke-dasharray="4 5"/><line x1="210" y1="34" x2="235" y2="118" stroke-dasharray="4 5"/></g>'+
+    '<path d="'+band('L')+'" fill="none" stroke="#223a70" stroke-width="10" stroke-linejoin="miter"/>'+
+    '<path d="'+band('R')+'" fill="none" stroke="#3a2a2a" stroke-width="10" stroke-linejoin="miter"/>'+
+    '<path d="'+band('R')+'" fill="none" stroke="#7a1c16" stroke-width="10" stroke-linejoin="miter" clip-path="url(#bmred'+l+')" opacity="0.8"/>'+
+    '<clipPath id="bmred'+l+'"><rect x="0" y="0" width="420" height="'+redY.toFixed(1)+'"/></clipPath>'+
+    '<g id="nd-spd-'+l+'" data-bar="spd" data-max="200" data-y0="'+Y0+'" data-y1="'+Y1+'" data-clip="bmcr-spd-'+l+'">'+
+      '<path d="'+band('L')+'" fill="none" stroke="#5aa0ff" stroke-width="10" stroke-linejoin="miter" clip-path="url(#bmcs'+l+')"/></g>'+
+    '<g id="nd-rpm-'+l+'" data-bar="rpm" data-y0="'+Y0+'" data-y1="'+Y1+'" data-clip="bmcr-rpm-'+l+'">'+
+      '<path d="'+band('R')+'" fill="none" stroke="url(#bmrpm'+l+')" stroke-width="10" stroke-linejoin="miter" clip-path="url(#bmcrp'+l+')"/></g>'+
+    lab+
+    '<text x="92" y="20" class="bm-cap">mph</text><text x="330" y="20" text-anchor="end" class="bm-cap">1/min x1000</text>'+
+    '<text x="152" y="84" text-anchor="middle" class="bm-big" id="cl-mph-'+l+'">0</text>'+
+    '<text x="152" y="98" text-anchor="middle" class="bm-sm">mph</text>'+
+    '<text x="268" y="84" text-anchor="middle" class="bm-big" id="cl-gear2-'+l+'" data-pre="D">D1</text>'+
+    '<text x="210" y="58" text-anchor="middle" class="bm-mode">'+modeTxt+'</text>'+
+    '<text x="210" y="112" text-anchor="middle" class="bm-sm"><tspan id="cl-g-'+l+'">0.00</tspan> g</text>'+
+    '</svg>';
+}
+function tickL(cx,cy,r1,r2,deg,col,w){const a=pol(cx,cy,r1,deg),b=pol(cx,cy,r2,deg);
+  return '<line x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'" stroke="'+col+'" stroke-width="'+w+'"/>';}
+function txtAt(cx,cy,r,deg,t,cls,fill,dy){const a=pol(cx,cy,r,deg);
+  return '<text x="'+a[0].toFixed(1)+'" y="'+(a[1]+(dy||3.5)).toFixed(1)+'" text-anchor="middle" class="'+cls+'"'+(fill?' fill="'+fill+'"':'')+'>'+t+'</text>';}
+function modeWord(c,map){return map[c.mode]||map.normal;}
+function displayDurango(l,c,tachK,redFrac,spdMax){
+  const o=[],RED='#ff2d2d';
+  // tach
+  const tx=92,ty=96,tR=70,tA0=165,tSp=210;
+  o.push('<path d="'+arcD(tx,ty,tR+4,tA0,tA0+tSp)+'" fill="none" stroke="'+RED+'" stroke-width="2.4"/>');
+  o.push('<path d="'+arcD(tx,ty,tR+8,tA0+tSp*redFrac,tA0+tSp)+'" fill="none" stroke="'+RED+'" stroke-width="5"/>');
+  for(let i=0;i<=tachK*2;i++){const a=tA0+tSp*i/(tachK*2),maj=i%2===0;
+    o.push(tickL(tx,ty,tR-(maj?11:6),tR+3,a,maj?'#ffffff':RED,maj?2.2:1.4));
+    if(maj&&(tachK<=10||(i/2)%2===0))o.push(txtAt(tx,ty,tR-21,a,i/2,'dg-num'));}
+  o.push('<text x="'+(tx+34)+'" y="'+(ty+62)+'" class="dg-cap" text-anchor="middle">RPM</text><text x="'+(tx+34)+'" y="'+(ty+70)+'" class="dg-cap" text-anchor="middle">x1000</text>');
+  o.push('<g id="nd-rpm-'+l+'" data-a0="'+tA0+'" data-span="'+tSp+'" data-cx="'+tx+'" data-cy="'+ty+'">'+
+    '<polygon points="'+(tx-2.2)+','+(ty-tR+22)+' '+(tx+2.2)+','+(ty-tR+22)+' '+(tx+1)+','+(ty-tR-6)+' '+(tx-1)+','+(ty-tR-6)+'" fill="#fff"/></g>');
+  // speedo
+  const sx=220,sy=94,sR=80,sA0=-140,sSp=280,step=spdMax>150?20:10,n=spdMax/step;
+  o.push('<path d="'+arcD(sx,sy,sR+5,sA0,sA0+sSp)+'" fill="none" stroke="'+RED+'" stroke-width="2.4"/>');
+  for(let i=0;i<=n*2;i++){const a=sA0+sSp*i/(n*2),maj=i%2===0;
+    o.push(tickL(sx,sy,sR-(maj?10:5),sR,a,'#fff',maj?2.4:1.2));
+    if(maj){const v=i/2*step,big=spdMax>150?true:(v%20===0);
+      o.push(txtAt(sx,sy,sR-(big?22:19),a,v,big?'dg-spd':'dg-spd2','',big?5:3));}}
+  o.push('<text x="'+sx+'" y="'+(sy-(spdMax>150?8:50))+'" text-anchor="middle" class="dg-cap">MPH</text>');
+  o.push('<text x="'+sx+'" y="'+(sy+16)+'" text-anchor="middle" class="dg-dig" id="cl-mph-'+l+'">0</text>');
+  o.push('<text x="'+sx+'" y="'+(sy+30)+'" text-anchor="middle" class="dg-cap"><tspan id="cl-g-'+l+'">0.00</tspan> g</text>');
+  o.push('<g id="nd-spd-'+l+'" data-a0="'+sA0+'" data-span="'+sSp+'" data-cx="'+sx+'" data-cy="'+sy+'">'+
+    '<polygon points="'+(sx-1.8)+','+(sy-sR+44)+' '+(sx+1.8)+','+(sy-sR+44)+' '+(sx+0.8)+','+(sy-sR+1)+' '+(sx-0.8)+','+(sy-sR+1)+'" fill="#fff"/></g>');
+  o.push('<text x="'+(sx+100)+'" y="'+(sy+12)+'" text-anchor="middle" class="dg-gear" id="cl-gear2-'+l+'" data-pre="D">D1</text>');
+  o.push('<text x="'+(sx-88)+'" y="22" class="dg-sm">N</text><text x="'+(sx+92)+'" y="24" class="dg-sm" id="dg-amb-'+l+'">'+Math.round(ambient())+'°F</text>');
+  // coolant (top) and fuel (bottom) arcs on the right
+  const rx=350,ry=94,rR=60;
+  o.push('<path d="'+arcD(rx,ry,rR+4,18,82)+'" fill="none" stroke="'+RED+'" stroke-width="2.4"/>');
+  o.push('<path d="'+arcD(rx,ry,rR+4,98,162)+'" fill="none" stroke="'+RED+'" stroke-width="2.4"/>');
+  [18,34,50,66,82,98,114,130,146,162].forEach((a,i)=>o.push(tickL(rx,ry,rR-(i%4===0?9:5),rR+3,a,i===0||i===9?RED:'#fff',1.6)));
+  o.push(txtAt(rx,ry,rR-18,24,'H','dg-num'),txtAt(rx,ry,rR-18,78,'C','dg-num'),txtAt(rx,ry,rR-18,102,'F','dg-num'),txtAt(rx,ry,rR-18,156,'E','dg-num'));
+  const nd=(a)=>{const p1=pol(rx,ry,rR-14,a),p2=pol(rx,ry,rR+4,a);return '<line x1="'+p1[0].toFixed(1)+'" y1="'+p1[1].toFixed(1)+'" x2="'+p2[0].toFixed(1)+'" y2="'+p2[1].toFixed(1)+'" stroke="#fff" stroke-width="3" stroke-linecap="round"/>';};
+  o.push(nd(58),nd(118));
+  return '<svg viewBox="0 0 440 182" class="nc-svg" role="img" aria-label="instrument cluster">'+
+    '<rect x="2" y="2" width="436" height="178" rx="26" fill="#050506" stroke="#2a2a2e" stroke-width="2"/>'+o.join('')+'</svg>';
+}
+function displayC8(l,c,tachK,redFrac){
+  const o=[],cx=220,cy=90,R=68,A0=-125,SP=250;
+  o.push('<path d="M36 26 H150 L150 150 H22 L12 140 Z" fill="url(#c8p'+l+')" stroke="#3a78c8" stroke-width="1.2"/>');
+  o.push('<path d="M290 26 H404 L428 140 L418 150 H290 Z" fill="url(#c8p'+l+')" stroke="#3a78c8" stroke-width="1.2"/>');
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+(R+8)+'" fill="#05070c" stroke="#1f3f6b" stroke-width="2"/>');
+  o.push('<path d="'+arcD(cx,cy,R,A0,A0+SP)+'" fill="none" stroke="#1d3a66" stroke-width="7"/>');
+  o.push('<path id="nd-rpm-'+l+'" data-arc="1" pathLength="1000" stroke-dasharray="0 1000" d="'+arcD(cx,cy,R,A0,A0+SP)+'" fill="none" stroke="#e9f3ff" stroke-width="7"/>');
+  o.push('<path d="'+arcD(cx,cy,R+5,A0+SP*(redFrac-0.07),A0+SP*redFrac)+'" fill="none" stroke="#ffd23c" stroke-width="2.4"/>');
+  o.push('<path d="'+arcD(cx,cy,R+5,A0+SP*redFrac,A0+SP)+'" fill="none" stroke="#ff2b2b" stroke-width="2.4"/>');
+  for(let i=0;i<=tachK;i++){const a=A0+SP*i/tachK;o.push(tickL(cx,cy,R-4,R+4,a,'#e9f3ff',1.4));
+    if(tachK<=10||i%2===0)o.push(txtAt(cx,cy,R-17,a,i,'c8-num',i/tachK>=redFrac-0.001?'#ff3b3b':'',5));
+    if(i<tachK)o.push(tickL(cx,cy,R+2,R+5,A0+SP*(i+0.5)/tachK,'#8fb8e8',1));}
+  o.push('<text x="'+cx+'" y="'+(cy+8)+'" text-anchor="middle" class="c8-dig" id="cl-mph-'+l+'">0</text>');
+  o.push('<text x="'+cx+'" y="'+(cy+21)+'" text-anchor="middle" class="c8-sm">MPH</text>');
+  o.push('<text x="'+cx+'" y="'+(cy+48)+'" text-anchor="middle" class="c8-gear" id="cl-gear2-'+l+'" data-pre="">1</text>');
+  o.push('<text x="'+(cx+34)+'" y="'+(cy+66)+'" text-anchor="middle" class="c8-tiny">RPM</text><text x="'+(cx+34)+'" y="'+(cy+73)+'" text-anchor="middle" class="c8-tiny">/1000</text>');
+  // left pane
+  o.push('<text x="86" y="42" text-anchor="middle" class="c8-hd">Time &amp; Temperature</text><line x1="36" y1="47" x2="140" y2="47" stroke="#6fb4ff" stroke-width="0.8"/>');
+  const tod=({day:'2:15 PM',dusk:'7:31 PM',night:'10:48 PM'})[timeOfDay()]||'2:15 PM';
+  o.push('<text x="86" y="68" text-anchor="middle" class="c8-val">'+tod+' / '+Math.round(ambient())+'°F</text>');
+  o.push('<text x="86" y="92" text-anchor="middle" class="c8-hd">Oil Pressure</text><line x1="36" y1="97" x2="140" y2="97" stroke="#6fb4ff" stroke-width="0.8"/>');
+  o.push('<text x="86" y="113" text-anchor="middle" class="c8-val"><tspan id="nd-rpm-'+l+'-3" data-num="1" data-lo="24" data-hi="78">24</tspan> psi</text>');
+  o.push('<rect x="38" y="120" width="100" height="3" fill="#24406a"/><rect id="nd-rpm-'+l+'-2" data-hbar="1" data-w="100" x="38" y="120" width="0" height="3" fill="#e9f3ff"/>');
+  o.push('<text x="38" y="133" class="c8-tiny">0</text><text x="138" y="133" text-anchor="end" class="c8-tiny">80</text>');
+  // right pane
+  o.push('<text x="352" y="42" text-anchor="middle" class="c8-hd">Performance</text><line x1="300" y1="47" x2="404" y2="47" stroke="#6fb4ff" stroke-width="0.8"/>');
+  o.push('<text x="352" y="68" text-anchor="middle" class="c8-val">Accel <tspan id="cl-g-'+l+'">0.00</tspan> g</text>');
+  o.push('<text x="352" y="92" text-anchor="middle" class="c8-hd">Drive Mode</text><line x1="300" y1="97" x2="404" y2="97" stroke="#6fb4ff" stroke-width="0.8"/>');
+  o.push('<text x="352" y="116" text-anchor="middle" class="c8-val">'+modeWord(c,{normal:'Tour',sport:'Sport',track:'Track',corsa:'Track',drag:'Launch'})+'</text>');
+  // bottom strip: coolant and fuel
+  o.push('<text x="40" y="170" class="c8-sm">210°F</text><rect x="72" y="164" width="60" height="3" fill="#24406a"/><rect x="72" y="164" width="36" height="3" fill="#e9f3ff"/>');
+  o.push('<rect x="310" y="164" width="60" height="3" fill="#24406a"/><rect x="310" y="164" width="44" height="3" fill="#e9f3ff"/><text x="400" y="170" text-anchor="end" class="c8-sm">SE</text>');
+  return '<svg viewBox="0 0 440 180" class="nc-svg" role="img" aria-label="instrument display">'+
+    '<defs><linearGradient id="c8p'+l+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f3d78"/><stop offset="1" stop-color="#0a1f3f"/></linearGradient></defs>'+
+    '<path d="M24 8 H416 L438 150 L420 178 H20 L2 150 Z" fill="#070b14" stroke="#1d2f4d" stroke-width="1.5"/>'+o.join('')+'</svg>';
+}
+function displayC7(l,c,tachK,redFrac){
+  const o=[],cx=220,cy=92,R=74,A0=-125,SP=250;
+  // left speedo arc
+  const lx=208,ly=95,lR=112,la0=232,lsp=76;
+  o.push('<path d="'+arcD(lx,ly,lR,la0,la0+lsp)+'" fill="none" stroke="#5a1010" stroke-width="1.2"/>');
+  for(let i=0;i<=20;i++){const a=la0+lsp*i/20,maj=i%2===0;o.push(tickL(lx,ly,lR-(maj?7:4),lR,a,maj?'#f2f2f2':'#b0b0b0',maj?1.6:0.9));
+    if(maj)o.push(txtAt(lx,ly,lR+12,a,i*10,'c7-num','',3));}
+  o.push(txtAt(lx,ly,lR-18,268,'MPH','c7-cap','',3));
+  o.push('<g id="nd-spd-'+l+'" data-a0="'+la0+'" data-span="'+lsp+'" data-cx="'+lx+'" data-cy="'+ly+'">'+
+    '<polygon points="'+(lx-1.6)+','+(ly-lR+30)+' '+(lx+1.6)+','+(ly-lR+30)+' '+(lx+0.6)+','+(ly-lR-2)+' '+(lx-0.6)+','+(ly-lR-2)+'" fill="#ff2a2a"/></g>');
+  // right fuel / temperature arcs
+  const rx=232,rR=112;
+  o.push('<path d="'+arcD(rx,ly,rR,52,86)+'" fill="none" stroke="#5a1010" stroke-width="1.2"/><path d="'+arcD(rx,ly,rR,94,128)+'" fill="none" stroke="#5a1010" stroke-width="1.2"/>');
+  for(let i=0;i<=8;i++){o.push(tickL(rx,ly,rR-(i%4===0?7:4),rR,52+34*i/8,'#e8e8e8',1.1));o.push(tickL(rx,ly,rR-(i%2===0?7:4),rR,94+34*i/8,'#e8e8e8',1.1));}
+  o.push(txtAt(rx,ly,rR+11,52,'1','c7-num'),txtAt(rx,ly,rR+11,69,'½','c7-num'),txtAt(rx,ly,rR+11,86,'0','c7-num'),
+    txtAt(rx,ly,rR+13,94,'260','c7-num'),txtAt(rx,ly,rR+13,111,'220','c7-num'),txtAt(rx,ly,rR+13,128,'100','c7-num'));
+  const nd=(a)=>{const p1=pol(rx,ly,rR-26,a),p2=pol(rx,ly,rR+1,a);return '<line x1="'+p1[0].toFixed(1)+'" y1="'+p1[1].toFixed(1)+'" x2="'+p2[0].toFixed(1)+'" y2="'+p2[1].toFixed(1)+'" stroke="#ff2a2a" stroke-width="2.4" stroke-linecap="round"/>';};
+  o.push(nd(60),nd(108));
+  // centre tach
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+(R+10)+'" fill="#08090b" stroke="url(#c7r'+l+')" stroke-width="5"/>');
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+(R+4)+'" fill="none" stroke="#3b3f45" stroke-width="1"/>');
+  o.push('<path d="'+arcD(cx,cy,R-2,A0+SP*redFrac,A0+SP)+'" fill="none" stroke="#e0201b" stroke-width="7"/>');
+  for(let i=0;i<=tachK*5;i++){const a=A0+SP*i/(tachK*5),maj=i%5===0,red=i/(tachK*5)>=redFrac-0.001;
+    o.push(tickL(cx,cy,R-(maj?12:6),R,a,red?'#ff5040':'#f4f4f4',maj?2.2:1));
+    if(maj&&(tachK<=10||(i/5)%2===0))o.push(txtAt(cx,cy,R-24,a,i/5,'c7-tn',red?'#ff4a3d':'',6));}
+  o.push('<text x="'+cx+'" y="'+(cy+48)+'" text-anchor="middle" class="c7-cap">RPM x1000</text>');
+  o.push('<g id="nd-rpm-'+l+'" data-a0="'+A0+'" data-span="'+SP+'" data-cx="'+cx+'" data-cy="'+cy+'">'+
+    '<polygon points="'+(cx-2)+','+(cy-36)+' '+(cx+2)+','+(cy-36)+' '+(cx+0.7)+','+(cy-R+2)+' '+(cx-0.7)+','+(cy-R+2)+'" fill="#ff2a2a"/></g>');
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="36" fill="#000" stroke="#9ea4ab" stroke-width="2"/>');
+  o.push('<text x="'+cx+'" y="'+(cy+9)+'" text-anchor="middle" class="c7-dig" id="cl-mph-'+l+'">0</text>');
+  o.push('<text x="'+cx+'" y="'+(cy+22)+'" text-anchor="middle" class="c7-cap">MPH</text>');
+  o.push('<text x="'+cx+'" y="'+(cy-20)+'" text-anchor="middle" class="c7-gear" id="cl-gear2-'+l+'" data-pre="">1</text>');
+  o.push('<rect x="'+(cx-9)+'" y="'+(cy+R-4)+'" width="18" height="12" rx="1.5" fill="none" stroke="#e8c14a" stroke-width="1"/>'+
+    '<text x="'+cx+'" y="'+(cy+R+5.5)+'" text-anchor="middle" class="c7-mode">'+modeWord(c,{normal:'T',sport:'S',track:'TR',corsa:'TR',drag:'TR'})+'</text>');
+  o.push('<text x="'+(cx+46)+'" y="'+(cy+R+6)+'" class="c7-cap"><tspan id="cl-g-'+l+'">0.00</tspan> g</text>');
+  return '<svg viewBox="0 0 440 184" class="nc-svg" role="img" aria-label="instrument cluster">'+
+    '<defs><linearGradient id="c7r'+l+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="0.5" stop-color="#6d737a"/><stop offset="1" stop-color="#d9dde2"/></linearGradient></defs>'+
+    '<rect x="2" y="2" width="436" height="180" rx="30" fill="#040405" stroke="#26282c" stroke-width="2"/>'+o.join('')+'</svg>';
+}
+function displayLambo(l,c,tachK,redFrac){
+  const o=[],cx=220,cy=178,R=142,A0=-80,SP=160,N=tachK*6;
+  const base=[],lit=[];
+  for(let i=0;i<N;i++){
+    const a1=A0+SP*i/N+0.5,a2=A0+SP*(i+1)/N-0.5,fr=(i+0.5)/N;
+    const p1=pol(cx,cy,R-20,a1),p2=pol(cx,cy,R,a1),p3=pol(cx,cy,R,a2),p4=pol(cx,cy,R-20,a2);
+    const pts=[p1,p2,p3,p4].map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+    base.push('<polygon points="'+pts+'" fill="#2b2f36"/>');
+    const col=fr>=redFrac?'#ff2020':fr>=redFrac-0.12?'#ffc21a':'#f2f4f8';
+    lit.push('<polygon points="'+pts+'" fill="'+col+'" opacity="0"/>');
+  }
+  o.push(base.join(''),'<g id="nd-rpm-'+l+'" data-segs="1">'+lit.join('')+'</g>');
+  o.push('<path d="'+arcD(cx,cy,R+4,A0,A0+SP*(redFrac-0.12))+'" fill="none" stroke="#e8c21c" stroke-width="2"/>');
+  o.push('<path d="'+arcD(cx,cy,R+4,A0+SP*(redFrac-0.12),A0+SP)+'" fill="none" stroke="#ff2a1a" stroke-width="3"/>');
+  for(let i=0;i<=tachK;i++){const a=A0+SP*i/tachK;
+    if(tachK<=12||i%2===0)o.push(txtAt(cx,cy,R-32,a,i,'lb-num',i/tachK>=redFrac-0.001?'#ff3a2a':'',5));}
+  o.push('<text x="'+(cx+R-8)+'" y="176" class="lb-sm" text-anchor="middle">RPM x1000</text>');
+  o.push('<text x="'+(cx+2)+'" y="'+(cy-38)+'" text-anchor="middle" class="lb-gear" id="cl-gear2-'+l+'" data-pre="">1</text>');
+  o.push('<text x="'+(cx-30)+'" y="'+(cy-40)+'" text-anchor="end" class="lb-mode">'+modeWord(c,{normal:'STRADA',sport:'SPORT',track:'CORSA',corsa:'CORSA',drag:'CORSA'})+'</text>');
+  o.push('<text x="'+(cx+72)+'" y="'+(cy-38)+'" text-anchor="end" class="lb-dig" id="cl-mph-'+l+'">0</text><text x="'+(cx+75)+'" y="'+(cy-38)+'" class="lb-sm">mph</text>');
+  o.push('<rect x="'+(cx-40)+'" y="'+(cy-24)+'" width="80" height="16" rx="8" fill="#1b0f10" stroke="#ff2a1a" stroke-width="1"/>'+
+    '<text x="'+cx+'" y="'+(cy-13)+'" text-anchor="middle" class="lb-sm"><tspan id="cl-g-'+l+'">0.00</tspan> g</text>');
+  // side screens
+  o.push('<path d="M14 70 L52 56 L66 150 L22 168 Z" fill="#0d1218" stroke="#303844" stroke-width="1"/>');
+  o.push('<path d="M426 70 L388 56 L374 150 L418 168 Z" fill="#0d1218" stroke="#303844" stroke-width="1"/>');
+  o.push('<text x="40" y="92" text-anchor="middle" class="lb-sm">'+Math.round(ambient())+'°F</text><text x="40" y="112" text-anchor="middle" class="lb-sm">OIL</text>'+
+    '<rect x="30" y="118" width="20" height="3" fill="#2b2f36"/><rect id="nd-rpm-'+l+'-2" data-hbar="1" data-w="20" x="30" y="118" width="0" height="3" fill="#ffc21a"/>');
+  o.push('<text x="400" y="92" text-anchor="middle" class="lb-sm">'+(c.drive||'awd').toUpperCase()+'</text><text x="400" y="112" text-anchor="middle" class="lb-sm">— — mi</text>');
+  return '<svg viewBox="0 0 440 184" class="nc-svg" role="img" aria-label="instrument display">'+
+    '<defs><pattern id="lbhex'+l+'" width="24" height="14" patternUnits="userSpaceOnUse">'+
+      '<path d="M6 0 H18 L24 7 L18 14 H6 L0 7 Z" fill="none" stroke="#1c2430" stroke-width="0.8"/></pattern></defs>'+
+    '<path d="M60 4 H380 L436 60 L420 180 H20 L4 60 Z" fill="#06080b" stroke="#2d3440" stroke-width="2"/>'+
+    '<path d="M70 12 H370 L420 62 L406 172 H34 L20 62 Z" fill="url(#lbhex'+l+')"/>'+o.join('')+'</svg>';
+}
+function uniScale(n,minor,lab){const M=[],m=[];
+  for(let i=0;i<=n;i++){M.push({p:i/n,t:lab(i),i});if(minor&&i<n)for(let k=1;k<=minor;k++)m.push((i+k/(minor+1))/n);}
+  return {M,m};}
+function pwMap(pw,f){if(!pw)return f;const pts=pw.split('|').map(q=>q.split(',').map(Number));
+  for(let i=1;i<pts.length;i++)if(f<=pts[i][0]){const a=pts[i-1],b=pts[i];return a[1]+(f-a[0])/(b[0]-a[0]||1)*(b[1]-a[1]);}
+  return 1;}
+function gDial(o){
+  const cx=o.cx,cy=o.cy,R=o.R,a=p=>o.a0+o.span*p,out=[];
+  const redP=o.redFrac||0;
+  if(o.face)out.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+o.face.r+'" fill="'+o.face.fill+'" stroke="'+(o.face.stroke||'none')+'" stroke-width="'+(o.face.w||1)+'"/>');
+  (o.rings||[]).forEach(g=>out.push('<path d="'+arcD(cx,cy,g.r,a(g.p0||0),a(g.p1==null?1:g.p1))+'" fill="none" stroke="'+g.col+'" stroke-width="'+g.w+'"'+(g.op?' opacity="'+g.op+'"':'')+'/>'));
+  if(o.red&&redP>0&&redP<1)out.push('<path d="'+arcD(cx,cy,o.red.r,a(redP),a(1))+'" fill="none" stroke="'+o.red.col+'" stroke-width="'+o.red.w+'"/>');
+  if(o.fill)out.push('<path id="'+o.fill.id+'" data-arc="1" pathLength="1000" stroke-dasharray="0 1000" d="'+arcD(cx,cy,o.fill.r,a(0),a(1))+
+    '" fill="none" stroke="'+o.fill.col+'" stroke-width="'+o.fill.w+'"'+(o.fill.op?' opacity="'+o.fill.op+'"':'')+'/>');
+  const sc=o.scale,tk=o.ticks||{};
+  (sc.m||[]).forEach(p=>{const red=redP>0&&p>=redP-1e-6;
+    out.push(tickL(cx,cy,R-(tk.lm||5),R,a(p),red&&tk.red?tk.red:(tk.cm||'#9aa0a6'),tk.wm||1));});
+  sc.M.forEach(M=>{const red=redP>0&&M.p>=redP-1e-6;
+    if(tk.lM!==0)out.push(tickL(cx,cy,R-(tk.lM||10),R,a(M.p),red&&tk.red?tk.red:(tk.cM||'#fff'),tk.wM||2));
+    if(M.t!==''&&M.t!=null){const L=o.lab||{},q=pol(cx,cy,L.r||R-22,a(M.p));
+      out.push(T(q[0],q[1]+(L.dy==null?(L.sz||12)*0.36:L.dy),M.t,L.sz||12,red&&L.red?L.red:(L.col||'#fff'),{w:L.w,it:L.it,fam:L.fam}));}});
+  if(o.needle){const N=o.needle,w=N.w||3,tw=N.tw==null?w*0.35:N.tw;
+    out.push('<g id="'+N.id+'" data-a0="'+o.a0+'" data-span="'+o.span+'" data-cx="'+cx+'" data-cy="'+cy+'"'+(o.pw?' data-pw="'+o.pw+'"':'')+'>'+
+      '<polygon points="'+(cx-w/2)+','+(cy-N.r0)+' '+(cx+w/2)+','+(cy-N.r0)+' '+(cx+tw/2)+','+(cy-N.r1)+' '+(cx-tw/2)+','+(cy-N.r1)+'" fill="'+N.col+'"'+
+      (N.glow?' filter="url(#'+N.glow+')"':'')+'/></g>');
+    if(N.hub)out.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+N.hub.r+'" fill="'+N.hub.fill+'" stroke="'+(N.hub.stroke||'none')+'" stroke-width="'+(N.hub.w||1)+'"/>');}
+  return out.join('');
+}
+function staticNeedle(cx,cy,r0,r1,deg,col,w){const p1=pol(cx,cy,r0,deg),p2=pol(cx,cy,r1,deg);
+  return '<line x1="'+p1[0].toFixed(1)+'" y1="'+p1[1].toFixed(1)+'" x2="'+p2[0].toFixed(1)+'" y2="'+p2[1].toFixed(1)+'" stroke="'+col+'" stroke-width="'+w+'" stroke-linecap="round"/>';}
+function svgWrap(inner,defs,bg){return '<svg viewBox="0 0 440 180" class="nc-svg" role="img" aria-label="instrument cluster">'+
+  (defs?'<defs>'+defs+'</defs>':'')+(bg||'')+inner+'</svg>';}
+function glowDef(id,sd){return '<filter id="'+id+'" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="'+(sd||1.4)+'" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';}
+const modeTxt=(c,m)=>m[c.mode]||m.normal;
+function displayR8(l,c,tk,rf){
+  const cx=220,cy=92,R=78,sc=uniScale(tk,4,i=>i===0?'':i),o=[];
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+(R+8)+'" fill="#0a0a0b" stroke="#cfd3d8" stroke-width="3"/>');
+  o.push('<path d="'+arcD(cx,cy,(R+36)/2,-135+270*rf,135)+'" fill="none" stroke="#b3121a" stroke-width="'+(R-36)+'" opacity="0.85"/>');
+  o.push(gDial({cx,cy,R,a0:-135,span:270,redFrac:rf,scale:sc,ticks:{lM:12,wM:2.4,lm:6,wm:1.1,cm:'#d8d8d8'},
+    lab:{r:R-25,sz:21,w:700,col:'#f4f4f4'},
+    needle:{id:'nd-rpm-'+l,col:'#ff5a1f',r0:36,r1:R-2,w:3.2,tw:1.2}}));
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="34" fill="#050505" stroke="#6b6f75" stroke-width="1.4"/>');
+  o.push(T(cx,cy-16,'MPH',6.5,'#cfcfcf'),T(cx,cy+6,'0',24,'#fff',{id:'cl-mph-'+l,w:600}),
+    T(cx,cy+20,'D1',9,'#fff',{id:'cl-gear2-'+l,extra:' data-pre="D"'}),
+    T(cx,cy+29,modeTxt(c,{normal:'COMFORT',sport:'DYNAMIC',track:'PERFORMANCE',corsa:'PERFORMANCE'}),5.5,'#cfcfcf',{ls:0.6}));
+  o.push(T(48,40,'Date &amp; time',9,'#fff',{anchor:'start'}),'<line x1="46" y1="45" x2="128" y2="45" stroke="#555"/>',
+    T(60,66,({day:'3:32',dusk:'7:31',night:'10:48'})[timeOfDay()]||'3:32',15,'#fff',{anchor:'start'}),T(98,66,timeOfDay()==='day'?'PM':'PM',6.5,'#ddd',{anchor:'start'}),
+    T(86,82,Math.round(ambient())+'°F outside',8,'#ddd'),T(86,94,'Harlan County',8,'#ddd'));
+  const small=(x,lbl,idN)=>'<circle cx="'+x+'" cy="92" r="21" fill="#0b0b0c" stroke="#9a9ea4" stroke-width="1.6"/>'+
+    T(x,62,lbl,9,'#fff')+T(x,87,'%',6,'#bbb')+T(x,101,'0',13,'#fff',{extra:' id="'+idN+'"'})+
+    '<line x1="'+x+'" y1="111" x2="'+x+'" y2="114" stroke="#ff3a2a" stroke-width="1.5"/>';
+  o.push(small(338,'Power','nd-rpm-'+l+'-4').replace('id="nd-rpm-'+l+'-4"','id="nd-rpm-'+l+'-4" data-num="1" data-lo="0" data-hi="100"'),
+    small(392,'Torque','nd-rpm-'+l+'-5').replace('id="nd-rpm-'+l+'-5"','id="nd-rpm-'+l+'-5" data-num="1" data-lo="0" data-hi="100" data-bell="'+(c.tqRpm/(tk*1000)).toFixed(2)+'"'));
+  o.push('<line x1="40" y1="150" x2="400" y2="150" stroke="#2a2a2c"/>'+T(cx,166,Math.round(ambient())+'°F',9,'#fff'));
+  return svgWrap(o.join(''),'','<rect x="2" y="2" width="436" height="176" rx="16" fill="#060607" stroke="#222" stroke-width="1.5"/>');
+}
+function displayMcLaren(l,c,tk,rf){
+  const cx=196,cy=92,R=72,per=Math.min(30,270/tk),a0=-180,sp=per*tk,o=[];
+  const sc=uniScale(tk,1,i=>i===0?'':i);
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+(R+6)+'" fill="#0a0806" stroke="#3a2a1c" stroke-width="1"/>');
+  o.push(gDial({cx,cy,R,a0,span:sp,redFrac:rf,scale:sc,
+    rings:[{r:R-6,col:'#3a1f0c',w:11}],
+    fill:{id:'nd-rpm-'+l,r:R-6,col:'#ff7a1a',w:11,op:0.9},
+    ticks:{lM:14,wM:2,cM:'#fff',lm:6,wm:1,cm:'#b8a898',red:'#ff3b2a'},
+    lab:{r:R-26,sz:15,w:600,col:'#e8e2da',red:'#ff3b2a'}}));
+  o.push('<path d="'+arcD(cx,cy,R+2,a0,a0+sp)+'" fill="none" stroke="#f0ece6" stroke-width="1.6"/>');
+  o.push(T(cx,cy+22,'1',62,'#ff8a1a',{id:'cl-gear2-'+l,w:600,extra:' data-pre=""'}),T(cx+34,cy+22,'M',14,'#ff8a1a'),
+    T(cx+58,cy+56,'0',22,'#fff',{id:'cl-mph-'+l,w:600}),T(cx+58,cy+66,'MPH',7,'#fff'),T(cx+32,cy+40,'RPM x1000',5.5,'#ddd'));
+  const nm=(c.name||'').replace(/^\d{4}\s+/,'').replace(/^mclaren\s+/i,'');
+  o.push(T(392,34,nm,13,'#f2f2f2',{it:true,w:700,anchor:'end'}),'<line x1="290" y1="42" x2="400" y2="42" stroke="#ff7a1a" stroke-width="0.8"/>',
+    T(300,76,'<tspan id="cl-g-'+l+'">0.00</tspan> g',16,'#fff',{anchor:'start'}),
+    T(300,122,'H',9,'#ff7a1a',{anchor:'start'})+T(312,122,modeTxt(c,{normal:'COMFORT',sport:'SPORT',track:'TRACK',corsa:'TRACK'}),9,'#fff',{anchor:'start'}),
+    T(300,134,'P',9,'#ff7a1a',{anchor:'start'})+T(312,134,modeTxt(c,{normal:'COMFORT',sport:'SPORT',track:'TRACK',corsa:'TRACK'}),9,'#fff',{anchor:'start'}));
+  o.push('<line x1="30" y1="60" x2="120" y2="60" stroke="#ff7a1a" stroke-width="0.8"/>'+T(34,80,Math.round(ambient())+'°F',10,'#fff',{anchor:'start'})+
+    T(34,100,'Launch ready',10,'#ff8a1a',{anchor:'start'})+'<line x1="30" y1="120" x2="120" y2="120" stroke="#ff7a1a" stroke-width="0.8"/>');
+  return svgWrap(o.join(''),'','<rect x="2" y="2" width="436" height="176" rx="18" fill="#07080a" stroke="#1d1f24" stroke-width="1.5"/>');
+}
+function displayAccord10(l,c,tk,rf){
+  const o=[];
+  o.push(gDial({cx:120,cy:92,R:64,a0:-135,span:270,redFrac:rf,scale:uniScale(tk,1,i=>i),
+    face:{r:70,fill:'#0b1220',stroke:'#aeb6c2',w:1.6},red:{r:61,col:'#e0231c',w:5},
+    ticks:{lM:9,wM:1.8,lm:5,wm:1},lab:{r:48,sz:12,w:500,col:'#f2f2f2'},
+    needle:{id:'nd-rpm-'+l,col:'#f4f4f4',r0:-6,r1:58,w:2.4,tw:1,hub:{r:3,fill:'#1a1e26'}}}));
+  o.push(T(120,70,'x1000r/min',5.5,'#9aa3b0'));
+  o.push(gDial({cx:320,cy:92,R:64,a0:-135,span:270,scale:uniScale(8,1,i=>i*20),
+    face:{r:70,fill:'#0b1220',stroke:'#aeb6c2',w:1.6},
+    ticks:{lM:9,wM:1.8,lm:5,wm:1},lab:{r:47,sz:12,w:500,col:'#f2f2f2'},
+    needle:{id:'nd-spd-'+l,col:'#f4f4f4',r0:-6,r1:58,w:2.4,tw:1,hub:{r:3,fill:'#1a1e26'}}}));
+  o.push(T(320,70,'mph',6,'#9aa3b0'));
+  o.push(T(220,86,'D1',16,'#ff3b2f',{id:'cl-gear2-'+l,extra:' data-pre="D"'}),T(220,102,Math.round(ambient())+'°F',9,'#fff'),
+    T(220,114,'<tspan id="cl-g-'+l+'">0.00</tspan> g',9,'#fff'),T(196,40,'ACC',6.5,'#46d36a'),T(244,40,'LKAS',6.5,'#46d36a'));
+  for(let i=0;i<8;i++){o.push('<rect x="'+(34+i*0.6)+'" y="'+(126-i*9)+'" width="7" height="3" fill="'+(i<4?'#fff':'#333')+'"/>');
+    o.push('<rect x="'+(399-i*0.6)+'" y="'+(126-i*9)+'" width="7" height="3" fill="'+(i<6?'#fff':'#333')+'"/>');}
+  o.push(T(26,62,'H',8,'#fff'),T(26,136,'C',8,'#fff'),T(414,62,'F',8,'#fff'),T(414,136,'E',8,'#fff'));
+  return svgWrap(o.join(''),'','<path d="M20 20 Q220 6 420 20 L430 150 Q220 176 10 150 Z" fill="#05070b" stroke="#c6ccd4" stroke-width="1.4"/>');
+}
+function displayElantraN(l,c,tk,rf){
+  const cx=220,cy=90,R=74,o=[];
+  const sc=uniScale(tk,4,i=>i);
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+(R-4)+'" fill="url(#enb'+l+')"/>');
+  for(let i=0;i<12;i++){const a1=-140+280*i/12+1.5,a2=-140+280*(i+1)/12-1.5;
+    o.push('<path d="'+arcD(cx,cy,R+8,a1,a2)+'" fill="none" stroke="#ff3b1f" stroke-width="6"/>');}
+  o.push(gDial({cx,cy,R,a0:-140,span:280,redFrac:rf,scale:sc,
+    rings:[{r:R-3,col:'#d9e2ea',w:1}],fill:{id:'nd-rpm-'+l+'-2',r:R-3,col:'#ff5a3a',w:5,op:0.85},
+    ticks:{lM:10,wM:2,cM:'#fff',lm:5,wm:1,cm:'#cfd6de',red:'#ff3b1f'},lab:{r:R-20,sz:16,w:600,it:true,col:'#f4f4f4'},
+    needle:{id:'nd-rpm-'+l,col:'#ff3b1f',r0:26,r1:R-2,w:3,tw:1}}));
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="26" fill="#07080b" stroke="#ff3b1f" stroke-width="1.5"/>',
+    T(cx,cy+11,'D1',28,'#f4f4f4',{it:true,id:'cl-gear2-'+l,extra:' data-pre="D"'}),
+    '<rect x="'+(cx-44)+'" y="'+(cy+46)+'" width="88" height="26" fill="#07080b"/>',
+    T(cx-4,cy+68,'0',26,'#fff',{it:true,id:'cl-mph-'+l}),T(cx+32,cy+68,'MPH',6.5,'#fff'),T(cx-54,cy+64,'x1000 rpm',5,'#ddd'));
+  o.push(T(70,48,'Oil Temp.',10,'#fff'),T(70,80,'<tspan id="en-oil-'+l+'">165</tspan><tspan font-size="9">°F</tspan>',28,'#fff',{w:500}),
+    T(70,104,'Engine Temp.',10,'#fff'),T(70,136,'202<tspan font-size="9">°F</tspan>',28,'#fff',{w:500}));
+  o.push('<path d="M300 42 H420" stroke="#39c6e8" stroke-width="2"/>'+T(362,60,'Grin Shift',12,'#fff')+
+    '<circle cx="362" cy="106" r="28" fill="#061019" stroke="#2c6f96" stroke-width="5"/>'+
+    '<circle cx="362" cy="106" r="28" fill="none" stroke="#bfe6ff" stroke-width="5" pathLength="1000" stroke-dasharray="620 1000" transform="rotate(-90 362 106)"/>'+
+    T(362,112,'20',17,'#fff',{w:500})+T(362,148,modeTxt(c,{normal:'NORMAL',sport:'SPORT',track:'N MODE',corsa:'N MODE'}),8,'#9fdcff'));
+  return svgWrap(o.join(''),'<radialGradient id="enb'+l+'"><stop offset="0.35" stop-color="#07080b"/><stop offset="0.7" stop-color="#0f3a58"/><stop offset="1" stop-color="#1b6f98"/></radialGradient>',
+    '<rect x="2" y="2" width="436" height="176" rx="10" fill="#040506"/>');
+}
+function displayC6(l,c,tk,rf){
+  const o=[],ch='url(#c6c'+l+')',zr1=/zr1/i.test(c.name||''),smax=zr1?220:200;
+  const face=(x,y,r)=>'<circle cx="'+x+'" cy="'+y+'" r="'+(r+4)+'" fill="#0b0c0e" stroke="'+ch+'" stroke-width="3"/>';
+  o.push(face(112,92,70),face(328,92,70),face(220,58,28),face(220,124,28));
+  o.push(gDial({cx:112,cy:92,R:66,a0:-135,span:270,scale:uniScale(smax/20,4,i=>i*20),
+    ticks:{lM:8,wM:2,lm:4,wm:0.9,cm:'#c9ced6',cM:'#f2f4f8'},lab:{r:51,sz:11,w:500,col:'#f2f4f8'},
+    needle:{id:'nd-spd-'+l,col:'#ff5a1e',r0:-6,r1:62,w:3,tw:1.2,hub:{r:8,fill:'#18191c',stroke:'#555'}}}));
+  o.push(gDial({cx:112,cy:92,R:36,a0:-135,span:270,scale:uniScale(Math.round(smax*1.609/40),1,i=>i%2?'':i*40),
+    ticks:{lM:3,wM:1,lm:0,wm:0,cm:'#8a9099',cM:'#8a9099'},lab:{r:28,sz:6,w:400,col:'#8a9099'}}));
+  o.push(T(112,74,'MPH',7,'#f2f4f8'),T(112,124,'km/h',6,'#8a9099'));
+  o.push(gDial({cx:328,cy:92,R:66,a0:-135,span:270,redFrac:rf,scale:uniScale(tk,2,i=>i),red:{r:63,col:'#d8141a',w:4},
+    ticks:{lM:8,wM:2,lm:4,wm:0.9,cm:'#c9ced6',cM:'#f2f4f8',red:'#ff3a2a'},lab:{r:51,sz:13,w:500,col:'#f2f4f8'},
+    needle:{id:'nd-rpm-'+l,col:'#ff5a1e',r0:-6,r1:62,w:3,tw:1.2,hub:{r:8,fill:'#18191c',stroke:'#555'}}}));
+  o.push(T(328,72,'RPM',7,'#f2f4f8'),T(328,80,'x1000',5.5,'#c9ced6'),T(328,128,zr1?'ZR1':/z06/i.test(c.name||'')?'Z06':'',8,'#ff5a1e',{it:true,w:700}));
+  o.push(ring(220,58,22,-60,60,'#c9ced6',1)+T(204,70,'E',7,'#f2f4f8')+T(236,70,'F',7,'#f2f4f8')+minNeedle(220,64,-2,22,-25,'#ff5a1e',2,4));
+  o.push(ring(220,124,22,-60,60,'#c9ced6',1)+T(204,136,'C',7,'#f2f4f8')+T(236,136,'H',7,'#f2f4f8')+minNeedle(220,130,-2,22,-10,'#ff5a1e',2,4));
+  o.push('<rect x="190" y="84" width="60" height="18" rx="3" fill="#06070a" stroke="#2a2c30"/>',
+    T(206,97,'D1',9,'#e8eef8',{id:'cl-gear2-'+l,fam:'Roboto Mono, monospace',extra:' data-pre="'+(c.trans==='manual'?'':'D')+'"'}),
+    T(234,97,'<tspan id="cl-g-'+l+'">0.00</tspan>g',7,'#e8eef8',{fam:'Roboto Mono, monospace'}));
+  return svgWrap(o.join(''),chromeGrad('c6c'+l),'<path d="M14 40 Q220 4 426 40 L432 130 Q420 176 330 174 H110 Q20 176 8 130 Z" fill="#141518" stroke="#2c2d31" stroke-width="2"/>');
+}
+function displayGolf(l,c,tk,rf){
+  const cx=220,cy=94,R=72,o=[];
+  o.push('<ellipse cx="220" cy="92" rx="210" ry="30" fill="url(#gfg'+l+')" opacity="0.7"/>');
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+(R+8)+'" fill="#0a1024"/>');
+  o.push(gDial({cx,cy,R:R-12,a0:-150,span:300,redFrac:rf,scale:uniScale(tk,4,i=>''),
+    rings:[{r:R+6,col:'#bcd9ff',w:1.6}],fill:{id:'nd-rpm-'+l,r:R+1,col:'#5c8fe0',w:10,op:0.7},
+    ticks:{lM:7,wM:2.2,cM:'#fff',lm:5,wm:1.2,cm:'#c9d2e0',red:'#ff4a3a'}}));
+  for(let i=0;i<=tk;i++){if(tk>12&&i%2)continue;const a=-150+300*i/tk,q=pol(cx,cy,R-2,a),red=i/tk>=rf-1e-6;
+    o.push(tickL(cx,cy,R+2,R+8,a,red?'#ff4a3a':'#fff',2),T(q[0],q[1]+6,i,17,red?'#ff5a3a':'#fff',{it:true,w:600}));}
+  o.push(T(cx,cy+12,'0',40,'#fff',{it:true,w:500,id:'cl-mph-'+l}),T(cx,cy+26,'mph',9,'#fff',{w:500}),
+    T(cx,cy-24,'D1',14,'#fff',{id:'cl-gear2-'+l,extra:' data-pre="D"'}),T(cx-58,cy+52,'rpm',6,'#dbe6ff'),T(cx-58,cy+59,'x1000',6,'#dbe6ff'));
+  o.push('<circle cx="70" cy="92" r="46" fill="#0a1024" stroke="#6d7690" stroke-width="1.2"/>');
+  const d=c.drive==='awd'?[0.6,0.6,0.8,0.8]:c.drive==='fwd'?[1,1,0.15,0.15]:[0.15,0.15,1,1];
+  [44,58,82,96].forEach((x,i)=>o.push('<line x1="'+x+'" y1="'+(i<2?74:78)+'" x2="'+x+'" y2="'+(i<2?74:78)+'" stroke="#fff"/>',
+    '<line x1="'+x+'" y1="112" x2="'+x+'" y2="'+(112-d[i]*36).toFixed(0)+'" stroke="#dfe8ff" stroke-width="1.6"/><circle cx="'+x+'" cy="112" r="2" fill="#5c8fe0"/>'));
+  o.push('<rect x="60" y="84" width="20" height="22" rx="4" fill="#e9edf5"/>'+T(70,130,c.drive.toUpperCase(),7,'#dbe6ff'));
+  o.push('<circle cx="370" cy="92" r="46" fill="#0a1024" stroke="#6d7690" stroke-width="1.2"/>'+
+    T(376,76,'165°F',12,'#fff',{w:500})+'<line x1="342" y1="82" x2="398" y2="82" stroke="#9aa3b8"/>'+
+    T(376,98,'219°F',12,'#fff',{w:500})+'<line x1="342" y1="104" x2="398" y2="104" stroke="#9aa3b8"/>'+
+    T(376,120,'<tspan id="cl-g-'+l+'">0.00</tspan> g',12,'#fff',{w:500}));
+  o.push(T(120,30,({day:'2:29',dusk:'7:31',night:'10:48'})[timeOfDay()]||'2:29',10,'#fff'),T(330,30,Math.round(ambient())+' °F',10,'#fff'));
+  return svgWrap(o.join(''),'<radialGradient id="gfg'+l+'"><stop offset="0" stop-color="#1f4fd8"/><stop offset="1" stop-color="#1f4fd8" stop-opacity="0"/></radialGradient>',
+    '<rect x="4" y="8" width="432" height="166" rx="18" fill="#0a1024" stroke="#1d2a4d" stroke-width="1.5"/>');
+}
+function displayLincoln(l,c,tk,rf){
+  const o=[];
+  o.push(gDial({cx:92,cy:96,R:74,a0:-160,span:180,redFrac:rf,scale:uniScale(tk,1,i=>i),
+    face:{r:80,fill:'#101114',stroke:'#3a3c42',w:2},rings:[{r:74,col:'#2a2c31',w:1}],red:{r:66,col:'#e0402a',w:4},
+    ticks:{lM:10,wM:2.2,lm:5,wm:1.2,cm:'#e8e8e8'},lab:{r:56,sz:14,w:600,col:'#f2f2f2'},
+    needle:{id:'nd-rpm-'+l,col:'#9fd8ff',r0:40,r1:72,w:3,tw:1.6}}));
+  o.push(T(92,130,'RPM x1000',6,'#ddd'),'<path d="'+arcD(92,96,40,150,210)+'" fill="none" stroke="#6ab4ff" stroke-width="2"/>',T(66,140,'H',7,'#fff'),T(118,140,'C',7,'#fff'));
+  o.push('<rect x="140" y="36" width="160" height="106" rx="8" fill="#0d1726" stroke="#3a4a66"/>',
+    '<path d="M156 52 H240 L246 60 L240 68 H156 Z" fill="#241b36" stroke="#b9a7ff" stroke-width="0.8"/>'+T(162,64,'Performance',9,'#fff',{anchor:'start'})+
+    T(162,86,'<tspan id="cl-g-'+l+'">0.00</tspan> g',13,'#fff',{anchor:'start'})+T(162,108,Math.round(ambient())+'°F',11,'#ddd',{anchor:'start'}),
+    T(196,160,'P R N',11,'#8a8a8a'),T(226,160,'D',11,'#ffb02a'),T(240,160,'1',11,'#ffb02a',{id:'cl-gear2-'+l,extra:' data-pre=""'}));
+  o.push(gDial({cx:350,cy:96,R:74,a0:-130,span:260,scale:uniScale(8,1,i=>i*20),
+    face:{r:80,fill:'#101114',stroke:'#c9ccd2',w:2.2},
+    ticks:{lM:10,wM:2.2,lm:5,wm:1.2,cm:'#e8e8e8'},lab:{r:60,sz:13,w:600,col:'#f2f2f2'},
+    needle:{id:'nd-spd-'+l,col:'#f4f4f4',r0:-4,r1:70,w:2.8,tw:1,hub:{r:4,fill:'#1a1b1f',stroke:'#777'}}}));
+  o.push('<path d="'+arcD(350,96,34,140,220)+'" fill="none" stroke="#6ab4ff" stroke-width="2"/>'+T(330,136,'E',7,'#fff')+T(370,136,'F',7,'#fff')+T(350,158,'MPH',6,'#ddd'));
+  return svgWrap(o.join(''),'','<rect x="2" y="2" width="436" height="176" rx="22" fill="#08090b" stroke="#6a6d73" stroke-width="1.5"/>');
+}
+function displayMazda3(l,c,tk,rf){
+  const o=[];
+  o.push(gDial({cx:62,cy:98,R:60,a0:-135,span:270,redFrac:rf,scale:uniScale(tk,1,i=>i),
+    face:{r:64,fill:'#050505',stroke:'#4a4a4a',w:1.2},red:{r:57,col:'#c0141a',w:4},
+    ticks:{lM:8,wM:2,lm:4,wm:1},lab:{r:44,sz:12,w:500,col:'#f2f2f2'},
+    needle:{id:'nd-rpm-'+l,col:'#f4f4f4',r0:-4,r1:54,w:2.2,tw:0.9,hub:{r:3,fill:'#222',stroke:'#888'}}}));
+  o.push(T(62,74,'x1000r/min',5,'#aaa'));
+  o.push(gDial({cx:220,cy:92,R:76,a0:-135,span:270,scale:uniScale(8,1,i=>i*20),
+    face:{r:80,fill:'#050505',stroke:'#555',w:1.4},
+    ticks:{lM:10,wM:2.4,lm:5,wm:1.2},lab:{r:58,sz:14,w:500,col:'#f4f4f4'},
+    needle:{id:'nd-spd-'+l,col:'#f4f4f4',r0:-6,r1:70,w:2.4,tw:0.9,hub:{r:5,fill:'#111',stroke:'#aaa',w:1.4}}}));
+  o.push(T(220,64,'mph',6.5,'#bbb'),T(220,146,'D1',11,'#fff',{id:'cl-gear2-'+l,extra:' data-pre="D"'}),T(262,164,Math.round(ambient())+'°F',8,'#ddd'),
+    T(176,164,'<tspan id="cl-g-'+l+'">0.00</tspan> g',8,'#ddd'));
+  for(let i=0;i<9;i++){o.push('<line x1="130" y1="'+(40+i*10)+'" x2="'+(i%2?134:137)+'" y2="'+(40+i*10)+'" stroke="#bbb"/>','<line x1="310" y1="'+(40+i*10)+'" x2="'+(i%2?306:303)+'" y2="'+(40+i*10)+'" stroke="#bbb"/>');}
+  o.push(T(140,36,'mpg',5,'#aaa'),T(300,36,'mi',5,'#aaa'));
+  o.push('<circle cx="382" cy="98" r="64" fill="#050505" stroke="#4a4a4a" stroke-width="1.2"/>'+
+    '<path d="'+arcD(382,98,56,-120,-30)+'" fill="none" stroke="#666" stroke-width="1"/>'+'<path d="'+arcD(382,98,56,30,120)+'" fill="none" stroke="#666" stroke-width="1"/>'+
+    '<path d="'+arcD(382,98,56,-120,-105)+'" fill="none" stroke="#2b5bd8" stroke-width="4"/>'+
+    T(342,58,'H',9,'#fff')+T(342,142,'C',9,'#fff')+T(424,58,'F',9,'#fff')+T(424,142,'E',9,'#fff')+
+    staticNeedle(382,98,-4,52,-75,'#f4f4f4',2)+staticNeedle(382,98,-4,52,55,'#f4f4f4',2)+'<circle cx="382" cy="98" r="4" fill="#222" stroke="#aaa"/>');
+  return svgWrap(o.join(''),'','<rect x="2" y="2" width="436" height="176" rx="14" fill="#000" stroke="#1c1c1c"/>');
+}
+function displayMiata(l,c,tk,rf){
+  const o=[],chrome='url(#mxc'+l+')';
+  // left TFT
+  o.push('<circle cx="80" cy="96" r="58" fill="#0a0c14" stroke="'+chrome+'" stroke-width="5"/>',
+    '<path d="'+arcD(80,96,50,-60,60)+'" fill="none" stroke="#3a4a8a" stroke-width="3"/>'+
+    '<path d="'+arcD(80,96,50,-60,-30)+'" fill="none" stroke="#7aa6ff" stroke-width="3"/>',
+    T(46,82,'TRIP',6,'#ccc',{anchor:'start'})+T(112,82,'<tspan id="mx-ft-'+l+'">1320</tspan> ft',9,'#fff',{anchor:'end'}),
+    T(46,100,'AVG',6,'#ccc',{anchor:'start'})+T(112,100,'<tspan id="cl-g-'+l+'">0.00</tspan> g',9,'#fff',{anchor:'end'}),
+    T(46,118,Math.round(ambient())+'°F',8,'#fff',{anchor:'start'}),T(112,118,modeTxt(c,{normal:'',sport:'SPORT',track:'SPORT'}),7,'#ff9a3a',{anchor:'end'}));
+  // centre tach
+  o.push('<circle cx="220" cy="92" r="80" fill="#07080b" stroke="'+chrome+'" stroke-width="6"/>',
+    '<path d="M220 92 L220 146 A54 54 0 0 1 166 92 Z" fill="#1c1e24"/>','<circle cx="220" cy="92" r="30" fill="#1a1c22"/>');
+  o.push(gDial({cx:220,cy:92,R:74,a0:-170,span:(250/8)*tk,redFrac:rf,scale:uniScale(tk,4,i=>i),
+    red:{r:70,col:'#d8261c',w:4},ticks:{lM:10,wM:2.2,lm:5,wm:1,cm:'#e8e8e8'},lab:{r:56,sz:15,w:500,col:'#f2f2f2'},
+    needle:{id:'nd-rpm-'+l,col:'#f2f2f2',r0:-6,r1:70,w:2.6,tw:1,hub:{r:9,fill:'#15171c',stroke:'#555'}}}));
+  o.push(T(262,122,'x1000',6,'#ccc'),T(262,129,'r/min',6,'#ccc'),T(196,136,'D1',10,'#fff',{id:'cl-gear2-'+l,extra:' data-pre="D"'}));
+  // right speedo
+  o.push('<circle cx="362" cy="96" r="58" fill="#07080b" stroke="'+chrome+'" stroke-width="5"/>');
+  o.push(gDial({cx:362,cy:96,R:52,a0:-160,span:300,scale:uniScale(8,1,i=>i%1===0&&i>0?i*20:''),
+    ticks:{lM:7,wM:1.8,lm:4,wm:0.9},lab:{r:39,sz:10,w:500,col:'#f2f2f2'},
+    needle:{id:'nd-spd-'+l,col:'#f2f2f2',r0:-4,r1:50,w:2.2,tw:0.9,hub:{r:5,fill:'#15171c',stroke:'#555'}}}));
+  o.push(gDial({cx:362,cy:96,R:27,a0:-160,span:300,scale:uniScale(8,0,i=>i%2===0&&i>0?Math.round(i*20*1.609):''),
+    ticks:{lM:3,wM:0.8},lab:{r:20,sz:5,w:500,col:'#cfcfcf'}}));
+  o.push(T(362,150,'mph',6,'#ccc'));
+  return svgWrap(o.join(''),'<linearGradient id="mxc'+l+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="0.5" stop-color="#7a8088"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient>',
+    '<rect x="2" y="2" width="436" height="176" rx="40" fill="#101116" stroke="#26282e"/>');
+}
+function displayVolvo(l,c,tk,rf){
+  const o=[];
+  o.push(gDial({cx:88,cy:98,R:58,a0:-165,span:255,scale:uniScale(8,1,i=>i*20),
+    face:{r:62,fill:'#0d0f13',stroke:'#3a3f48',w:1.5},rings:[{r:59,col:'#c9a86a',w:1.2,p0:0,p1:0.45}],
+    ticks:{lM:6,wM:1.6,lm:3,wm:0.9,cm:'#bbb'},lab:{r:70,sz:10,w:500,col:'#e8e8e8'},
+    needle:{id:'nd-spd-'+l,col:'#e7c27a',r0:34,r1:58,w:2.4,tw:1.2}}));
+  o.push('<circle cx="88" cy="98" r="30" fill="#0d0f13"/>',T(88,104,'0',22,'#fff',{id:'cl-mph-'+l,w:500}),T(88,116,'mph',6.5,'#ccc'));
+  o.push('<rect x="170" y="36" width="100" height="112" fill="#e9ecef"/>'+
+    '<path d="M214 36 L214 110 L230 124" stroke="#e8a21a" stroke-width="3" fill="none"/><path d="M230 124 L262 96" stroke="#2aa6e0" stroke-width="3" fill="none"/>'+
+    '<path d="M170 70 H270 M196 36 V148 M170 130 H270" stroke="#fff" stroke-width="4"/>'+
+    '<polygon points="230,116 236,130 230,127 224,130" fill="#2aa6e0" stroke="#fff"/>'+
+    '<rect x="170" y="140" width="100" height="14" fill="#1b1e24"/>'+T(220,150,'<tspan id="cl-g-'+l+'">0.00</tspan> g',8,'#fff'));
+  o.push(T(190,26,Math.round((ambient()-32)/1.8)+'°C',8,'#ddd'),T(250,26,({day:'10:45',dusk:'19:31',night:'22:48'})[timeOfDay()]||'10:45',8,'#ddd'));
+  o.push(gDial({cx:352,cy:98,R:58,a0:-120,span:240,redFrac:rf,scale:uniScale(tk,1,i=>i===0?'':i),
+    face:{r:62,fill:'#0d0f13',stroke:'#3a3f48',w:1.5},fill:{id:'nd-rpm-'+l,r:54,col:'#dfe8f2',w:5,op:0.55},
+    ticks:{lM:6,wM:1.6,lm:3,wm:0.9,cm:'#bbb',red:'#e0402a'},lab:{r:70,sz:11,w:500,col:'#e8e8e8',red:'#ff6a4a'}}));
+  o.push('<circle cx="352" cy="98" r="30" fill="#0d0f13"/>',T(352,106,'D1',20,'#fff',{id:'cl-gear2-'+l,extra:' data-pre="D"'}),T(352,120,'rpm x1000',5.5,'#ccc'),
+    T(352,164,modeTxt(c,{normal:'COMFORT',sport:'DYNAMIC',track:'DYNAMIC',corsa:'POLESTAR'}),7,'#ccc',{ls:0.8}));
+  return svgWrap(o.join(''),'','<rect x="2" y="2" width="436" height="176" rx="20" fill="#08090c" stroke="#1f2228"/>');
+}
+function displayAccord9(l,c,tk,rf){
+  const o=[],RED='#e0231c';
+  o.push(gDial({cx:96,cy:100,R:58,a0:165,span:190,redFrac:rf,scale:uniScale(tk,1,i=>i),
+    rings:[{r:60,col:RED,w:1.2}],red:{r:62,col:RED,w:4},ticks:{lM:8,wM:2,lm:4,wm:1,cm:RED},lab:{r:44,sz:12,w:500,col:'#fff'},
+    needle:{id:'nd-rpm-'+l,col:'#f2f2f2',r0:-4,r1:54,w:2.6,tw:1,hub:{r:7,fill:'#111',stroke:'#555'}}}));
+  o.push(T(120,48,'x1000r/min',5,'#ccc'));
+  o.push('<path d="'+arcD(228,92,84,-128,128)+'" fill="none" stroke="#fff" stroke-width="2.4"/>');
+  o.push(gDial({cx:228,cy:92,R:78,a0:-122,span:244,scale:uniScale(8,4,i=>i*20),
+    rings:[{r:78,col:RED,w:1.4}],ticks:{lM:10,wM:2.2,lm:5,wm:1,cm:RED},lab:{r:62,sz:14,w:600,col:'#fff'},
+    needle:{id:'nd-spd-'+l,col:'#f4f4f4',r0:34,r1:76,w:2.8,tw:1.2}}));
+  o.push(gDial({cx:228,cy:92,R:44,a0:-122,span:244,scale:uniScale(13,0,i=>i%2===0&&i>0?i*20:''),
+    ticks:{lM:3,wM:0.8,cM:'#bbb'},lab:{r:37,sz:5,w:500,col:'#bbb'}}));
+  o.push('<circle cx="228" cy="92" r="30" fill="#050608" stroke="#555"/>',T(228,74,'mph',5.5,'#ccc'),
+    T(228,98,'D1',14,'#fff',{id:'cl-gear2-'+l,extra:' data-pre="D"'}),'<line x1="208" y1="104" x2="248" y2="104" stroke="#ccc"/>',T(228,114,Math.round(ambient())+'F',8,'#fff'));
+  o.push('<path d="'+arcD(348,92,58,25,85)+'" fill="none" stroke="'+RED+'" stroke-width="1.2"/><path d="'+arcD(348,92,58,95,155)+'" fill="none" stroke="'+RED+'" stroke-width="1.2"/>',
+    T(386,50,'H',9,'#fff'),T(398,90,'C',9,'#fff'),T(398,106,'F',9,'#fff'),T(386,146,'E',9,'#fff'),
+    staticNeedle(348,78,-2,40,76,'#f2f2f2',2.2),staticNeedle(348,106,-2,40,100,'#f2f2f2',2.2),
+    '<circle cx="348" cy="78" r="5" fill="#111" stroke="#555"/><circle cx="348" cy="106" r="5" fill="#111" stroke="#555"/>');
+  return svgWrap(o.join(''),'','<path d="M16 26 Q220 2 424 26 L430 150 Q220 178 10 150 Z" fill="#050608" stroke="#3a3c42" stroke-width="1.5"/>');
+}
+function displayInfiniti(l,c,tk,rf){
+  const o=[],BLUE='#3b3df5',glow='url(#ifg'+l+')';
+  const bez=(cx)=>'<circle cx="'+cx+'" cy="92" r="82" fill="#07080b" stroke="#2a2d33" stroke-width="3"/>'+
+    '<circle cx="'+cx+'" cy="92" r="60" fill="none" stroke="'+BLUE+'" stroke-width="3.2" filter="'+glow+'"/>'+
+    '<circle cx="'+cx+'" cy="92" r="57" fill="none" stroke="#1a1c6e" stroke-width="2"/>';
+  o.push(bez(86),bez(354));
+  const tN=tk;
+  o.push(gDial({cx:86,cy:92,R:78,a0:-120,span:240,redFrac:rf,scale:uniScale(tN,2,i=>''),
+    red:{r:80,col:'#e0201a',w:2.4},ticks:{lM:9,wM:3.2,lm:5,wm:1.6,cM:'#f2f2f2',cm:'#d8d8d8',red:'#ff3a2a'},
+    needle:{id:'nd-rpm-'+l,col:'#f4f4f4',r0:-12,r1:56,w:3.4,tw:1.4,hub:{r:9,fill:'#141518',stroke:'#3a3d44',w:1.4}}}));
+  // numerals sit inside the blue ring
+  for(let i=0;i<=tN;i++){const q=pol(86,92,47,-120+240*i/tN);o.push(T(q[0],q[1]+4.5,String(i),12.5,'#fff',{w:600}));}
+  o.push(T(86,75,'RPMx1000',6,'#e8e8e8'));
+  o.push('<path d="'+arcD(98,140,15,-70,40)+'" fill="none" stroke="#e8e8e8" stroke-width="1.2"/>'+T(84,136,'C',6,'#fff')+T(116,134,'H',6,'#fff')+
+    staticNeedle(98,140,-2,14,-28,'#f4f4f4',2));
+  o.push('<g transform="translate(70,116)"><rect x="-4" y="-3" width="8" height="5" rx="1" fill="#3bd16b"/></g>'+
+    '<g transform="translate(104,116)"><circle r="2.6" fill="#3bd16b"/></g>');
+  // speedometer 0-180 mph, inner km/h
+  const M=[],m=[];for(let v=0;v<=180;v+=20)M.push({p:v/180,t:String(v)});for(let v=10;v<180;v+=20)m.push(v/180);
+  o.push(gDial({cx:354,cy:92,R:78,a0:-120,span:240,scale:{M:M.map(q=>({p:q.p,t:''})),m},
+    ticks:{lM:9,wM:3.2,lm:5,wm:1.6,cM:'#f2f2f2',cm:'#d8d8d8'},
+    needle:{id:'nd-spd-'+l,col:'#f4f4f4',r0:-12,r1:56,w:3.4,tw:1.4,hub:{r:9,fill:'#141518',stroke:'#3a3d44',w:1.4}}}));
+  M.forEach(q=>{const p=pol(354,92,47,-120+240*q.p);o.push(T(p[0],p[1]+4.5,q.t,11.5,'#fff',{w:600}));});
+  for(let k=0;k<=280;k+=40){const p=pol(354,92,33,-120+240*(k/1.609)/180);if(k/1.609<=180)o.push(T(p[0],p[1]+2.5,String(k),5.6,'#cfd3da'));}
+  o.push(T(354,76,'MPH',6,'#e8e8e8')+T(372,118,'km/h',5,'#cfd3da'));
+  o.push('<path d="'+arcD(366,140,15,-40,70)+'" fill="none" stroke="#e8e8e8" stroke-width="1.2"/>'+T(352,136,'0',6,'#fff')+T(382,134,'1',6,'#fff')+
+    '<path d="'+arcD(366,140,15,-40,-30)+'" fill="none" stroke="#e0201a" stroke-width="2"/>'+staticNeedle(366,140,-2,14,40,'#f4f4f4',2));
+  // centre TFT
+  o.push('<rect x="176" y="20" width="88" height="144" rx="3" fill="#0b1018" stroke="#2c3440" stroke-width="1.2"/>'+
+    T(184,32,'12:36 AM',7.5,'#fff',{anchor:'start'})+T(258,32,Math.round(ambient())+'°F',7.5,'#fff',{anchor:'end'})+
+    '<line x1="180" y1="37" x2="260" y2="37" stroke="#56606e" stroke-width="1"/>'+
+    '<rect x="186" y="42" width="11" height="19" rx="3" fill="none" stroke="#3bd16b" stroke-width="1.6"/>'+
+    T(258,56,'<tspan id="cl-g-'+l+'">0.00</tspan> g',7,'#fff',{anchor:'end'})+
+    '<line x1="180" y1="66" x2="260" y2="66" stroke="#56606e" stroke-width="1"/>'+
+    T(220,80,'Speed',8,'#e6e9ee')+T(214,106,'0',25,'#fff',{id:'cl-mph-'+l,w:500})+T(246,106,'MPH',6.5,'#fff')+
+    T(220,122,'Average',7,'#e6e9ee')+T(228,134,'— MPH',7,'#fff')+
+    '<line x1="180" y1="139" x2="260" y2="139" stroke="#56606e" stroke-width="1"/>'+
+    T(186,153,'D',12,'#fff',{anchor:'start',id:'cl-gear2-'+l,extra:' data-pre="'+(c.trans==='manual'?'':'D')+'"'})+
+    '<rect x="184" y="155" width="30" height="7" fill="#25a454"/>'+T(199,161,modeTxt(c,{normal:'ECO',sport:'SPORT',track:'SPORT+',corsa:'SPORT+'}),5.5,'#fff')+
+    T(258,153,'34038 mi',7,'#fff',{anchor:'end'}));
+  return svgWrap(o.join(''),glowDef('ifg'+l,1.2),'<rect x="2" y="2" width="436" height="176" rx="40" fill="#0d0e11"/>');
+}
+function displayG70(l,c,tk,rf){
+  const o=[],chrome='url(#g7c'+l+')';
+  const ring=(x)=>'<circle cx="'+x+'" cy="92" r="80" fill="#0b0c0f" stroke="'+chrome+'" stroke-width="4"/>';
+  o.push(ring(84),ring(356));
+  o.push(gDial({cx:84,cy:92,R:74,a0:-170,span:Math.min(270,33*tk),redFrac:rf,scale:uniScale(tk,4,i=>i),
+    red:{r:70,col:'#ff2a1f',w:3},ticks:{lM:10,wM:2.4,lm:5,wm:1.2,cm:'#ddd',red:'#ff3a2a'},lab:{r:56,sz:15,w:600,col:'#fff'},
+    needle:{id:'nd-rpm-'+l,col:'#ff5a2a',r0:-10,r1:70,w:3.4,tw:1.2,glow:'g7g'+l,hub:{r:9,fill:'#222',stroke:'#aaa',w:1.4}}}));
+  o.push(T(110,164,'x1000rpm',6,'#ddd'));
+  o.push('<path d="'+arcD(104,120,16,-90,90)+'" fill="none" stroke="#aaa"/>'+T(122,112,'H',6,'#fff')+T(122,132,'C',6,'#fff')+staticNeedle(104,120,-2,14,120,'#ff5a2a',2));
+  const M=[0,10,20,30,40,50,60,80,100,120,140,160,180].map((v,i)=>({p:i/12,t:v}));
+  const m=[];for(let i=0;i<12;i++)m.push((i+0.5)/12);
+  o.push(gDial({cx:356,cy:92,R:74,a0:-170,span:265,scale:{M,m},pw:'0,0|0.3333,0.5|1,1',
+    ticks:{lM:10,wM:2.4,lm:5,wm:1.2,cm:'#ddd'},lab:{r:56,sz:13,w:600,col:'#fff'},
+    needle:{id:'nd-spd-'+l,col:'#ff5a2a',r0:-10,r1:70,w:3.4,tw:1.2,glow:'g7g'+l,hub:{r:9,fill:'#222',stroke:'#aaa',w:1.4}}}));
+  o.push('<path d="'+arcD(378,122,16,-90,90)+'" fill="none" stroke="#aaa"/>'+T(396,114,'F',6,'#fff')+T(396,134,'E',6,'#fff')+staticNeedle(378,122,-2,14,60,'#ff5a2a',2)+T(350,166,'MPH',6,'#ddd'));
+  o.push('<rect x="168" y="36" width="104" height="104" rx="3" fill="#0e1116"/>'+'<line x1="170" y1="56" x2="270" y2="56" stroke="#39a8e8" stroke-width="1.5"/>'+
+    T(178,50,'D1',11,'#fff',{anchor:'start',id:'cl-gear2-'+l,extra:' data-pre="D"'})+T(262,50,'Range 124mi',6.5,'#fff',{anchor:'end'})+
+    T(220,92,'0',26,'#fff',{id:'cl-mph-'+l,w:500})+T(220,104,'mph',6.5,'#ccc')+'<line x1="170" y1="120" x2="270" y2="120" stroke="#39a8e8" stroke-width="1"/>'+
+    T(180,133,Math.round(ambient())+'°F',7,'#fff',{anchor:'start'})+T(220,133,modeTxt(c,{normal:'COMFORT',sport:'SPORT',track:'SPORT+',corsa:'SPORT+'}),6.5,'#fff')+
+    T(262,133,'<tspan id="cl-g-'+l+'">0.00</tspan>g',7,'#fff',{anchor:'end'}));
+  return svgWrap(o.join(''),'<linearGradient id="g7c'+l+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="0.5" stop-color="#6c727a"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient>'+glowDef('g7g'+l,1.3),
+    '<rect x="2" y="2" width="436" height="176" rx="26" fill="#08090b"/>');
+}
+function displayG80(l,c,tk,rf){
+  const o=[];
+  const glow='url(#g8g'+l+')';
+  o.push(gDial({cx:98,cy:98,R:70,a0:-160,span:250,scale:uniScale(8,1,i=>i*20),
+    rings:[{r:72,col:'#9fd4ff',w:1.6,op:0.8}],fill:{id:'nd-spd-'+l+'-2',r:40,col:'#2c7fe8',w:4},
+    ticks:{lM:7,wM:1.6,lm:4,wm:0.9,cm:'#9fc8ee'},lab:{r:56,sz:11,w:500,col:'#fff'},
+    needle:{id:'nd-spd-'+l,col:'#bfe6ff',r0:44,r1:70,w:3,tw:1.6,glow:'g8g'+l}}));
+  o.push('<circle cx="98" cy="98" r="30" fill="none" stroke="#1f4f8a" stroke-width="2" stroke-dasharray="2 3"/>',
+    '<circle cx="98" cy="98" r="13" fill="#0b1a2c" stroke="#3a8ae0" stroke-width="2"/>',T(98,126,'mph',6,'#bfe0ff'));
+  o.push(gDial({cx:342,cy:98,R:70,a0:160,span:-250,redFrac:rf,scale:uniScale(tk,1,i=>i),
+    rings:[{r:72,col:'#9fd4ff',w:1.6,op:0.8}],red:{r:72,col:'#ff5a4a',w:2.4},fill:{id:'nd-rpm-'+l+'-2',r:40,col:'#2c7fe8',w:4},
+    ticks:{lM:7,wM:1.6,lm:4,wm:0.9,cm:'#9fc8ee',red:'#ff5a4a'},lab:{r:56,sz:14,w:500,col:'#fff',red:'#ff7a6a'},
+    needle:{id:'nd-rpm-'+l,col:'#bfe6ff',r0:44,r1:70,w:3,tw:1.6,glow:'g8g'+l}}));
+  o.push('<circle cx="342" cy="98" r="30" fill="none" stroke="#1f4f8a" stroke-width="2" stroke-dasharray="2 3"/>',
+    '<circle cx="342" cy="98" r="13" fill="#0b1a2c" stroke="#3a8ae0" stroke-width="2"/>',T(342,126,'x1000 rpm',6,'#bfe0ff'));
+  const modes=['COMFORT','SPORT','ECO','CUSTOM'],cur=modeTxt(c,{normal:'COMFORT',sport:'SPORT',track:'SPORT',corsa:'SPORT'});
+  o.push(T(220,34,'D1',12,'#fff',{id:'cl-gear2-'+l,extra:' data-pre="D"'}),'<line x1="178" y1="42" x2="262" y2="42" stroke="#9fd4ff"/>',T(220,62,'DRIVE MODE',8,'#fff'));
+  modes.forEach((m,i)=>{const y=82+i*16;if(m===cur)o.push('<rect x="184" y="'+(y-10)+'" width="72" height="14" fill="#1b4e7a" opacity="0.7"/><line x1="184" y1="'+(y+4)+'" x2="256" y2="'+(y+4)+'" stroke="#39c6e8" stroke-width="1.5"/>');
+    o.push(T(220,y,m,9,m===cur?'#fff':'#9fb6cc'));});
+  o.push('<rect x="170" y="150" width="100" height="5" rx="2" fill="#2a3a52"/><rect x="170" y="150" width="0" height="5" rx="2" fill="#dfe8f2" id="nd-spd-'+l+'-3" data-hbar="1" data-w="100"/>',
+    T(220,170,'<tspan id="cl-g-'+l+'">0.00</tspan> g · '+Math.round(ambient())+'°F',8,'#dfe8f2'));
+  return svgWrap(o.join(''),glowDef('g8g'+l,1.6),'<path d="M10 40 Q220 -6 430 40 L420 168 Q220 182 20 168 Z" fill="#070b14" stroke="#1d2f4d"/>');
+}
+function pathSampler(segs){
+  const pts=[];let d='';
+  segs.forEach((s,si)=>{
+    if(s.t==='L'){if(!si){d+='M'+s.a[0]+' '+s.a[1];pts.push(s.a);}d+=' L'+s.b[0]+' '+s.b[1];pts.push(s.b);}
+    else if(s.t==='C'){if(!si){d+='M'+s.a[0]+' '+s.a[1];pts.push(s.a);}d+=' C'+s.c1.join(' ')+' '+s.c2.join(' ')+' '+s.b.join(' ');
+      for(let k=1;k<=40;k++){const u=k/40,v=1-u;pts.push([0,1].map(j=>v*v*v*s.a[j]+3*v*v*u*s.c1[j]+3*v*u*u*s.c2[j]+u*u*u*s.b[j]));}}
+    else if(s.t==='A'){const p0=pol(s.cx,s.cy,s.r,s.a1);if(!si){d+='M'+p0[0].toFixed(1)+' '+p0[1].toFixed(1);pts.push(p0);}
+      d+=' '+arcD(s.cx,s.cy,s.r,s.a1,s.a2).replace(/^M[^A]*/,'');
+      for(let k=1;k<=40;k++)pts.push(pol(s.cx,s.cy,s.r,s.a1+(s.a2-s.a1)*k/40));}
+  });
+  const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
+  const L=cum[cum.length-1];
+  const at=f=>{const s=Math.max(0,Math.min(1,f))*L;let i=1;while(i<cum.length-1&&cum[i]<s)i++;
+    const t=(s-cum[i-1])/((cum[i]-cum[i-1])||1),a=pts[i-1],b=pts[i],dx=b[0]-a[0],dy=b[1]-a[1],n=Math.hypot(dx,dy)||1;
+    return {x:a[0]+dx*t,y:a[1]+dy*t,tx:dx/n,ty:dy/n,nx:-dy/n,ny:dx/n};};
+  const lenAt=k=>{let s=0;return cum[Math.min(k,cum.length-1)];};
+  return {d,L,at,cum,pts};
+}
+function displayS650(l,c,tk,rf){
+  const P=pathSampler([{t:'C',a:[46,128],c1:[46,92],c2:[58,52],b:[92,46]},{t:'L',a:[92,46],b:[398,46]}]);
+  const riser=P.cum[40]/P.L, k1=1/tk;              // rev 1,000 lands where the curve meets the straight
+  const pw='0,0|'+k1.toFixed(4)+','+riser.toFixed(4)+'|1,1';
+  const pos=f=>pwMap(pw,f),o=[],W=26;
+  o.push('<path d="'+P.d+'" fill="none" stroke="#11152a" stroke-width="'+W+'"/>');
+  // red zone from the redline
+  const rz=[];for(let q=pos(rf);q<=1.0001;q+=0.004){const a=P.at(q);rz.push(a);}
+  if(rz.length>1)o.push('<path d="M'+rz.map(a=>a.x.toFixed(1)+' '+a.y.toFixed(1)).join(' L')+'" fill="none" stroke="#3a1a10" stroke-width="'+W+'"/>');
+  o.push('<path id="nd-rpm-'+l+'" data-arc="1" data-pw="'+pw+'" pathLength="1000" stroke-dasharray="0 1000" d="'+P.d+'" fill="none" stroke="#efeae0" stroke-width="'+(W-4)+'" opacity="0.92"/>');
+  // yellow outline: top edge + the start riser
+  const edge=[];for(let q=0;q<=1.0001;q+=0.01){const a=P.at(q);edge.push([a.x-a.nx*W/2,a.y-a.ny*W/2]);}
+  o.push('<path d="M'+edge.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' L')+'" fill="none" stroke="#e8a21a" stroke-width="1.4"/>');
+  const edge2=[];for(let q=0;q<=1.0001;q+=0.01){const a=P.at(q);edge2.push([a.x+a.nx*W/2,a.y+a.ny*W/2]);}
+  o.push('<path d="M'+edge2.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' L')+'" fill="none" stroke="#5a5f8a" stroke-width="0.8"/>');
+  for(let i=0;i<=tk;i++){const a=P.at(pos(i/tk)),red=i/tk>=rf-1e-6;
+    o.push('<line x1="'+(a.x-a.nx*W/2).toFixed(1)+'" y1="'+(a.y-a.ny*W/2).toFixed(1)+'" x2="'+(a.x-a.nx*2).toFixed(1)+'" y2="'+(a.y-a.ny*2).toFixed(1)+'" stroke="'+(red?'#ff5a1a':'#e8c21a')+'" stroke-width="1.6"/>');
+    if(i>0&&(tk<=12||i%2===0))o.push(T(a.x-7,a.y+8,i,12,red?'#ff6a2a':'#fff',{w:600}));}
+  for(let i=0;i<tk;i++){const a=P.at(pos((i+0.5)/tk));
+    o.push('<line x1="'+(a.x-a.nx*W/2).toFixed(1)+'" y1="'+(a.y-a.ny*W/2).toFixed(1)+'" x2="'+(a.x-a.nx*6).toFixed(1)+'" y2="'+(a.y-a.ny*6).toFixed(1)+'" stroke="#e8c21a" stroke-width="0.8"/>');}
+  o.push(T(386,82,'<tspan id="nd-rpm-'+l+'-3" data-num="1" data-lo="0" data-hi="'+tk*1000+'">0</tspan>',17,'#fff',{anchor:'end'}),T(390,82,'RPM',6.5,'#ddd',{anchor:'start'}));
+  o.push(T(140,116,'0',30,'#fff',{id:'cl-mph-'+l}),T(140,128,'MPH',7,'#ddd'));
+  o.push(T(300,104,'Performance',10,'#fff'),T(300,122,'<tspan id="cl-g-'+l+'">0.00</tspan> g',13,'#fff'),
+    '<line x1="250" y1="130" x2="350" y2="130" stroke="#8fa0c8"/>',T(300,144,modeTxt(c,{normal:'NORMAL',sport:'SPORT',track:'TRACK',corsa:'TRACK',drag:'DRAG STRIP'}),9,'#e8a21a'));
+  o.push('<rect x="176" y="150" width="88" height="16" rx="3" fill="#0b0e1c"/>'+T(186,162,'P',10,'#888')+T(200,162,'R',10,'#888')+T(214,162,'N',10,'#888')+
+    '<rect x="222" y="151" width="14" height="14" rx="2" fill="#e8a21a"/>'+T(229,162,(c.trans==='manual'?'M':'D'),10,'#000')+T(248,162,'1',10,'#fff',{id:'cl-gear2-'+l,extra:' data-pre=""'}));
+  o.push(T(150,162,Math.round(ambient())+'°',9,'#ddd'),'<rect x="414" y="90" width="5" height="50" fill="#333"/><rect x="414" y="104" width="5" height="36" fill="#e8b21a"/>',
+    '<rect x="22" y="136" width="18" height="4" fill="#333"/><rect x="22" y="136" width="10" height="4" fill="#e8b21a"/>');
+  return svgWrap(o.join(''),'','<path d="M14 10 H426 Q434 10 434 20 V166 Q434 174 426 174 H14 Q6 174 6 166 V20 Q6 10 14 10 Z" fill="#161a33" stroke="#2c3360"/>');
+}
+function displayMustangDigital(l,c,tk,rf){
+  const P=pathSampler([{t:'A',cx:118,cy:110,r:66,a1:225,a2:360},{t:'L',a:[118,44],b:[296,44]}]);
+  const arcF=P.cum[40]/P.L,k=Math.min(0.9,2.7/tk);
+  const pw='0,0|'+k.toFixed(4)+','+arcF.toFixed(4)+'|1,1',pos=f=>pwMap(pw,f),o=[];
+  o.push('<path d="'+P.d+'" fill="none" stroke="#10151f" stroke-width="16"/>');
+  o.push('<path id="nd-rpm-'+l+'" data-arc="1" data-pw="'+pw+'" pathLength="1000" stroke-dasharray="0 1000" d="'+P.d+'" fill="none" stroke="url(#mdg'+l+')" stroke-width="16"/>');
+  o.push('<path d="'+P.d+'" fill="none" stroke="#2c3a52" stroke-width="0.8" transform="translate(0,-8.5)" opacity="0.8"/>');
+  for(let i=0;i<=tk;i++){const a=P.at(pos(i/tk)),red=i/tk>=rf-1e-6;
+    o.push('<line x1="'+(a.x-a.nx*8).toFixed(1)+'" y1="'+(a.y-a.ny*8).toFixed(1)+'" x2="'+(a.x+a.nx*8).toFixed(1)+'" y2="'+(a.y+a.ny*8).toFixed(1)+'" stroke="'+(red?'#ff4a3a':'#dfe8f4')+'" stroke-width="1.4"/>');
+    if(tk<=12||i%2===0)o.push(T(a.x+a.nx*19,a.y+a.ny*19+5,i,14,'#dfe8f4',{w:500}));}
+  for(let i=0;i<tk;i++){const a=P.at(pos((i+0.5)/tk));o.push('<line x1="'+(a.x+a.nx*4).toFixed(1)+'" y1="'+(a.y+a.ny*4).toFixed(1)+'" x2="'+(a.x+a.nx*8).toFixed(1)+'" y2="'+(a.y+a.ny*8).toFixed(1)+'" stroke="'+((i+0.5)/tk>=rf?'#ff4a3a':'#6f8fb8')+'" stroke-width="1"/>');}
+  o.push(T(122,96,'GEAR',8,'#dfe8f4'),T(122,128,'1',30,'#fff',{id:'cl-gear2-'+l,w:500,extra:' data-pre=""'}),T(122,150,'RPM x 1000',7,'#dfe8f4'));
+  const mini=(x,lo,hi,lbl,f)=>'<path d="'+arcD(x,110,17,-135,135)+'" fill="none" stroke="#1e3a66" stroke-width="3"/>'+
+    '<path d="'+arcD(x,110,17,-135,-135+270*f)+'" fill="none" stroke="#2c86e8" stroke-width="3"/>'+
+    '<path d="'+arcD(x,110,17,100,135)+'" fill="none" stroke="#e0402a" stroke-width="3"/>'+T(x,114,lbl,7,'#dfe8f4')+T(x-10,136,lo,5.5,'#bbb')+T(x+10,136,hi,5.5,'#bbb');
+  o.push(mini(186,'100','300','OIL',0.35),mini(226,'L','H','PRES',0.5),mini(266,'140','340','ENG',0.4));
+  o.push(T(412,30,Math.round(ambient())+'° E',7,'#dfe8f4'));
+  o.push(gDial({cx:370,cy:104,R:48,a0:-135,span:270,scale:uniScale(8,1,i=>i*20),
+    rings:[{r:49,col:'#3a4a66',w:1}],fill:{id:'nd-spd-'+l,r:40,col:'#2c86e8',w:12,op:0.9},
+    ticks:{lM:6,wM:1.4,lm:3,wm:0.8,cm:'#8fa6c6'},lab:{r:58,sz:9,w:500,col:'#dfe8f4'}}));
+  o.push('<circle cx="370" cy="104" r="26" fill="#070a10" stroke="#9fb6d6" stroke-width="1.4"/>',T(370,95,'MPH',7,'#dfe8f4'),T(370,118,'0',20,'#fff',{id:'cl-mph-'+l,w:500}));
+  o.push(T(220,166,'PRN<tspan fill="#ff3a2a">D</tspan>S',11,'#dfe8f4'),T(150,166,'<tspan id="cl-g-'+l+'">0.00</tspan> g',8,'#dfe8f4'));
+  return svgWrap(o.join(''),'<linearGradient id="mdg'+l+'" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0c3a8a"/><stop offset="1" stop-color="#3aa0ff"/></linearGradient>',
+    '<path d="M40 22 Q220 2 400 22 Q436 30 434 100 Q432 172 400 176 H40 Q8 172 6 100 Q4 30 40 22 Z" fill="#05070b" stroke="#2a2e36"/>');
+}
+function displayMustangS550(l,c,tk,rf){
+  const o=[],ch='url(#m6c'+l+')';
+  const face=x=>'<circle cx="'+x+'" cy="92" r="82" fill="#0a0a0c" stroke="'+ch+'" stroke-width="5"/>';
+  o.push(face(86),face(354));
+  o.push(gDial({cx:86,cy:92,R:74,a0:-120,span:245,redFrac:rf,scale:uniScale(tk,4,i=>i),
+    rings:[{r:74,col:'#ff2a3a',w:2.4,op:0.9}],ticks:{lM:10,wM:2.4,lm:5,wm:1.1,cm:'#eee',red:'#ff3a3a'},lab:{r:57,sz:15,w:600,col:'#fff'},
+    needle:{id:'nd-rpm-'+l,col:'#ff2a3a',r0:-8,r1:66,w:3.4,tw:1.4,hub:{r:11,fill:'#16171a',stroke:'#444'}}}));
+  const hb=pol(86,92,62,-120+245*rf);
+  o.push('<path d="'+arcD(86,92,62,-120+245*rf,125)+'" fill="none" stroke="#ff2a3a" stroke-width="4"/>');
+  o.push(T(86,70,'REVOLUTIONS PER MINUTE',5,'#ddd'),T(86,77,'x1000',5,'#ddd'),
+    '<path d="'+arcD(86,138,16,-70,70)+'" fill="none" stroke="#eee" stroke-width="1"/>'+T(66,142,'C',6,'#fff')+T(106,142,'H',6,'#fff')+staticNeedle(86,138,4,15,-5,'#ff2a3a',2));
+  o.push(gDial({cx:354,cy:92,R:74,a0:-120,span:245,scale:uniScale(8,1,i=>i%1===0?i*20:''),
+    rings:[{r:74,col:'#ff2a3a',w:2.4,op:0.9}],ticks:{lM:10,wM:2.4,lm:5,wm:1.1,cm:'#eee'},lab:{r:57,sz:14,w:600,col:'#fff'},
+    needle:{id:'nd-spd-'+l,col:'#ff2a3a',r0:-8,r1:66,w:3.4,tw:1.4,hub:{r:11,fill:'#16171a',stroke:'#444'}}}));
+  o.push(gDial({cx:354,cy:92,R:38,a0:-120,span:245,scale:uniScale(13,0,i=>i%2===0&&i>0?i*20:''),ticks:{lM:3,wM:0.8,cM:'#aaa'},lab:{r:31,sz:4.6,w:500,col:'#bbb'}}));
+  o.push(T(354,68,'GROUND SPEED',5.5,'#ddd'),
+    '<path d="'+arcD(354,140,16,-70,70)+'" fill="none" stroke="#eee" stroke-width="1"/>'+T(334,144,'E',6,'#fff')+T(374,144,'F',6,'#fff')+staticNeedle(354,140,4,15,40,'#ff2a3a',2));
+  o.push('<rect x="176" y="50" width="88" height="76" rx="3" fill="#07090d" stroke="#222"/>'+T(220,64,'Digital Speedometer',6.5,'#fff')+
+    T(214,98,'0',26,'#fff',{id:'cl-mph-'+l,w:500})+T(240,98,'MPH',6.5,'#fff',{anchor:'start'})+T(220,112,'<tspan id="cl-g-'+l+'">0.00</tspan> g',7,'#6fc3ff')+
+    T(200,122,'D1',7,'#fff',{id:'cl-gear2-'+l,extra:' data-pre="D"'}));
+  return svgWrap(o.join(''),'<linearGradient id="m6c'+l+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="0.5" stop-color="#6c727a"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient>',
+    '<rect x="2" y="2" width="436" height="176" rx="30" fill="#0b0b0d"/>');
+}
+function displayMustangS197(l,c,tk,rf){
+  const o=[];
+  const face=x=>'<circle cx="'+x+'" cy="92" r="78" fill="#0c0c0d" stroke="#1d1d20" stroke-width="7"/><circle cx="'+x+'" cy="92" r="74" fill="none" stroke="#2c2c30" stroke-width="1"/>';
+  o.push(face(86),face(354));
+  o.push('<path d="M86 92 L'+pol(86,92,58,-115+230*rf).map(v=>v.toFixed(1)).join(' ')+' '+arcD(86,92,58,-115+230*rf,-115+230*Math.min(1,rf+0.16)).replace(/^M[^A]*/,'')+' Z" fill="#e8401c"/>');
+  o.push(gDial({cx:86,cy:92,R:72,a0:-115,span:230,scale:uniScale(tk,1,i=>i),
+    ticks:{lM:8,wM:2,lm:4,wm:1,cm:'#ddd'},lab:{r:58,sz:15,w:600,col:'#f2f2f2'},
+    needle:{id:'nd-rpm-'+l,col:'#ff3a1c',r0:-10,r1:66,w:3.6,tw:1.4,hub:{r:9,fill:'#1a1a1c',stroke:'#555'}}}));
+  o.push(T(64,124,'RPMx1000',5.5,'#ddd'));
+  o.push(gDial({cx:354,cy:92,R:72,a0:-115,span:230,scale:uniScale(7,1,i=>i*20),
+    ticks:{lM:8,wM:2,lm:4,wm:1,cm:'#ddd'},lab:{r:58,sz:13,w:600,col:'#f2f2f2'},
+    needle:{id:'nd-spd-'+l,col:'#ff3a1c',r0:-10,r1:66,w:3.6,tw:1.4,hub:{r:9,fill:'#1a1a1c',stroke:'#555'}}}));
+  o.push(gDial({cx:354,cy:92,R:40,a0:-115,span:230,scale:uniScale(11,0,i=>i%2===0&&i>0?i*20:''),ticks:{lM:3,wM:0.8,cM:'#aaa'},lab:{r:33,sz:4.5,w:500,col:'#bbb'}}));
+  o.push(T(330,124,'MPH',6,'#ddd'),'<rect x="330" y="132" width="52" height="16" fill="#03140a"/>',T(356,144,'<tspan id="cl-g-'+l+'">0.00</tspan> g',8,'#3aff7a',{fam:'Roboto Mono, monospace'}));
+  const mini=(x,y,a,b,ang)=>'<circle cx="'+x+'" cy="'+y+'" r="20" fill="#0c0c0d" stroke="#1d1d20" stroke-width="2"/>'+
+    '<path d="'+arcD(x,y,15,-60,60)+'" fill="none" stroke="#ddd" stroke-width="1"/>'+T(x-17,y+2,a,6,'#fff')+T(x+17,y+2,b,6,'#fff')+
+    '<path d="'+arcD(x,y,15,40,60)+'" fill="none" stroke="#e8401c" stroke-width="2"/>'+staticNeedle(x,y,-2,15,ang,'#ff3a1c',1.8)+'<circle cx="'+x+'" cy="'+y+'" r="3" fill="#222"/>';
+  o.push(mini(196,62,'E','F',30),mini(244,62,'C','H',-5),mini(196,112,'L','H',0),mini(244,112,'L','H',10));
+  o.push(T(220,158,'D1',10,'#3aff7a',{id:'cl-gear2-'+l,fam:'Roboto Mono, monospace',extra:' data-pre="D"'}));
+  return svgWrap(o.join(''),'','<path d="M20 20 H420 Q432 20 432 34 V160 Q432 172 420 172 H20 Q8 172 8 160 V34 Q8 20 20 20 Z" fill="#141416" stroke="#2a2a2e"/>');
+}
+function displayCamaro6(l,c,tk,rf,boosted){
+  const o=[];
+  o.push(gDial({cx:84,cy:98,R:76,a0:-130,span:260,redFrac:rf,scale:uniScale(tk,1,i=>i),
+    face:{r:82,fill:'#050506',stroke:'#1a1a1c',w:2},rings:[{r:50,col:'#d8102a',w:1.6}],red:{r:60,col:'#ff1a3a',w:3},
+    ticks:{lM:10,wM:2.6,lm:5,wm:1.2,cm:'#eee',red:'#ff2a4a'},lab:{r:62,sz:17,w:600,it:true,col:'#fff'},
+    needle:{id:'nd-rpm-'+l,col:'#ff2a5a',r0:-6,r1:72,w:3.4,tw:1.4,glow:'c6g'+l,hub:{r:8,fill:'#0a0a0b',stroke:'#222'}}}));
+  o.push(T(84,76,'RPM',8,'#fff',{it:true}),T(84,85,'x1000',7,'#fff',{it:true}));
+  o.push(gDial({cx:356,cy:98,R:76,a0:-130,span:260,scale:uniScale(10,1,i=>i%1===0&&i>0?i*20:(i===0?'0':'')),
+    face:{r:82,fill:'#050506',stroke:'#1a1a1c',w:2},rings:[{r:50,col:'#d8102a',w:1.6}],
+    ticks:{lM:10,wM:2.6,lm:5,wm:1.2,cm:'#eee'},lab:{r:62,sz:14,w:600,it:true,col:'#fff'},
+    needle:{id:'nd-spd-'+l,col:'#ff2a5a',r0:-6,r1:72,w:3.4,tw:1.4,glow:'c6g'+l,hub:{r:8,fill:'#0a0a0b',stroke:'#222'}}}));
+  o.push(T(356,80,'MPH',8,'#fff',{it:true}));
+  const mini=(x,lo,hi,ang,lbl)=>'<circle cx="'+x+'" cy="46" r="17" fill="#15161a" stroke="#6a6d73" stroke-width="1.2"/>'+
+    staticNeedle(x,46,-2,15,ang,'#ff2a4a',2)+'<circle cx="'+x+'" cy="46" r="5" fill="#2a2c30"/>'+T(x-11,70,lo,6.5,'#fff')+T(x+11,70,hi,6.5,'#fff')+T(x,40,lbl,6.5,'#fff');
+  o.push(mini(172,'0','80',-30,'40'),mini(206,'160','260',-20,'210'),mini(240,'E','F',-10,'½'),
+    mini(274,'-15','15',boosted?-80:-80,'0').replace('staticNeedle',''));
+  o.push('<g id="c6b-'+l+'"></g>');
+  o.push(T(220,118,'0',30,'#fff',{id:'cl-mph-'+l,it:true,w:600}),T(220,130,'MPH',7,'#fff'),'<line x1="190" y1="134" x2="250" y2="134" stroke="#ccc"/>',
+    T(220,146,'<tspan id="cl-g-'+l+'">0.00</tspan> g',8,'#fff'),T(262,160,'D1',9,'#fff',{id:'cl-gear2-'+l,extra:' data-pre="D"'}),T(220,84,'NW',8,'#fff'));
+  return svgWrap(o.join(''),glowDef('c6g'+l,1.5),'<rect x="2" y="2" width="436" height="176" rx="14" fill="#030304"/>');
+}
+function displayCamaro5(l,c,tk,rf){
+  const o=[];
+  const hood=x=>'<rect x="'+(x-96)+'" y="6" width="192" height="168" rx="30" fill="#18191c" stroke="#2c2d31" stroke-width="2"/>'+
+    '<circle cx="'+x+'" cy="92" r="76" fill="#0a0a0b" stroke="#2a2a2e" stroke-width="3"/>';
+  o.push(hood(112),hood(328),'<rect x="190" y="30" width="60" height="110" rx="6" fill="#050506" stroke="#2a2a2e"/>');
+  o.push(gDial({cx:112,cy:92,R:72,a0:-125,span:250,scale:uniScale(9,1,i=>i*20),rings:[{r:44,col:'#e0202a',w:2}],
+    ticks:{lM:8,wM:2,lm:4,wm:1,cm:'#ddd'},lab:{r:58,sz:12,w:600,col:'#f2f2f2'},
+    needle:{id:'nd-spd-'+l,col:'#ff3a2a',r0:-6,r1:66,w:3.2,tw:1.2,hub:{r:7,fill:'#1a1a1c',stroke:'#888'}}}));
+  o.push('<path d="M92 148 H132 L128 130 H96 Z" fill="#141416" stroke="#333"/>'+T(98,144,'C',6,'#fff')+T(126,144,'H',6,'#fff')+T(112,122,'MPH',5.5,'#aaa'));
+  o.push(gDial({cx:328,cy:92,R:72,a0:-125,span:250,redFrac:rf,scale:uniScale(tk,4,i=>i),rings:[{r:44,col:'#e0202a',w:2}],red:{r:70,col:'#e0202a',w:3},
+    ticks:{lM:8,wM:2,lm:4,wm:1,cm:'#ddd',red:'#ff3a2a'},lab:{r:58,sz:13,w:600,col:'#f2f2f2'},
+    needle:{id:'nd-rpm-'+l,col:'#ff3a2a',r0:-6,r1:66,w:3.2,tw:1.2,hub:{r:7,fill:'#1a1a1c',stroke:'#888'}}}));
+  o.push('<path d="M308 148 H348 L344 130 H312 Z" fill="#141416" stroke="#333"/>'+T(314,144,'E',6,'#fff')+T(342,144,'F',6,'#fff')+T(328,122,'RPM',5.5,'#aaa'));
+  o.push(T(220,70,'0',20,'#fff',{id:'cl-mph-'+l}),T(220,82,'MPH',6,'#aaa'),T(220,104,'<tspan id="cl-g-'+l+'">0.00</tspan> g',8,'#fff'),
+    T(220,124,'D1',10,'#fff',{id:'cl-gear2-'+l,extra:' data-pre="D"'}));
+  return svgWrap(o.join(''),'','<rect x="2" y="2" width="436" height="176" rx="20" fill="#0d0d0f"/>');
+}
+function displayAcura17(l,c,tk,rf){
+  const o=[],ch='url(#ac7'+l+')';
+  const face=x=>'<circle cx="'+x+'" cy="92" r="74" fill="url(#acb'+l+')" stroke="'+ch+'" stroke-width="4"/>';
+  o.push(face(112),face(328));
+  o.push(gDial({cx:112,cy:92,R:68,a0:-125,span:250,redFrac:rf,scale:uniScale(tk,4,i=>i),red:{r:70,col:'#c8141a',w:3},
+    ticks:{lM:9,wM:2,lm:4,wm:1,cm:'#ccc',red:'#e0202a'},lab:{r:53,sz:14,w:500,col:'#fff'},
+    needle:{id:'nd-rpm-'+l,col:'#f4f4f4',r0:-12,r1:62,w:3,tw:1.2,hub:{r:10,fill:'#26282c',stroke:'#555'}}}));
+  o.push(T(130,72,'x1000r/min',6,'#ddd'),T(112,132,modeTxt(c,{normal:'',sport:'SPORT',track:'SPORT+',corsa:'SPORT+'}),6,'#fff'));
+  o.push(gDial({cx:328,cy:92,R:68,a0:-125,span:250,scale:uniScale(8,1,i=>i*20),
+    ticks:{lM:9,wM:2,lm:4,wm:1,cm:'#ccc'},lab:{r:53,sz:13,w:500,col:'#fff'},
+    needle:{id:'nd-spd-'+l,col:'#f4f4f4',r0:-12,r1:62,w:3,tw:1.2,hub:{r:10,fill:'#26282c',stroke:'#555'}}}));
+  o.push(gDial({cx:328,cy:92,R:32,a0:-125,span:250,scale:uniScale(13,0,i=>i%2===0&&i>0?i*20:''),ticks:{lM:3,wM:0.8,cM:'#aaa'},lab:{r:27,sz:4.4,w:500,col:'#bbb'}}));
+  o.push(T(328,70,'mph',6,'#ddd'));
+  const vbar=(x,dir,a,b)=>{let s='';for(let i=0;i<8;i++)s+='<line x1="'+x+'" y1="'+(124-i*9)+'" x2="'+(x+dir*6)+'" y2="'+(124-i*9)+'" stroke="'+(i===7?'#e0202a':'#ddd')+'" stroke-width="1.4"/>';
+    return s+T(x+dir*12,62,a,8,'#fff')+T(x+dir*12,132,b,8,'#fff');};
+  o.push(vbar(22,1,'H','C'),vbar(418,-1,'F','E'));
+  const modes=['Econ','Normal','Sport','Sport +'],cur=modeTxt(c,{normal:'Normal',sport:'Sport',track:'Sport +',corsa:'Sport +'});
+  o.push('<rect x="196" y="16" width="48" height="66" fill="#f2f2f2"/>'+T(220,26,'IDS',7,'#111'));
+  modes.forEach((m,i)=>{const y=40+i*11;if(m===cur)o.push('<rect x="204" y="'+(y-8)+'" width="32" height="10" fill="#333"/>');o.push(T(220,y,m,7.5,m===cur?'#fff':'#111'));});
+  o.push('<rect x="206" y="96" width="28" height="14" fill="#8a1010"/>',T(220,107,'D1',10,'#fff',{id:'cl-gear2-'+l,extra:' data-pre="D"'}),
+    T(220,122,Math.round(ambient())+'°F',8,'#fff'),T(220,134,'<tspan id="cl-g-'+l+'">0.00</tspan> g',8,'#fff'));
+  return svgWrap(o.join(''),'<linearGradient id="ac7'+l+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="0.5" stop-color="#70767e"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient>'+
+    '<radialGradient id="acb'+l+'"><stop offset="0" stop-color="#3a3c40"/><stop offset="1" stop-color="#1c1d20"/></radialGradient>',
+    '<rect x="2" y="2" width="436" height="176" rx="24" fill="#232427"/>');
+}
+function displayAcura21(l,c,tk,rf){
+  const o=[],ch='url(#a2c'+l+')';
+  const face=x=>'<circle cx="'+x+'" cy="94" r="80" fill="#15171a" stroke="'+ch+'" stroke-width="5"/><circle cx="'+x+'" cy="94" r="40" fill="url(#a2b'+l+')" stroke="#6a6e75" stroke-width="1.2"/>';
+  o.push(face(92),face(348));
+  o.push(gDial({cx:92,cy:94,R:74,a0:-130,span:260,redFrac:rf,scale:uniScale(tk,4,i=>i),red:{r:72,col:'#e0141a',w:5},
+    ticks:{lM:8,wM:2,lm:4,wm:1,cm:'#ccc'},lab:{r:58,sz:15,w:500,col:'#fff'},
+    needle:{id:'nd-rpm-'+l,col:'#f4f4f4',r0:-10,r1:70,w:3.4,tw:1.2,hub:{r:9,fill:'#2a2c30',stroke:'#777'}}}));
+  o.push(T(110,72,'x1000r/min',6,'#ddd'));
+  o.push(gDial({cx:348,cy:94,R:74,a0:-130,span:260,scale:uniScale(8,1,i=>i*20),
+    ticks:{lM:8,wM:2,lm:4,wm:1,cm:'#ccc'},lab:{r:58,sz:14,w:500,col:'#fff'},
+    needle:{id:'nd-spd-'+l,col:'#f4f4f4',r0:-10,r1:70,w:3.4,tw:1.2,hub:{r:9,fill:'#2a2c30',stroke:'#777'}}}));
+  o.push(gDial({cx:348,cy:94,R:36,a0:-130,span:260,scale:uniScale(13,0,i=>i%2===0&&i>0?i*20:''),ticks:{lM:3,wM:0.8,cM:'#aaa'},lab:{r:29,sz:4.4,w:500,col:'#bbb'}}));
+  o.push(T(348,64,'mph',6,'#ddd'));
+  const vb=(x,a,b,f)=>'<rect x="'+x+'" y="62" width="6" height="70" rx="2" fill="#333"/><rect x="'+x+'" y="'+(132-70*f)+'" width="6" height="'+(70*f)+'" rx="2" fill="#dcdcdc"/>'+
+    T(x+14,66,a,7,'#fff')+T(x+14,132,b,7,'#fff');
+  o.push(vb(180,'H','C',0.45),vb(254,'F','E',0.7).replace(/x="268"/g,'x="246"'));
+  o.push('<rect x="196" y="40" width="48" height="96" fill="#07080a"/>'+
+    '<path d="M212 126 L218 70 H222 L228 126 Z" fill="#1fbf4a" opacity="0.85"/><rect x="214" y="96" width="12" height="16" rx="3" fill="#dfe3e8"/>'+
+    T(220,58,'Safety Support',6,'#fff')+T(220,150,'D1',9,'#fff',{id:'cl-gear2-'+l,extra:' data-pre="D"'})+
+    T(220,162,Math.round(ambient())+'°F  '+modeTxt(c,{normal:'COMFORT',sport:'SPORT',track:'SPORT+',corsa:'SPORT+'}),6.5,'#fff')+
+    T(220,172,'<tspan id="cl-g-'+l+'">0.00</tspan> g',6.5,'#fff'));
+  return svgWrap(o.join(''),'<linearGradient id="a2c'+l+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="0.5" stop-color="#6c727a"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient>'+
+    '<radialGradient id="a2b'+l+'"><stop offset="0" stop-color="#4a4d52"/><stop offset="1" stop-color="#1f2124"/></radialGradient>',
+    '<rect x="2" y="2" width="436" height="176" rx="18" fill="#0b0c0e"/>');
+}
+function displayBMWM5(l,c,tk,rf){
+  const o=[],ch='url(#m5c'+l+')';
+  const face=x=>'<circle cx="'+x+'" cy="92" r="78" fill="#0a0b0d" stroke="'+ch+'" stroke-width="4"/>';
+  o.push(face(116),face(324));
+  o.push(gDial({cx:116,cy:92,R:72,a0:-140,span:250,scale:uniScale(10,1,i=>i*20),rings:[{r:40,col:'#3a3c40',w:6}],
+    ticks:{lM:7,wM:2,lm:4,wm:1,cm:'#ccc'},lab:{r:58,sz:12,w:500,col:'#fff'},
+    needle:{id:'nd-spd-'+l,col:'#ff2a1a',r0:-14,r1:70,w:3.2,tw:1.2,hub:{r:9,fill:'#2a2c30',stroke:'#888'}}}));
+  o.push('<circle cx="116" cy="92" r="3.5" fill="#ff2a1a"/>',T(116,62,'mph',6,'#ddd'),T(116,78,'0',14,'#fff',{id:'cl-mph-'+l,w:500}));
+  o.push(gDial({cx:324,cy:92,R:72,a0:-135,span:270,redFrac:rf,scale:uniScale(tk,1,i=>i===0?'':i),rings:[{r:40,col:'#3a3c40',w:6}],red:{r:70,col:'#e0202a',w:3},
+    ticks:{lM:7,wM:2,lm:4,wm:1,cm:'#ccc',red:'#ff3a2a'},lab:{r:58,sz:14,w:500,col:'#fff'},
+    needle:{id:'nd-rpm-'+l,col:'#ff2a1a',r0:-14,r1:70,w:3.2,tw:1.2,hub:{r:9,fill:'#2a2c30',stroke:'#888'}}}));
+  o.push('<circle cx="324" cy="92" r="3.5" fill="#ff2a1a"/>',T(296,130,'D1',9,'#fff',{id:'cl-gear2-'+l,extra:' data-pre="D"'}),T(282,70,'1/min x 1000',5,'#ddd'));
+  const side=(x,dir,lbls,ang)=>'<path d="'+arcD(x,122,28,dir>0?200:160,dir>0?300:60)+'" fill="none" stroke="'+ch+'" stroke-width="2"/>'+
+    T(x+dir*-12,106,lbls[0],6,'#fff')+T(x+dir*-16,128,lbls[1],6,'#fff')+staticNeedle(x,122,4,22,ang,'#ff2a1a',2);
+  o.push(side(40,1,['1','½'],250),side(400,-1,['170','120'],110));
+  o.push(T(190,34,'Efficient',6,'#ccc'),T(220,34,modeTxt(c,{normal:'Comfort',sport:'Sport',track:'Sport+',corsa:'Sport+'}),6,'#fff'),T(250,34,'Comfort',6,'#ccc'),
+    T(220,76,c.drive==='awd'?'4WD':'2WD',8,'#fff'),T(220,98,'<tspan id="cl-g-'+l+'">0.00</tspan> g',8,'#fff'));
+  o.push('<rect x="140" y="160" width="160" height="14" rx="2" fill="#0d0e10"/>'+T(220,170,({day:'14:42',dusk:'19:31',night:'22:48'})[timeOfDay()]+'   TRIP 0.25 mi   '+Math.round(ambient())+'°F',7,'#fff'));
+  return svgWrap(o.join(''),'<linearGradient id="m5c'+l+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="0.5" stop-color="#6c727a"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient>',
+    '<rect x="2" y="2" width="436" height="176" rx="22" fill="#060708"/>');
+}
+function displayBMWCurved(l,c,tk,rf){
+  const o=[],Y0=166,Y1=18,H=Y0-Y1;
+  const ox=y=>y>=92?74+(y-92)*0.95:74+(92-y)*0.95;       // outer (vertex) edge of the left chevron
+  const band=(side)=>{const s=[];for(const y of [Y1,92,Y0])s.push([ox(y),y]);for(const y of [Y0,92,Y1])s.push([ox(y)+22,y]);
+    return s.map(p=>(side==='L'?p[0]:440-p[0]).toFixed(1)+','+p[1]).join(' ');};
+  const clip=(id)=>'<clipPath id="'+id+'"><rect id="'+id+'-r" x="0" y="'+Y0+'" width="440" height="0"/></clipPath>';
+  o.push('<polygon points="'+band('L')+'" fill="#0e1b3a" stroke="#b9c6e6" stroke-width="1.2"/>','<polygon points="'+band('R')+'" fill="#0e1b3a" stroke="#b9c6e6" stroke-width="1.2"/>');
+  o.push('<g id="nd-spd-'+l+'" data-bar="lin" data-y0="'+Y0+'" data-y1="'+Y1+'" data-clip="bcs'+l+'-r"><polygon points="'+band('L')+'" fill="url(#bcg'+l+')" clip-path="url(#bcs'+l+')"/></g>');
+  o.push('<g id="nd-rpm-'+l+'" data-bar="lin" data-y0="'+Y0+'" data-y1="'+Y1+'" data-clip="bcr'+l+'-r"><polygon points="'+band('R')+'" fill="url(#bcg'+l+')" clip-path="url(#bcr'+l+')"/></g>');
+  const redY=Y0-H*rf;o.push('<polygon points="'+band('R')+'" fill="#d0202a" opacity="0.85" clip-path="url(#bcrr'+l+')"/>');
+  for(let i=0;i<=8;i++){const y=Y0-H*i/8;o.push(T(ox(y)+32,y+3.5,i*20+(i===8?' mph':''),9,'#e8ecf6',{anchor:'start'}));}
+  for(let i=0;i<=tk;i++){if(tk>12&&i%2)continue;const y=Y0-H*i/tk;o.push(T(440-ox(y)-32,y+3.5,i,9,i/tk>=rf-1e-6?'#ff5a4a':'#e8ecf6',{anchor:'end'}));}
+  o.push(T(362,24,'1/min x1000',6.5,'#cfd6e8',{anchor:'end'}));
+  o.push(T(178,112,'0',30,'#fff',{id:'cl-mph-'+l,w:400,anchor:'end'}),T(166,126,'mph',8,'#fff'),
+    T(266,112,'D1',30,'#fff',{id:'cl-gear2-'+l,w:400,anchor:'start',extra:' data-pre="D"'}),
+    T(220,44,'Values since start',9,'#fff'),T(190,64,'0.0',8,'#fff'),'<line x1="202" y1="61" x2="240" y2="61" stroke="#fff"/>',T(254,64,'<tspan id="cl-g-'+l+'">0.00</tspan> g',8,'#fff'),
+    '<g transform="translate(0,16)"><path d="M196 118 Q198 100 212 98 H228 Q242 100 244 118 Z" fill="#8a929e"/><rect x="194" y="116" width="52" height="14" rx="4" fill="#6d747e"/>'+
+    '<rect x="200" y="104" width="40" height="8" rx="2" fill="#2a3444"/><rect x="198" y="120" width="8" height="4" fill="#e03a2a"/><rect x="234" y="120" width="8" height="4" fill="#e03a2a"/></g>',
+    T(220,162,modeTxt(c,{normal:'COMFORT',sport:'SPORT',track:'SPORT PLUS',corsa:'SPORT PLUS',drag:'LAUNCH'}),8,'#ffa53a',{ls:0.8}),
+    T(380,162,'+'+Math.round(ambient())+' °F',8,'#fff'),T(62,162,({day:'11:31',dusk:'7:31',night:'10:48'})[timeOfDay()]+' am'.replace(' am',timeOfDay()==='day'?' am':' pm'),8,'#fff'));
+  return svgWrap(o.join(''),'<linearGradient id="bcg'+l+'" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff7a3a"/><stop offset="0.6" stop-color="#e86a8a"/><stop offset="1" stop-color="#6a5ab0"/></linearGradient>'+
+    clip('bcs'+l)+clip('bcr'+l)+'<clipPath id="bcrr'+l+'"><rect x="0" y="'+Y1+'" width="440" height="'+(redY-Y1).toFixed(1)+'"/></clipPath>'+
+    '<radialGradient id="bcbg'+l+'" cx="0.5" cy="0.4"><stop offset="0" stop-color="#1c3a6a"/><stop offset="1" stop-color="#070d1c"/></radialGradient>',
+    '<rect x="2" y="2" width="436" height="176" rx="12" fill="url(#bcbg'+l+')"/>');
+}
+const chromeGrad=(id)=>'<linearGradient id="'+id+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="0.5" stop-color="#6c727a"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient>';
+const minNeedle=(cx,cy,r0,r1,deg,col,w,hub)=>staticNeedle(cx,cy,r0,r1,deg,col,w)+(hub?'<circle cx="'+cx+'" cy="'+cy+'" r="'+hub+'" fill="#1a1b1e" stroke="#555"/>':'');
+function displayViper(l,c,tk,rf){
+  const o=[],cx=226,cy=100,R=72,per=Math.min(35,250/tk);
+  o.push(gDial({cx:178,cy:96,R:100,a0:222,span:96,scale:uniScale(11,1,i=>i===0?'':i*20),
+    ticks:{lM:9,wM:1.8,lm:5,wm:1,cm:'#cfd8e8'},lab:{r:85,sz:9.5,w:600,it:true,col:'#fff'},
+    needle:{id:'nd-spd-'+l,col:'#fff',r0:80,r1:100,w:3,tw:2}}));
+  o.push(T(140,166,'MPH',9,'#fff',{it:true}));
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+(R+6)+'" fill="#05070b"/>');
+  o.push(gDial({cx,cy,R,a0:-145,span:per*tk,redFrac:rf,scale:uniScale(tk,4,i=>i),
+    rings:[{r:R+2,col:'#9fb6d6',w:1.2}],red:{r:R-3,col:'#ff3a2a',w:4},
+    ticks:{lM:11,wM:2.4,lm:5,wm:1,cm:'#b9c8e0',red:'#ff3a2a'},lab:{r:R-22,sz:19,w:700,it:true,col:'#fff'},
+    needle:{id:'nd-rpm-'+l,col:'#fff',r0:R-22,r1:R+3,w:3,tw:2}}));
+  o.push(T(cx,cy-30,'RPM - 1000',5,'#ccc'));
+  o.push(ring(cx,cy+6,30,-62,62,'#3a4a66',5),'<path id="nd-rpm-'+l+'-2" data-arc="1" pathLength="1000" stroke-dasharray="0 1000" d="'+arcD(cx,cy+6,30,-62,62)+'" fill="none" stroke="#dfe8f4" stroke-width="5"/>');
+  o.push(T(cx,cy-12,'HP',6,'#ddd'),T(cx-28,cy-2,'0',5.5,'#ddd'),T(cx+30,cy-2,Math.round(c.hp)+'+',5.5,'#ddd'),
+    T(cx,cy+22,'<tspan id="nd-rpm-'+l+'-3" data-num="1" data-lo="0" data-hi="'+Math.round(c.hp)+'" data-bell="'+(c.hpRpm/(tk*1000)).toFixed(2)+'">0</tspan>',14,'#fff'),
+    T(cx,cy+64,'Current Power',7,'#fff'),T(cx+66,cy+56,'0',22,'#fff',{it:true,w:700,id:'cl-mph-'+l,anchor:'end'}),T(cx+68,cy+66,'MPH',7,'#fff',{it:true,anchor:'start'}),
+    T(cx-58,cy+24,'D1',9,'#fff',{id:'cl-gear2-'+l,extra:' data-pre="D"'}));
+  o.push(ring(330,104,32,20,160,'#9fb6d6',1.2)+T(336,82,'100',6,'#fff')+T(348,106,'PSI',6,'#fff')+T(336,134,'0',6,'#fff')+minNeedle(330,104,20,33,62,'#fff',2));
+  o.push(gDial({cx:320,cy:104,R:94,a0:30,span:120,scale:uniScale(4,1,i=>['F','','','','E'][i]),
+    ticks:{lM:7,wM:1.6,lm:4,wm:1,cm:'#cfd8e8'},lab:{r:82,sz:10,w:600,col:'#fff'}}),minNeedle(320,104,70,94,120,'#fff',3));
+  o.push(T(210,176,'<tspan id="cl-g-'+l+'">0.00</tspan> g',8,'#fff'));
+  return svgWrap(o.join(''),'','<rect x="2" y="2" width="436" height="176" rx="40" fill="#030406" stroke="#3a3e44" stroke-width="3"/>');
+}
+function displayCharger11(l,c,tk,rf){
+  const o=[],ch='url(#c11c'+l+')';
+  const face=x=>'<circle cx="'+x+'" cy="92" r="80" fill="url(#c11f'+l+')" stroke="'+ch+'" stroke-width="4"/>';
+  o.push(face(92),face(348));
+  o.push(gDial({cx:92,cy:92,R:74,a0:-125,span:250,redFrac:rf,scale:uniScale(tk,4,i=>i),rings:[{r:60,col:'#d8202a',w:1.2}],red:{r:62,col:'#d8202a',w:3},
+    ticks:{lM:8,wM:1.8,lm:4,wm:0.9,cm:'#bbb'},lab:{r:47,sz:13,w:500,col:'#e8e8e8'},
+    needle:{id:'nd-rpm-'+l,col:'#ff2a3a',r0:-6,r1:70,w:3,tw:1.2,hub:{r:10,fill:'#3a3c40',stroke:'#777'}}}));
+  o.push(T(64,130,'RPM',6,'#ddd'),T(64,137,'x1000',5,'#ddd'),'<circle cx="92" cy="140" r="17" fill="#141518" stroke="#777"/>'+T(80,150,'C',6,'#fff')+T(104,150,'H',6,'#fff')+minNeedle(92,140,2,14,-10,'#ff2a3a',2,3));
+  o.push(gDial({cx:348,cy:92,R:74,a0:-125,span:250,scale:uniScale(7,1,i=>i*20),rings:[{r:60,col:'#d8202a',w:1.2}],
+    ticks:{lM:8,wM:1.8,lm:4,wm:0.9,cm:'#bbb'},lab:{r:47,sz:12,w:500,col:'#e8e8e8'},
+    needle:{id:'nd-spd-'+l,col:'#ff2a3a',r0:-6,r1:70,w:3,tw:1.2,hub:{r:10,fill:'#3a3c40',stroke:'#777'}}}));
+  o.push(gDial({cx:348,cy:92,R:36,a0:-125,span:250,scale:uniScale(11,0,i=>i%2===0&&i>0?i*20:''),ticks:{lM:3,wM:0.8,cM:'#999'},lab:{r:29,sz:4.4,w:500,col:'#aaa'}}));
+  o.push(T(326,134,'MPH',6,'#ddd'),'<circle cx="348" cy="140" r="17" fill="#141518" stroke="#777"/>'+T(336,150,'E',6,'#fff')+T(360,150,'F',6,'#fff')+minNeedle(348,140,2,14,30,'#ff2a3a',2,3));
+  o.push('<rect x="184" y="30" width="72" height="92" rx="4" fill="#1a1c20" stroke="#444"/>','<rect x="188" y="34" width="64" height="84" fill="#0b0c0f"/>',
+    '<rect x="188" y="34" width="64" height="12" fill="#8a1a14"/>'+T(220,43,Math.round(ambient())+'°',7,'#fff'),T(220,58,'Vehicle Speed',6.5,'#fff'),
+    T(212,86,'0',22,'#fff',{id:'cl-mph-'+l,w:500}),T(236,86,'mph',6.5,'#fff',{anchor:'start'}),T(220,104,'<tspan id="cl-g-'+l+'">0.00</tspan> g',7,'#fff'),
+    T(242,114,'D1',7,'#fff',{id:'cl-gear2-'+l,extra:' data-pre="D"'}),T(220,150,'BRAKE',6,'#ff3a2a'));
+  return svgWrap(o.join(''),chromeGrad('c11c'+l)+'<radialGradient id="c11f'+l+'"><stop offset="0.5" stop-color="#26282c"/><stop offset="1" stop-color="#3a3c40"/></radialGradient>',
+    '<rect x="2" y="2" width="436" height="176" rx="30" fill="#18191c"/>');
+}
+function displayCharger15(l,c,tk,rf){
+  const o=[],nm=(c.name||'').toLowerCase(),srt=/hellcat|scat|srt/.test(nm),smax=clusterMeta[l].spdMax||160;
+  const face=x=>'<circle cx="'+x+'" cy="94" r="80" fill="url(#c15f'+l+')" stroke="#2a2b2e" stroke-width="5"/>'+
+    '<circle cx="'+x+'" cy="94" r="74" fill="none" stroke="#ff2a1f" stroke-width="2.4" filter="url(#c15g'+l+')" opacity="0.9"/>';
+  o.push(face(92),face(348));
+  const dial=(cx,id,sc,red,lab)=>gDial({cx,cy:94,R:70,a0:-125,span:250,redFrac:red,scale:sc,
+    red:{r:64,col:'#e0201a',w:7},rings:[{r:70.5,col:'#ff3a2a',w:0.8,op:0.8}],
+    ticks:{lM:8,wM:1.8,lm:4,wm:1,cm:'#ff3a2a',cM:'#ff5a40',red:'#ffd0c8'},lab:Object.assign({r:51,sz:12.5,w:600,col:'#f4f4f4',red:'#fff'},lab||{}),
+    needle:{id,col:'#ff9a2a',r0:-8,r1:66,w:3.2,tw:1.1,glow:'c15n'+l,hub:{r:9,fill:'#141416',stroke:'#ff3a2a',w:1.6}}});
+  o.push(dial(92,'nd-rpm-'+l,uniScale(tk,4,i=>i),rf));
+  o.push(T(92,138,'RPM',7,'#fff',{w:600}),T(92,145,'x 1000',5,'#ddd'));
+  const n=smax/20;
+  o.push(dial(348,'nd-spd-'+l,uniScale(n,1,i=>i*20),0,{sz:10.5,r:52}));
+  o.push(T(348,145,'MPH',7,'#fff',{w:600}));
+  if(srt)o.push(T(348,135,'SRT',8,'#e8241c',{w:800,it:1}));
+  // centre screen
+  o.push('<rect x="173" y="24" width="94" height="132" rx="6" fill="#08090b" stroke="#2c2d31" stroke-width="2"/>',
+    T(184,37,'SE',7,'#fff',{w:600}),T(220,37,Math.round(ambient())+'°F',7.5,'#fff',{w:500}),
+    T(255,34,'53',7,'#fff',{w:600}),T(255,40,'Range mi',3.6,'#ccc'),
+    '<line x1="180" y1="44" x2="260" y2="44" stroke="#3a3c42" stroke-width="0.8"/>');
+  // honeycomb under the speed
+  const hex=(x,y,r)=>{let p='';for(let k=0;k<6;k++){const a=Math.PI/3*k+Math.PI/6;p+=(k?' ':'')+(x+r*Math.cos(a)).toFixed(1)+','+(y+r*Math.sin(a)).toFixed(1);}
+    return '<polygon points="'+p+'" fill="none" stroke="#4a4e57" stroke-width="0.6" opacity="0.7"/>';};
+  for(let i=0;i<5;i++)for(let j=0;j<2;j++)o.push(hex(201+i*9.5+(j?4.75:0),108+j*8.2,4.9));
+  o.push(T(220,90,'0',30,'#fff',{id:'cl-mph-'+l,w:600}),T(220,101,'MPH',6.5,'#fff',{w:600}));
+  // oil temperature (left) and gear (right)
+  o.push('<line x1="182" y1="58" x2="182" y2="122" stroke="#666" stroke-width="0.8"/>');
+  for(let i=0;i<=6;i++)o.push('<line x1="182" y1="'+(58+i*10.6)+'" x2="'+(i%3?184.5:186)+'" y2="'+(58+i*10.6)+'" stroke="#aaa" stroke-width="0.7"/>');
+  o.push(T(191,61,'260',4.2,'#bbb'),T(191,124,'170',4.2,'#bbb'),'<path d="M180 94 l-4 -2.5 v5 z" fill="#ff9a2a"/>',T(182,132,'OIL °F',3.8,'#aaa'));
+  ['P','R','N','D','M'].forEach((g,i)=>o.push(T(258,64+i*11,g,7,g==='D'?'#fff':'#777',{w:g==='D'?700:500})));
+  o.push('<rect x="252" y="90" width="12" height="11" rx="1.5" fill="none" stroke="#fff" stroke-width="0.8"/>');
+  o.push(T(220,128,'<tspan id="cl-g-'+l+'">0.00</tspan> g · <tspan id="cl-gear2-'+l+'" data-pre="D">D1</tspan>',5.5,'#bbb'),
+    T(220,146,'38001 mi',5.5,'#ddd'));
+  return svgWrap(o.join(''),
+    '<radialGradient id="c15f'+l+'"><stop offset="0.55" stop-color="#0d0d0f"/><stop offset="0.9" stop-color="#1a1b1e"/><stop offset="1" stop-color="#2e2f33"/></radialGradient>'+
+    glowDef('c15g'+l,2.2)+glowDef('c15n'+l,1.1),
+    '<path d="M14 22 Q14 8 30 8 H410 Q426 8 426 22 V150 Q426 176 400 176 H40 Q14 176 14 150 Z" fill="#111214" stroke="#26272a" stroke-width="2"/>');
+}
+function displayCrownVic(l,c,tk,rf){
+  const o=[];
+  const face=x=>'<circle cx="'+x+'" cy="86" r="76" fill="#0c0c0e" stroke="#2c2d30" stroke-width="5"/>';
+  o.push(face(96),face(344));
+  o.push(gDial({cx:96,cy:86,R:70,a0:-125,span:250,scale:uniScale(7,3,i=>i*20),
+    ticks:{lM:9,wM:1.8,lm:4,wm:0.9,cm:'#ddd'},lab:{r:54,sz:13,w:500,col:'#f2f2f2'},
+    needle:{id:'nd-spd-'+l,col:'#ff5a1a',r0:-4,r1:66,w:3.2,tw:1.2,hub:{r:10,fill:'#1a1b1e',stroke:'#444'}}}));
+  o.push(gDial({cx:96,cy:86,R:36,a0:-125,span:250,scale:uniScale(11,0,i=>i%2===0?Math.round(i*20):''),ticks:{lM:3,wM:0.8,cM:'#aaa'},lab:{r:29,sz:4.6,w:500,col:'#ccc'}}));
+  o.push(T(70,146,'MPH',7,'#ddd'),T(96,122,'km/h',5,'#aaa'));
+  o.push(gDial({cx:344,cy:86,R:70,a0:-125,span:250,redFrac:rf,scale:uniScale(tk,4,i=>i),
+    ticks:{lM:9,wM:1.8,lm:4,wm:0.9,cm:'#ddd',red:'#ff4a2a'},lab:{r:54,sz:14,w:500,col:'#f2f2f2',red:'#ff4a2a'},
+    needle:{id:'nd-rpm-'+l,col:'#ff5a1a',r0:-4,r1:66,w:3.2,tw:1.2,hub:{r:10,fill:'#1a1b1e',stroke:'#444'}}}));
+  o.push(T(350,62,'RPM x 1000',6,'#ddd'));
+  const mini=(x,a,b,ang,sym)=>ring(x,96,20,-70,70,'#ddd',1)+T(x-22,82,a,7,'#fff')+T(x+22,82,b,7,'#fff')+T(x,112,sym,6,'#ccc')+minNeedle(x,96,-2,20,ang,'#ff5a1a',2.4,5);
+  o.push(mini(196,'E','F',-40,'FUEL'),mini(250,'C','H',-30,'TEMP'));
+  o.push('<rect x="176" y="30" width="88" height="14" fill="#101114"/>'+T(220,56,'CERTIFIED CALIBRATION',6,'#ddd'));
+  o.push(T(190,148,'P',11,'#ddd'),T(206,148,'R',11,'#888'),T(218,148,'N',11,'#888'),'<rect x="224" y="138" width="12" height="13" rx="2" fill="none" stroke="#ddd"/>',T(230,148,'D',11,'#fff'),
+    T(244,148,'2',11,'#888'),T(256,148,'1',11,'#888'),T(220,166,'<tspan id="cl-g-'+l+'">0.00</tspan> g · <tspan id="cl-gear2-'+l+'" data-pre="D">D1</tspan>',7,'#aaa'));
+  return svgWrap(o.join(''),'','<path d="M16 16 H424 Q432 16 432 26 V150 Q432 172 410 174 H30 Q8 172 8 150 V26 Q8 16 16 16 Z" fill="#161719" stroke="#3a3b3e" stroke-width="2"/>');
+}
+function displayImpala(l,c,tk,rf){
+  const o=[],ch='url(#imc'+l+')';
+  const face=(x,r)=>'<circle cx="'+x+'" cy="92" r="'+r+'" fill="#0e0f11" stroke="'+ch+'" stroke-width="2.4"/>';
+  o.push(face(78,62),face(220,74),face(362,62));
+  o.push(gDial({cx:78,cy:92,R:58,a0:-125,span:250,redFrac:rf,scale:uniScale(tk,1,i=>i),
+    ticks:{lM:8,wM:2.2,lm:4,wm:1,cm:'#cfe4f0',cM:'#e8f4fa',red:'#ff5a2a'},lab:{r:44,sz:12,w:500,it:true,col:'#fff'},
+    needle:{id:'nd-rpm-'+l,col:'#ff4a1a',r0:-4,r1:54,w:3,tw:1.2,hub:{r:9,fill:'#141517',stroke:'#333'}}}));
+  o.push(T(78,70,'RPM',7,'#fff',{it:true}),T(78,78,'x 1000',6,'#fff',{it:true}));
+  o.push(gDial({cx:220,cy:92,R:70,a0:-125,span:200,scale:uniScale(7,1,i=>i*20),
+    ticks:{lM:9,wM:2.2,lm:4,wm:1,cm:'#cfe4f0',cM:'#e8f4fa'},lab:{r:54,sz:13,w:500,it:true,col:'#fff'},
+    needle:{id:'nd-spd-'+l,col:'#ff4a1a',r0:-4,r1:66,w:3.2,tw:1.2,hub:{r:10,fill:'#141517',stroke:'#333'}}}));
+  o.push(T(220,66,'MPH',8,'#2ac6b0',{it:true}),'<path d="M160 116 H280 A74 74 0 0 1 160 116 Z" fill="#050607"/>',
+    T(220,134,'P R N <tspan fill="#fff">D</tspan> 3 2 1',10,'#2ac6b0',{fam:'Roboto Mono, monospace'}),T(220,150,'<tspan id="cl-gear2-'+l+'" data-pre="D">D1</tspan>  <tspan id="cl-g-'+l+'">0.00</tspan> g',7,'#2ac6b0',{fam:'Roboto Mono, monospace'}));
+  o.push(gDial({cx:344,cy:92,R:54,a0:-150,span:100,scale:uniScale(4,1,i=>['C','','','','H'][i]),ticks:{lM:6,wM:1.8,lm:3,wm:1,cm:'#cfe4f0'},lab:{r:42,sz:9,w:600,col:'#fff'}}));
+  o.push(gDial({cx:380,cy:92,R:54,a0:150,span:-100,scale:uniScale(4,1,i=>['E','','','','F'][i]),ticks:{lM:6,wM:1.8,lm:3,wm:1,cm:'#cfe4f0'},lab:{r:42,sz:9,w:600,col:'#fff'}}));
+  o.push(minNeedle(344,92,-2,40,-120,'#ff4a1a',2.6,6),minNeedle(380,92,-2,40,110,'#ff4a1a',2.6,6));
+  return svgWrap(o.join(''),chromeGrad('imc'+l),'<path d="M20 30 Q220 10 420 30 L432 120 Q420 170 360 172 H80 Q20 170 8 120 Z" fill="#131416" stroke="#2a2b2e" stroke-width="2"/>');
+}
+function displayChall11(l,c,tk,rf){
+  const o=[],ch='url(#c1c'+l+')',cream='#efe8d4';
+  const face=(x,y,r)=>'<circle cx="'+x+'" cy="'+y+'" r="'+(r+5)+'" fill="#1a1a1c" stroke="'+ch+'" stroke-width="3"/><circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+cream+'"/>';
+  o.push(face(44,108,32),face(154,90,64),face(288,90,64),face(398,108,32));
+  o.push(gDial({cx:154,cy:90,R:60,a0:-125,span:250,scale:uniScale(8,4,i=>i*20),rings:[{r:60,col:'#c8202a',w:1}],
+    ticks:{lM:8,wM:1.8,lm:4,wm:0.8,cm:'#b0202a',cM:'#222'},lab:{r:47,sz:12,w:500,col:'#1d2a6a'},
+    needle:{id:'nd-spd-'+l,col:'#d8141a',r0:-4,r1:56,w:3,tw:1.2,hub:{r:9,fill:'#e0d8c4',stroke:'#999'}}}));
+  o.push(ring(154,90,28,-110,110,'#333',1),T(154,70,'MPH',6.5,'#222'));
+  o.push('<path d="M100 118 H208 A60 60 0 0 1 100 118 Z" fill="#101113"/>',T(132,136,'D',11,'#3aff9a',{fam:'Roboto Mono, monospace'}),
+    T(176,136,Math.round(ambient())+'°F',11,'#3aff9a',{fam:'Roboto Mono, monospace'}),T(154,146,'<tspan id="cl-g-'+l+'">0.00</tspan> g',6,'#3aff9a',{fam:'Roboto Mono, monospace'}));
+  o.push(gDial({cx:288,cy:90,R:60,a0:-125,span:250,redFrac:rf,scale:uniScale(tk,4,i=>i),rings:[{r:60,col:'#c8202a',w:1}],red:{r:57,col:'#d8141a',w:4},
+    ticks:{lM:8,wM:1.8,lm:4,wm:0.8,cm:'#b0202a',cM:'#222',red:'#d8141a'},lab:{r:47,sz:13,w:600,col:'#1d1d1d'},
+    needle:{id:'nd-rpm-'+l,col:'#d8141a',r0:-4,r1:56,w:3,tw:1.2,hub:{r:9,fill:'#e0d8c4',stroke:'#999'}}}));
+  o.push(ring(288,90,28,-110,110,'#333',1),T(288,68,'RPM',7,'#222'),T(288,75,'x1000',5,'#222'),'<path d="M234 118 H342 A60 60 0 0 1 234 118 Z" fill="#101113"/>',
+    T(288,138,'D1',10,'#3aff9a',{id:'cl-gear2-'+l,fam:'Roboto Mono, monospace',extra:' data-pre="D"'}));
+  o.push(ring(44,108,26,-80,40,'#c8202a',1)+T(30,110,'E',8,'#222')+T(58,92,'½',8,'#222')+minNeedle(44,108,-2,26,-35,'#d8141a',2.2,4));
+  o.push(ring(398,108,26,-40,80,'#c8202a',1)+T(412,110,'H',8,'#222')+T(386,92,'C',8,'#222')+minNeedle(398,108,-2,26,-20,'#d8141a',2.2,4));
+  return svgWrap(o.join(''),chromeGrad('c1c'+l),'<rect x="2" y="2" width="436" height="176" rx="26" fill="#26272a"/>');
+}
+function displayVenom(l,c,tk,rf){
+  const o=[];
+  o.push('<ellipse cx="220" cy="90" rx="214" ry="86" fill="#050506"/>');
+  o.push(gDial({cx:110,cy:92,R:72,a0:-135,span:265,redFrac:rf,scale:uniScale(tk,4,i=>i),rings:[{r:72,col:'#f4f4f4',w:1.2}],red:{r:72,col:'#ff2a2a',w:2.4},
+    ticks:{lM:8,wM:2,lm:4,wm:1,cm:'#f4f4f4',red:'#ff2a2a'},lab:{r:58,sz:15,w:700,it:true,col:'#fff',red:'#ff2a2a'},
+    needle:{id:'nd-rpm-'+l,col:'#ff2a2a',r0:-8,r1:68,w:3.4,tw:1.4,glow:'vng'+l,hub:{r:7,fill:'#300',stroke:'#600'}}}));
+  o.push(T(128,120,'rpm',8,'#fff',{it:true}),T(128,127,'x1000',5,'#fff',{it:true}));
+  o.push(gDial({cx:330,cy:92,R:72,a0:-135,span:265,scale:uniScale(9,1,i=>i*30),rings:[{r:72,col:'#f4f4f4',w:1.2}],
+    ticks:{lM:8,wM:2,lm:4,wm:1,cm:'#f4f4f4'},lab:{r:57,sz:12,w:700,it:true,col:'#fff'},
+    needle:{id:'nd-spd-'+l,col:'#ff2a2a',r0:-8,r1:68,w:3.4,tw:1.4,glow:'vng'+l,hub:{r:7,fill:'#300',stroke:'#600'}}}));
+  o.push(T(350,122,'MPH',8,'#fff',{it:true}),'<circle cx="220" cy="80" r="4" fill="#ff3a1a"/>',
+    '<rect x="176" y="112" width="88" height="26" fill="#1c2a08"/>',T(220,124,'<tspan id="cl-gear2-'+l+'" data-pre="D">D1</tspan>  <tspan id="cl-g-'+l+'">0.00</tspan>g',8,'#c8ff3a',{fam:'Roboto Mono, monospace'}),
+    T(220,134,'E ▮▮▮▮▮ F',7,'#c8ff3a',{fam:'Roboto Mono, monospace'}));
+  return svgWrap(o.join(''),glowDef('vng'+l,1.4),'<rect x="2" y="2" width="436" height="176" rx="40" fill="#020203"/>');
+}
+function displayFocusRS(l,c,tk,rf){
+  const o=[],ch='url(#frc'+l+')';
+  const pod=x=>'<circle cx="'+x+'" cy="94" r="80" fill="#1a1c20" stroke="'+ch+'" stroke-width="3"/><circle cx="'+x+'" cy="94" r="70" fill="#2a2c30"/>';
+  o.push(pod(86),pod(354));
+  o.push(gDial({cx:86,cy:94,R:68,a0:-125,span:250,redFrac:rf,scale:uniScale(tk,4,i=>i),rings:[{r:66,col:'#2a4ab8',w:5}],red:{r:66,col:'#e0302a',w:5},
+    ticks:{lM:9,wM:2.2,lm:4,wm:1,cm:'#ddd'},lab:{r:52,sz:15,w:500,col:'#f2f2f2'},
+    needle:{id:'nd-rpm-'+l,col:'#ff2a2a',r0:-10,r1:64,w:3.4,tw:1.2,hub:{r:9,fill:'#ddd',stroke:'#888'}}}));
+  o.push(T(70,120,'rpm',6.5,'#fff'),T(70,127,'x1000',6,'#fff'));
+  o.push(gDial({cx:354,cy:94,R:68,a0:-125,span:250,scale:uniScale(9,1,i=>i*20),rings:[{r:66,col:'#2a4ab8',w:5}],
+    ticks:{lM:9,wM:2.2,lm:4,wm:1,cm:'#ddd'},lab:{r:52,sz:13,w:500,col:'#f2f2f2'},
+    needle:{id:'nd-spd-'+l,col:'#ff2a2a',r0:-10,r1:64,w:3.4,tw:1.2,hub:{r:9,fill:'#ddd',stroke:'#888'}}}));
+  o.push(gDial({cx:354,cy:94,R:38,a0:-125,span:250,scale:uniScale(15,0,i=>i%2===0&&i>0?i*20:''),ticks:{lM:3,wM:0.8,cM:'#e0302a'},lab:{r:31,sz:5,w:600,col:'#e0302a'}}));
+  o.push(T(336,130,'mph',6,'#fff'));
+  o.push('<rect x="176" y="26" width="88" height="62" rx="3" fill="#0d1f5a"/>'+T(186,38,Math.round(ambient())+'°F',7,'#fff',{anchor:'start'})+T(226,38,'Trip 1',7,'#fff')+
+    T(220,58,'<tspan id="cl-g-'+l+'">0.00</tspan> g',11,'#fff')+T(220,76,'<tspan id="cl-gear2-'+l+'" data-pre="">1</tspan>',11,'#fff'));
+  o.push('<rect x="182" y="116" width="76" height="44" rx="8" fill="#141518" stroke="#555"/>'+ring(202,150,18,-60,30,'#2a4ab8',2)+ring(238,150,18,-30,60,'#2a4ab8',2)+
+    T(214,148,'E',6,'#fff')+T(226,148,'C',6,'#fff')+minNeedle(202,150,-2,16,-50,'#ff2a2a',2)+minNeedle(238,150,-2,16,10,'#ff2a2a',2));
+  return svgWrap(o.join(''),chromeGrad('frc'+l),'<rect x="2" y="2" width="436" height="176" rx="26" fill="#121316"/>');
+}
+function displayAgera(l,c,tk,rf){
+  const o=[],cx=220,cy=92,R=80;
+  o.push('<path d="M4 110 L70 104 L150 140 L150 176 L4 176 Z" fill="#0f3a6a" opacity="0.85"/><path d="M436 110 L370 104 L290 140 L290 176 L436 176 Z" fill="#0f3a6a" opacity="0.85"/>');
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+(R+6)+'" fill="#0b0d10" stroke="#8a9098" stroke-width="3"/>');
+  o.push(gDial({cx,cy,R,a0:-135,span:270,redFrac:rf,scale:uniScale(tk,1,i=>i),fill:{id:'nd-rpm-'+l,r:R-8,col:'#4ad8f0',w:6,op:0.95},
+    ticks:{lM:10,wM:3,lm:5,wm:1.2,cm:'#888',cM:'#fff',red:'#ff2a2a'},lab:{r:R-10,sz:9,w:600,col:'#ddd',red:'#ff3a2a'}}));
+  const sc=uniScale(13,0,i=>i===0?'0':i*20);
+  o.push(gDial({cx,cy,R:R-18,a0:-135,span:270,scale:sc,ticks:{lM:4,wM:1.2,cM:'#666'},lab:{r:R-30,sz:9,w:600,col:'#fff'},
+    needle:{id:'nd-spd-'+l,col:'#ff2a2a',r0:24,r1:R-20,w:3,tw:1.2}}));
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="22" fill="#08090b" stroke="#ccc"/>',T(cx,cy+7,'0',20,'#fff',{id:'cl-mph-'+l,w:600}),
+    '<ellipse cx="'+cx+'" cy="'+(cy+30)+'" rx="15" ry="9" fill="#08090b" stroke="#ccc"/>',T(cx,cy+34,'1',11,'#fff',{id:'cl-gear2-'+l,extra:' data-pre=""'}),
+    T(cx+34,cy+44,'mph',7,'#fff'),T(cx-66,cy+66,'rpm x1000',5,'#fff'));
+  o.push('<path d="M178 172 L186 162 H254 L262 172 Z" fill="#300"/>','<rect id="nd-rpm-'+l+'-2" data-hbar="1" data-w="84" x="178" y="162" width="0" height="10" fill="#e0201a"/>',T(cx,170,'Boost',8,'#fff',{w:700}));
+  o.push(T(30,122,'Oil',7,'#fff'),T(30,132,'Bar',7,'#fff')+minNeedle(98,150,-2,70,-90,'#ff2a1a',4),'<circle cx="98" cy="150" r="7" fill="#c9ced4"/>',
+    T(410,122,'Fuel',7,'#fff'),T(410,132,'Bar',7,'#fff')+minNeedle(342,150,-2,70,90,'#ff2a1a',4),'<circle cx="342" cy="150" r="7" fill="#c9ced4"/>',
+    T(60,170,'<tspan id="cl-g-'+l+'">0.00</tspan> g',9,'#fff'));
+  return svgWrap(o.join(''),'','<rect x="2" y="2" width="436" height="176" rx="20" fill="#1a1c20"/>');
+}
+function displayRegera(l,c,tk,rf){
+  const o=[],cx=196,cy=88,R=78;
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+(R+4)+'" fill="#0b1824" stroke="#9fb6c8" stroke-width="1.5"/>');
+  o.push(gDial({cx,cy,R,a0:-135,span:270,scale:uniScale(13,1,i=>i*20),ticks:{lM:6,wM:1.4,lm:3,wm:0.8,cM:'#dfe8f0',cm:'#8aa0b0'},lab:{r:R-14,sz:10,w:500,col:'#fff'},
+    needle:{id:'nd-spd-'+l,col:'#9fe0ff',r0:R-26,r1:R,w:3,tw:2,glow:'rgg'+l}}));
+  o.push(gDial({cx,cy,R:40,a0:-135,span:270,redFrac:rf,scale:uniScale(tk,0,i=>i%2===0?i:''),rings:[{r:40,col:'#dfe8f0',w:2.4}],
+    ticks:{lM:4,wM:1,cM:'#dfe8f0',red:'#ff5a4a'},lab:{r:32,sz:6,w:500,col:'#fff'}}));
+  o.push('<path id="nd-rpm-'+l+'" data-arc="1" pathLength="1000" stroke-dasharray="0 1000" d="'+arcD(cx,cy,44,-135,135)+'" fill="none" stroke="#6fd0ff" stroke-width="4" opacity="0.8"/>');
+  o.push(T(cx,cy-12,'<tspan id="cl-gear2-'+l+'" data-pre="">1</tspan>',14,'#fff'),T(cx,cy+12,'0',24,'#fff',{id:'cl-mph-'+l,w:600}),T(cx,cy+22,'mph',6,'#ddd'),T(cx,cy+38,'x1000',5,'#ddd'),T(cx,cy+R+2,'kW',6,'#ddd'));
+  o.push(ring(cx,cy,R+14,-150,-100,'#445',3)+'<path id="nd-rpm-'+l+'-2" data-arc="1" pathLength="1000" stroke-dasharray="0 1000" d="'+arcD(cx,cy,R+14,-150,-100)+'" fill="none" stroke="#bfffe0" stroke-width="3"/>'+
+    T(cx-R-4,cy-46,'E. POWER',5,'#ccc'));
+  o.push(ring(cx,cy,R+14,100,150,'#445',3)+'<path id="nd-spd-'+l+'-2" data-arc="1" pathLength="1000" stroke-dasharray="0 1000" d="'+arcD(cx,cy,R+14,150,100)+'" fill="none" stroke="#bfffe0" stroke-width="3"/>'+
+    T(cx+R+6,cy-46,'BOOST',5,'#ccc'));
+  const dots=(x,top,bot)=>{let s='';for(let i=0;i<10;i++){const a=-40+80*i/9,q=pol(x-40,90,50,90-a);s+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="2.2" fill="'+(i===9?'#ff3a2a':'#e8e8e8')+'"/>';}
+    return s+T(x,48,top,8,'#fff')+T(x,140,bot,8,'#fff');};
+  o.push(dots(338,'F','E'),dots(392,'H','L'));
+  o.push(T(60,172,Math.round((ambient()-32)/1.8*10)/10+'°C',8,'#fff'),T(130,172,({day:'14:20',dusk:'19:31',night:'22:48'})[timeOfDay()],8,'#fff'),
+    T(330,172,'<tspan id="cl-g-'+l+'">0.00</tspan> g',8,'#fff'));
+  return svgWrap(o.join(''),glowDef('rgg'+l,1.4),'<rect x="2" y="2" width="436" height="176" rx="14" fill="#020304"/>');
+}
+function displayLucid(l,c,tk,rf){
+  const o=[],cx=220,cy=96;
+  o.push(ring(cx,cy,56,-60,60,'#2a2c30',6));
+  o.push('<path id="nd-rpm-'+l+'" data-arc="1" pathLength="1000" stroke-dasharray="0 1000" d="'+arcD(cx,cy,56,-60,60)+'" fill="none" stroke="#e8a88a" stroke-width="6" opacity="0.9"/>');
+  for(let i=0;i<=12;i++)o.push(tickL(cx,cy,50,53,-60+10*i,'#555',1));
+  o.push(T(cx,cy-60,'POWER',5.5,'#aaa',{ls:1}),T(cx-8,cy+14,'0',38,'#f2f2f2',{id:'cl-mph-'+l,w:400}),T(cx-8,cy+28,'mph',7,'#ccc'),
+    '<rect x="'+(cx+32)+'" y="'+(cy-6)+'" width="18" height="22" rx="2" fill="#f2f2f2"/>',T(cx+41,cy+2,'LIMIT',3.5,'#111'),T(cx+41,cy+12,'70',9,'#111'));
+  o.push('<path d="M100 88 l8 -6 v4 h8 v4 h-8 v4 z" fill="#3ad64a"/><path d="M340 88 l-8 -6 v4 h-8 v4 h8 v4 z" fill="#3ad64a"/>');
+  o.push('<rect x="40" y="70" width="18" height="9" rx="1" fill="none" stroke="#e03a2a" stroke-width="1.2"/><rect x="42" y="72" width="10" height="5" fill="#3ad64a"/>'+
+    T(49,100,'<tspan id="cl-g-'+l+'">0.00</tspan> g',9,'#ddd'),T(49,112,({normal:'Smooth',sport:'Swift',track:'Sprint',drag:'Sprint'})[c.mode]||'Swift',8,'#e8a88a'));
+  o.push(T(390,86,'0.25 mi',11,'#ddd'),T(390,100,Math.round(ambient())+'°F',8,'#aaa'));
+  o.push(T(300,160,'P R N <tspan fill="#fff">D</tspan>',9,'#777',{ls:1}),T(220,160,'1,320 ft',8,'#ccc'));
+  return svgWrap(o.join(''),'','<rect x="2" y="12" width="436" height="160" rx="10" fill="#0d0e10" stroke="#2a2c30"/>');
+}
+function displayTesla(l,c,tk,rf){
+  const o=[],cx=220,cy=94,R=70;
+  o.push('<rect x="8" y="12" width="136" height="148" fill="#e8eaec"/><path d="M8 60 H144 M8 110 H144 M50 12 V160 M100 12 V160" stroke="#fff" stroke-width="4"/>'+
+    '<path d="M60 160 L64 120 L90 96 L112 70 L130 12" stroke="#3a8ae0" stroke-width="3" fill="none"/><polygon points="64,120 70,132 64,128 58,132" fill="#e03a2a"/>');
+  o.push('<rect x="300" y="30" width="130" height="100" fill="#0e1014"/>'+T(365,44,'Energy Consumption',7,'#ddd')+
+    '<path d="M306 100 L316 86 L326 94 L336 80 L346 90 L356 76 L366 88 L376 84 L386 96 L396 82 L406 92 L420 86" stroke="#f08a2a" stroke-width="1.5" fill="none"/><line x1="306" y1="92" x2="424" y2="92" stroke="#888" stroke-dasharray="2 2"/>'+
+    T(365,122,'<tspan id="cl-g-'+l+'">0.00</tspan> g',8,'#ddd'));
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+(R+10)+'" fill="#15181e" stroke="#4a4f58" stroke-width="3"/>');
+  o.push(gDial({cx,cy,R,a0:180,span:150,scale:uniScale(7,1,i=>i*20),rings:[{r:R-4,col:'#223',w:8}],fill:{id:'nd-spd-'+l,r:R-4,col:'#2a8ae8',w:8},
+    ticks:{lM:6,wM:1.4,lm:3,wm:0.8,cM:'#ddd',cm:'#888'},lab:{r:R-18,sz:8,w:500,col:'#ddd'}}));
+  o.push(gDial({cx,cy,R,a0:180,span:-150,scale:uniScale(8,0,i=>i*40),rings:[{r:R-4,col:'#223',w:8}],fill:{id:'nd-rpm-'+l,r:R-4,col:'#f08a2a',w:8},
+    ticks:{lM:6,wM:1.4,cM:'#ddd'},lab:{r:R-18,sz:7,w:500,col:'#ddd'}}));
+  o.push('<circle cx="'+cx+'" cy="'+cy+'" r="40" fill="#0b0d11" stroke="#333"/>',T(cx,cy-2,'0',26,'#fff',{id:'cl-mph-'+l,w:600}),T(cx,cy+8,'mph',6,'#ddd'),
+    '<rect x="'+(cx-20)+'" y="'+(cy+14)+'" width="40" height="8" rx="2" fill="#1c3a1c"/><rect x="'+(cx-19)+'" y="'+(cy+15)+'" width="32" height="6" rx="1" fill="#3ad64a"/>',
+    T(cx,cy+32,'Rated Range',5,'#ccc'),T(cx+R-6,cy-40,'kW',6,'#ddd'),T(76,172,'P R N <tspan fill="#fff">D</tspan>',9,'#888'));
+  return svgWrap(o.join(''),'','<rect x="2" y="2" width="436" height="176" rx="8" fill="#1d2027"/>');
+}
+function displayTaurus(l,c,tk,rf){
+  const o=[],ch='url(#tuc'+l+')',BL='#38c8ff';
+  const face=x=>'<circle cx="'+x+'" cy="88" r="78" fill="#08090b" stroke="'+ch+'" stroke-width="3"/>';
+  o.push(face(94),face(346));
+  o.push(gDial({cx:94,cy:88,R:72,a0:-120,span:230,redFrac:rf,scale:uniScale(tk,4,i=>i),red:{r:70,col:'#e0302a',w:2},
+    ticks:{lM:8,wM:2,lm:4,wm:0.9,cm:'#cfe8f4',red:'#ff4a3a'},lab:{r:56,sz:14,w:500,it:true,col:'#fff'},
+    needle:{id:'nd-rpm-'+l,col:BL,r0:-6,r1:68,w:3,tw:1.2,glow:'tug'+l,hub:{r:9,fill:'#15171a',stroke:'#444'}}}));
+  o.push(T(96,70,'RPM x 1000',7,'#fff',{it:true}),ring(94,140,20,-60,60,'#cfe8f4',1)+T(74,138,'E',7,'#fff')+T(114,138,'F',7,'#fff')+minNeedle(94,140,2,20,-40,BL,2.6,4));
+  o.push(gDial({cx:346,cy:88,R:72,a0:-125,span:250,scale:uniScale(14,1,i=>i*10),
+    ticks:{lM:8,wM:2,lm:4,wm:0.9,cm:'#cfe8f4'},lab:{r:57,sz:10.5,w:500,it:true,col:'#fff'},
+    needle:{id:'nd-spd-'+l,col:BL,r0:-6,r1:68,w:3,tw:1.2,glow:'tug'+l,hub:{r:9,fill:'#15171a',stroke:'#444'}}}));
+  o.push(gDial({cx:346,cy:88,R:38,a0:-125,span:250,scale:uniScale(11,0,i=>i%2===0&&i>0?i*20:''),ticks:{lM:3,wM:0.8,cM:'#8ab'},lab:{r:31,sz:4.6,w:500,col:'#bcd'}}));
+  o.push(T(330,130,'MPH',6,'#fff'));
+  o.push('<rect x="176" y="30" width="88" height="66" rx="3" fill="#0c3f9a" stroke="#2a4a80"/>'+'<rect x="176" y="30" width="88" height="10" fill="#0a2f78"/>'+
+    T(220,38,'Performance',7,'#fff')+T(220,62,'<tspan id="cl-g-'+l+'">0.00</tspan> g',13,'#fff')+
+    T(196,88,'SW',6,'#fff')+T(240,88,Math.round(ambient())+'°F',7,'#fff'));
+  o.push('<rect x="184" y="116" width="72" height="18" rx="3" fill="#0b0c0e"/>'+T(220,129,'<tspan fill="#ff8a1a">P</tspan> R N <tspan fill="#fff">D</tspan> S',11,'#6a6a6a',{ls:1}),
+    T(220,150,'<tspan id="cl-gear2-'+l+'" data-pre="D">D1</tspan>',8,'#cfe8f4'));
+  return svgWrap(o.join(''),chromeGrad('tuc'+l)+glowDef('tug'+l,1.4),'<path d="M14 18 Q220 4 426 18 L434 150 Q220 180 6 150 Z" fill="#101114" stroke="#8a9098" stroke-width="2"/>');
+}
+let clusterMeta={};
+function setGear(l,v){const g=document.getElementById('cl-gear-'+l);if(g)g.textContent=v;
+  const g2=document.getElementById('cl-gear2-'+l);if(g2)g2.textContent=(g2.dataset.pre||'')+v;}
+function applyGauge(el,f){
+  const d=el.dataset;
+  if(d.a0!=null){const q=pwMap(d.pw,f);el.setAttribute('transform','rotate('+(+d.a0+(+d.span)*q).toFixed(1)+' '+d.cx+' '+d.cy+')');return true;}
+  if(d.arc!=null){el.setAttribute('stroke-dasharray',(pwMap(d.pw,f)*1000).toFixed(1)+' 1000');return true;}
+  if(d.segs!=null){const kids=el.children,n=Math.round(f*kids.length);
+    if(el._n!==n){el._n=n;for(let i=0;i<kids.length;i++)kids[i].setAttribute('opacity',i<n?'1':'0');}return true;}
+  if(d.hbar!=null){el.setAttribute('width',(f*(+d.w)).toFixed(1));return true;}
+  if(d.num!=null){let g=f;if(d.bell!=null){const b=+d.bell;g=Math.max(0,1-Math.pow((f-b)/Math.max(0.2,f<b?b:1-b),2));}
+    el.textContent=Math.round(+d.lo+g*(+d.hi-(+d.lo)));return true;}
+  return false;
+}
+function setNeedle(id,frac){const el=document.getElementById(id);if(!el)return;
+  const f=Math.max(0,Math.min(1,frac));
+  // companion readouts driven by the same value (e.g. an oil-pressure bar tied to revs)
+  for(let k=2;k<=5;k++){const e2=document.getElementById(id+'-'+k);if(e2)applyGauge(e2,f);}
+  if(applyGauge(el,f))return;
+  const bar=el.getAttribute('data-bar');
+  if(bar){
+    const pos=bar==='spd'?bmwSpdPos(f*parseFloat(el.dataset.max||200)):f;
+    const y0=parseFloat(el.dataset.y0),y1=parseFloat(el.dataset.y1),h=(y0-y1)*pos;
+    const r=document.getElementById(el.dataset.clip);
+    if(r){r.setAttribute('y',(y0-h-6).toFixed(1));r.setAttribute('height',(h+12).toFixed(1));
+      if(pos<=0.001)r.setAttribute('height','0');}
+    return;
+  }
+  const muscle=el.getAttribute('data-muscle')==='1';
+  const a0=muscle?-135:-125, span=muscle?270:250;
+  el.setAttribute('transform','rotate('+(a0+span*f).toFixed(1)+' 100 100)');}
+function qmCluster(l,c){const col='#e8a20c';
+
+    const rl=(!isNaN(c.redline)&&c.redline>1200)?c.redline:7000;
+    const tachMax=/infiniti/i.test(c.name||'')?Math.max(9000,Math.ceil((rl+400)/1000)*1000):Math.ceil((rl+400)/1000)*1000;
+    clusterMeta[l]={tachMax,spdMax:220,boosted:(IND[c.ind]||IND.na).boosted,psi:boostInfo(c).psi};
+    // a saved car can pick its cluster; otherwise it follows the body / make
+    const cs=(c.cluster&&c.cluster!=='auto')?c.cluster:null;
+    const muscle=cs?cs==='challenger':(c.body==='challenger'||(c.body==='charger'&&(parseInt(c.name,10)||0)>=2015));
+    const chevy=cs?cs==='camaro':(c.body==='camaro');
+    const pony=cs?cs==='mustang':(c.body==='mustang');
+    const porsche=cs?cs==='porsche':/porsche/i.test(c.name||'');
+    const audi=cs?cs==='audi':/\baudi\b/i.test(c.name||'');
+    const bmw=cs?cs==='bmw':/\bbmw\b/i.test(c.name||'');
+    const nm=c.name||'';
+    const durango=cs?cs==='durango':/durango/i.test(nm);
+    const vetteC8=cs?cs==='c8':(/corvette/i.test(nm)&&/\bC8\b/.test(nm));
+    const vetteC7=cs?cs==='c7':(/corvette/i.test(nm)&&/\bC7\b/.test(nm));
+    const lambo=cs?cs==='lambo':/lamborghini/i.test(nm);
+    const yr=parseInt(nm,10)||0;
+    const isAcc=/\baccord\b/i.test(nm);
+    const NEWC={r8:/\baudi\b.*\bR8\b/i,mclaren:/mclaren/i,elantran:/elantra n\b/i,golf:/\b(golf|gti)\b/i,c6:/corvette.*\bC6\b/i,lincoln:/lincoln|\bfusion\b/i,viper:/viper/i,crownvic:/crown victoria/i,impala:/impala/i,
+      venom:/venom/i,focusrs:/focus rs/i,agera:/agera|jesko/i,regera:/regera/i,lucid:/lucid/i,tesla:/tesla/i,taurus:/taurus/i,
+      mazda3:/mazda ?3\b/i,miata:/miata|mx-5/i,volvo:/volvo/i,g70:/genesis g70/i,g80:/genesis g80/i,infiniti:/infiniti/i};
+    let nstyle=null;
+    const EXTRA=['charger11','charger15','chall11','accord','accord9','s650','mustangD','mustang6','mustang5','camaro6','camaro5','acura17','acura21','bmwm5','bmwcurved'];
+    if(cs){if(NEWC[cs]||EXTRA.indexOf(cs)>=0)nstyle=cs;}
+    else{for(const k in NEWC)if(NEWC[k].test(nm)){nstyle=k;break;}
+      if(!nstyle&&isAcc)nstyle=(yr&&yr<=2017)?'accord9':'accord';
+      if(!nstyle&&/mustang|shelby/i.test(nm)&&yr)nstyle=yr>=2024?'s650':(yr>=2021||/gt500/i.test(nm))?'mustangD':yr>=2015?'mustang6':yr>=2005?'mustang5':null;
+      if(!nstyle&&/charger/i.test(nm)&&yr>=2011&&yr<=2014)nstyle='charger11';
+      if(!nstyle&&/charger/i.test(nm)&&yr>=2015)nstyle='charger15';
+      if(!nstyle&&/challenger/i.test(nm)&&yr>=2008&&yr<=2014)nstyle='chall11';
+      if(!nstyle&&/camaro/i.test(nm)&&yr)nstyle=yr>=2016?'camaro6':yr>=2010?'camaro5':null;
+      if(!nstyle&&/acura/i.test(nm)&&yr)nstyle=yr>=2021?'acura21':'acura17';
+      if(!nstyle&&/\bbmw\b/i.test(nm)){if(/\bM5\b/.test(nm))nstyle='bmwm5';else if(yr>=2023||/230i/.test(nm))nstyle='bmwcurved';}}
+    const darkCluster=!!nstyle||muscle||chevy||pony||porsche||audi||bmw||durango||vetteC8||vetteC7||lambo;
+    // the Durango speedo reads to 140 mph; SRT models print 200
+    const durSpd=/srt|hellcat|392/i.test(nm)?200:140;
+    // needle scale must match the numbers printed on each style of speedo
+    clusterMeta[l].spdMax=nstyle?({c6:/zr1/i.test(nm)?220:200,infiniti:180,g70:180,bmwm5:200,camaro6:200,camaro5:180,mustang5:140,viper:220,charger11:140,crownvic:140,impala:140,venom:270,focusrs:180,agera:260,regera:260,tesla:140,taurus:140}[nstyle]||160):porsche?225:durango?durSpd:vetteC7?200:bmw?200:(muscle||chevy||pony||audi)?160:220;
+    if(nstyle==='charger15')clusterMeta[l].spdMax=/hellcat/i.test(nm)?200:/scat|392/i.test(nm)?180:160;
+    const d=document.createElement('div');d.className='cluster'+(darkCluster?' cluster-muscle':'');
+    function pickDial(idStr,tk,rf,lbl,isT){
+      if(pony) return dialMustang(idStr,tk,rf,lbl,isT);
+      if(muscle) return dialChallenger(idStr,tk,rf,lbl,isT);
+      if(chevy) return dialCamaro(idStr,tk,rf,lbl,isT);
+      // the generic speedo is printed 0-220, so it needs 11 major ticks
+      return dialSvg(idStr,isT?tk:11,rf,col,lbl);
+    }
+    // EV motors rev past 20,000: label every other thousand so the tach stays legible
+    const tkN=tachMax/1000;
+    const tachLbl=tkN>12?(i=>(i%(tkN>24?5:2)===0?i:'')):(i=>i);
+    const head='';
+    const tail='';
+    if(nstyle){
+      const tk=tachMax/1000,rf=rl/tachMax;
+      const F={r8:displayR8,mclaren:displayMcLaren,accord:displayAccord10,accord9:displayAccord9,elantran:displayElantraN,s650:displayS650,
+        golf:displayGolf,c6:displayC6,lincoln:displayLincoln,mazda3:displayMazda3,miata:displayMiata,volvo:displayVolvo,infiniti:displayInfiniti,g70:displayG70,g80:displayG80,
+        mustangD:displayMustangDigital,mustang6:displayMustangS550,mustang5:displayMustangS197,camaro6:(a,b,cc,dd)=>displayCamaro6(a,b,cc,dd,clusterMeta[l].boosted),
+        camaro5:displayCamaro5,viper:displayViper,charger11:displayCharger11,charger15:displayCharger15,crownvic:displayCrownVic,impala:displayImpala,chall11:displayChall11,
+        venom:displayVenom,focusrs:displayFocusRS,agera:displayAgera,regera:displayRegera,lucid:displayLucid,tesla:displayTesla,taurus:displayTaurus,acura17:displayAcura17,acura21:displayAcura21,bmwm5:displayBMWM5,bmwcurved:displayBMWCurved}[nstyle];
+      const svgH=F(l,c,tk,rf);
+      // the race loop updates gear / feet / slip alongside the digital speed, so
+      // layouts without a digital speed still need that element (hidden)
+      d.innerHTML=head+'<div class="nccl">'+svgH+'</div>'+(svgH.indexOf('cl-mph-'+l)<0?'<span id="cl-mph-'+l+'" hidden>0</span>':'')+tail;
+    }else if(porsche){
+      // Speedo left, big tach centre with a digital speed readout, TFT screen right.
+      d.innerHTML=head+
+        '<div class="dials pcl">'+
+        '<div class="dial pcl-side">'+dialPorsche('nd-spd-'+l,9,0,i=>i*25,false)+'</div>'+
+        '<div class="dial pcl-main">'+dialPorsche('nd-rpm-'+l,tachMax/1000,rl/tachMax,i=>i,true)+
+          '<div class="pcl-dig"><span id="cl-mph-'+l+'">0</span><small>mph</small></div></div>'+
+        '<div class="dial pcl-side"><div class="pcl-tft">'+
+          '<div class="pcl-bar">G-Force</div>'+
+          '<svg viewBox="0 0 120 96" class="pcl-gsvg" role="img" aria-label="G-force">'+
+            '<text x="60" y="10" text-anchor="middle" class="pcl-gnum" id="cl-gmax-'+l+'">0.0</text>'+
+            '<circle cx="60" cy="50" r="30" fill="none" stroke="#3d78b8" stroke-width="1.4"/>'+
+            '<circle cx="60" cy="50" r="15" fill="none" stroke="#24486e" stroke-width="0.8" stroke-dasharray="1.5 2.5"/>'+
+            '<line x1="22" y1="50" x2="98" y2="50" stroke="#24486e" stroke-width="0.8" stroke-dasharray="1.5 2.5"/>'+
+            '<line x1="60" y1="12" x2="60" y2="88" stroke="#24486e" stroke-width="0.8" stroke-dasharray="1.5 2.5"/>'+
+            '<text x="12" y="53" text-anchor="middle" class="pcl-gnum">0.0</text>'+
+            '<text x="108" y="53" text-anchor="middle" class="pcl-gnum">0.0</text>'+
+            '<circle id="cl-gdot-'+l+'" cx="60" cy="50" r="4.5" fill="#ffd23c"/>'+
+          '</svg>'+
+          '<div class="pcl-gnow"><span id="cl-g-'+l+'">0.00</span> g</div>'+
+        '</div></div></div>'+tail;
+    }else if(audi){
+      const mt={normal:'COMFORT',sport:'DYNAMIC',track:'DYNAMIC PLUS',corsa:'RS',drag:'LAUNCH'}[c.mode]||'COMFORT';
+      d.innerHTML=head+
+        '<div class="dials aucl">'+
+        '<div class="dial">'+dialAudi('nd-rpm-'+l,tachMax/1000,rl/tachMax,tachLbl,true,l,mt)+'</div>'+
+        '<div class="au-screen"><svg viewBox="0 0 160 124" role="img" aria-label="strip map">'+
+          '<rect width="160" height="124" rx="4" fill="#d9dccb"/>'+
+          '<g stroke="#f7f7f0" stroke-width="5"><line x1="0" y1="30" x2="160" y2="22"/><line x1="0" y1="78" x2="160" y2="84"/>'+
+            '<line x1="30" y1="0" x2="36" y2="124"/><line x1="128" y1="0" x2="120" y2="124"/></g>'+
+          '<g stroke="#b9bdab" stroke-width="1"><line x1="0" y1="52" x2="160" y2="50"/><line x1="58" y1="0" x2="60" y2="124"/></g>'+
+          '<line x1="84" y1="112" x2="84" y2="10" stroke="#8a8f7a" stroke-width="9"/>'+
+          '<line x1="84" y1="112" x2="84" y2="10" stroke="#e8352b" stroke-width="5"/>'+
+          '<rect x="74" y="8" width="20" height="5" fill="#111"/><rect x="74" y="8" width="5" height="2.5" fill="#fff"/>'+
+            '<rect x="84" y="8" width="5" height="2.5" fill="#fff"/><rect x="79" y="10.5" width="5" height="2.5" fill="#fff"/><rect x="89" y="10.5" width="5" height="2.5" fill="#fff"/>'+
+          '<g id="au-car-'+l+'"><ellipse cx="84" cy="110" rx="9" ry="6" fill="#dfe6f3" stroke="#6d7c95" stroke-width="0.8"/>'+
+            '<polygon points="84,103 90,114 84,111 78,114" fill="#1f63d6"/></g>'+
+          '<rect x="22" y="100" width="116" height="16" rx="2" fill="#1d1f22" opacity="0.92"/>'+
+          '<text x="80" y="111.5" text-anchor="middle" class="au-bar"><tspan id="au-ft-'+l+'">0</tspan> ft · <tspan id="cl-g-'+l+'">0.00</tspan> g</text>'+
+        '</svg></div>'+
+        '<div class="dial">'+dialAudi('nd-spd-'+l,8,0,i=>i*20,false,l,'')+'</div>'+
+        '</div>'+tail;
+    }else if(durango||vetteC8||vetteC7||lambo){
+      const tk=tachMax/1000,rf=rl/tachMax;
+      d.innerHTML=head+'<div class="nccl">'+(durango?displayDurango(l,c,tk,rf,durSpd):vetteC8?displayC8(l,c,tk,rf):
+        vetteC7?displayC7(l,c,tk,rf):displayLambo(l,c,tk,rf))+'</div>'+tail;
+    }else if(bmw){
+      d.innerHTML=head+
+        '<div class="bmcl">'+displayBMW(l,tachMax/1000,rl/tachMax,({normal:'COMFORT',sport:'SPORT',track:'TRACK',corsa:'SPORT PLUS',drag:'LAUNCH'}[c.mode]||'COMFORT'))+'</div>'+tail;
+    }else{
+    d.innerHTML='<div class="dials"><div class="dial">'+pickDial('nd-rpm-'+l,tachMax/1000,rl/tachMax,tachLbl,true)+'<div class="unit">RPM ×1000</div></div>'+
+      '<div class="centerread"><div class="bigmph" id="cl-mph-'+l+'">0</div><div class="unit">MPH</div><div class="gearbig" id="cl-gear-'+l+'">1</div><div class="unit">GEAR</div></div>'+
+      '<div class="dial">'+pickDial('nd-spd-'+l,8,0,i=>i*20,false)+'<div class="unit">MPH</div></div></div>';
+    }
+    return d;}
 </script>
 <script>
 /* ============================================================================
@@ -7337,7 +8952,9 @@ function aiPedals(h){
   const lock=Math.max(0.58/(1+Math.pow(v/((car.unit&&car.mode==='man')?14:9),1.8)),beta>0.06?Math.min(0.5,beta*1.3):0);
   car.steer+=clamp(clamp(I.steer,-lock,lock)-car.steer,-1.6*h,1.6*h);
 }
+const c0=()=>car.spec||{};
 function playerPedals(h){
+  if(car.state!=='D'&&car.state!=='M')car.lcStage=false;
   const ctl=controls();
   /* --- driver inputs --------------------------------------------------------
      Keyboard: W throttle, S brake (holding it at a stop selects reverse), A/D steer.
@@ -7353,7 +8970,13 @@ function playerPedals(h){
     wantThr=padT;wantBrk=padB;
   }else if(car.state==='D'||car.state==='M'){
     wantThr=Math.max(kbF?1:0,padT);wantBrk=padB;
-    if(kbB){if(speed>0.6)wantBrk=1;else{car.revT+=h;wantBrk=1;if(car.revT>0.18&&speed<0.6){car.state='R';car.revT=0;}}}else car.revT=0;
+    /* launch control: at a standstill, brake and throttle together hold the engine at the launch rpm (brake boost:
+       at the converter stall); let go of the brake with the throttle still down to launch */
+    const lcOn=car.launchMode&&car.launchMode!=='off'&&!(IND[c0().ind]||{}).electric;
+    const brkIn=kbB||padB>0.5,thrIn=kbF||padT>0.5;
+    if(lcOn&&Math.abs(speed)<0.8&&brkIn&&thrIn&&!car.disabled){car.lcStage=true;car.lcGo=null;wantThr=Math.max(1,padT);wantBrk=1;car.revT=0;}
+    else{if(car.lcStage&&thrIn&&!brkIn){car.lcGo=car.t||0;car.lcSnap=true;}car.lcStage=false;
+    if(kbB){if(speed>0.6)wantBrk=1;else{car.revT+=h;wantBrk=1;if(car.revT>(lcOn?0.5:0.18)&&speed<0.6){car.state='R';car.revT=0;}}}else car.revT=0;}
   }else{ // reverse
     wantThr=Math.max(kbB?1:0,padT);wantBrk=padB;
     if(kbF){if(speed<-0.6)wantBrk=1;else{car.revT+=h;wantBrk=1;if(car.revT>0.18&&speed>-0.6){car.state='D';car.gear=0;car.revT=0;}}}else car.revT=0;
@@ -7362,6 +8985,7 @@ function playerPedals(h){
   const tauUp=PAD.on&&padT>0?0.06:0.18;
   car.thr+=(wantThr-car.thr)*Math.min(1,h/(wantThr>car.thr?tauUp:0.07));
   car.brk+=(wantBrk-car.brk)*Math.min(1,h/0.08);
+  if(car.lcSnap){car.brk=0;car.lcSnap=false;}   // a launch: the foot comes straight off the brake
   car.hand=(ctl.hand||(PAD.on&&PAD.hand))?1:0;
   // steering: rate-limited, with the lock reduced at speed
   const v=Math.hypot(car.u,car.v);
@@ -7401,7 +9025,12 @@ function stepDynamics(h){
     rpm=car.freeRpm;
   }else{
     // converter: the engine flares toward stall speed under throttle, idles otherwise
-    const flare=car.idle+(car.stallRpm-car.idle)*Math.pow(car.thr,0.7);
+    let flare=car.idle+(car.stallRpm-car.idle)*Math.pow(car.thr,0.7);
+    // launch control: staged on the brake the engine sits on the launch-rpm limiter; just after the launch the
+    // driveline slips from that rpm until the wheels catch up (or 3 s, or the throttle comes up)
+    if(car.launchMode&&car.launchMode!=='off'){const lr=car.launchMode==='bb'?Math.min(car.launchRpm||2000,car.stallRpm):(car.launchRpm||3000);
+      if(car.lcStage)flare=lr+Math.sin((car.t||0)*55)*35;
+      else if(car.lcGo!=null){if((car.t||0)-car.lcGo<3&&car.thr>0.6&&turb<lr)flare=Math.max(flare,lr);else car.lcGo=null;}}
     if(turb<flare){rpm=flare;const sr=turb/flare;mult=1+(c.stall-1)*Math.pow(1-sr,1.6)*Math.min(1,car.thr*1.5);}
     else rpm=turb;
     car.freeRpm=rpm;
@@ -11278,8 +12907,25 @@ function bindFullMap(){
    HUD
 --------------------------------------------------------------------------- */
 let hudRoad='',hudGear='',hudMode='';
+/* the car's own instrument cluster, from the drag strip game, along the bottom of the screen */
+const QMC={sig:'',on:false};
+function clusterSig(){return (car.spec&&car.spec.name)+'|'+car.mode+'|'+timeOfDay()+'|'+(CFG.gfx.cluster!==false);}
+function clusterBuild(){const box=$('qmc');if(!box)return;QMC.sig=clusterSig();QMC.g=null;
+  const want=CFG.gfx.cluster!==false&&car.spec;box.innerHTML='';QMC.on=false;
+  if(want){try{const c=Object.assign({},car.spec,{mode:car.mode||'normal'});const d=qmCluster('P',c);
+      d.className=d.className.replace(/\bcluster\b/,'qmc-card');box.appendChild(d);QMC.on=true;}catch(e){console.warn('cluster',e);}}
+  box.hidden=!QMC.on;$('hud').classList.toggle('qmc-on',QMC.on);}
+function clusterFrame(mph){if(clusterSig()!==QMC.sig)clusterBuild();if(!QMC.on)return;const M=clusterMeta.P;if(!M)return;
+  const rpm=car.disabled?0:(car.rpm||0);setNeedle('nd-rpm-P',rpm/M.tachMax);setNeedle('nd-spd-P',mph/M.spdMax);
+  const em=document.getElementById('cl-mph-P');if(em){const v=String(Math.round(mph));if(em.textContent!==v)em.textContent=v;}
+  const g=car.state==='D'||car.state==='M'?car.gear+1:car.state;if(g!==QMC.g){QMC.g=g;setGear('P',g);}
+  const eg=document.getElementById('cl-g-P');if(eg)eg.textContent=Math.abs((car.ax||0)/9.81).toFixed(2);}
+function lcHud(){const el=$('lcbar');if(!el)return;let t='';
+  if(car.lcStage){const bb=car.launchMode==='bb',r=Math.round((car.rpm||0)/100)*100;
+    t=(bb?'BRAKE BOOST':'LAUNCH CONTROL')+' · '+r+' RPM'+(car.boostPsi>0.5?' · '+car.boostPsi.toFixed(1)+' PSI':'')+' — RELEASE BRAKE';}
+  if(el.textContent!==t)el.textContent=t;const h=!t;if(el.hidden!==h)el.hidden=h;el.classList.toggle('armed',!!t);}
 function drawHud(){
-  const mph=Math.abs(car.u)*MPH_PER_MS;
+  const mph=Math.abs(car.u)*MPH_PER_MS;clusterFrame(mph);lcHud();
   $('spd').textContent=Math.round(mph);
   const gt=car.state==='D'?'D'+(car.gear+1):car.state==='M'?'M'+(car.gear+1):car.state;
   if(gt!==hudGear){hudGear=gt;$('gear').innerHTML=gt.length>1?gt[0]+'<b>'+gt.slice(1)+'</b>':gt;}
@@ -11461,6 +13107,7 @@ function renderSettings(){
     h+=seg('distance','View distance',[['short','Short'],['normal','Normal'],['far','Far']],g.distance);
     h+=seg('fov','Field of view',[[50,'50°'],[56,'56°'],[62,'62°'],[70,'70°']],+g.fov);
     h+=seg('look','Picture',[['cine','Cinematic'],['classic','Classic']],g.look||'cine');
+    h+=seg('cluster','Gauge cluster',[[true,"The car's own"],[false,'Off']],CFG.gfx.cluster!==false);
     h+=seg('speedfx','Speed effects',[[0,'Off'],[0.6,'Subtle'],[1,'Normal'],[1.5,'Strong']],+(g.speedfx==null?1:g.speedfx));
     h+=seg('mblur','Motion blur',[[0,'Off'],[1,'Normal'],[1.6,'Strong']],+(g.mblur==null?1:g.mblur));
     h+=seg('fps','Frame rate counter',[[false,'Off'],[true,'On']],g.fps);
@@ -11579,7 +13226,24 @@ function renderPicks(){
   C.colors.forEach((col,i)=>{const b=document.createElement('button');b.type='button';b.className='sw'+((pick.color||C.colors[0])===col?' on':'');b.style.background=col;b.setAttribute('aria-label','Paint '+(i+1));
     b.addEventListener('click',()=>{pick.color=col;renderPicks();previewPick();});sw.appendChild(b);});
   $('pickTitle').textContent=C.label;
+  renderLaunch();
 }
+/* launch control, set up per car and remembered: off / launch control (holds the launch rpm) / brake boost (holds the
+   converter stall, builds boost). In the car: brake + throttle at a standstill, then release the brake. */
+const LAUNCH=(()=>{try{return JSON.parse(localStorage.getItem('backroads.launch')||'{}')||{};}catch(e){return {};}})();
+function launchCfg(key){const p=PRESETS[key]||{},ev=(IND[p.ind]||{}).electric,red=p.redline||6500;
+  const lo=1500,hi=Math.max(lo+500,Math.round((red-300)/100)*100);
+  const def={mode:ev?'off':(p.launch==='bb'?'bb':p.launch==='none'?'off':'lc'),rpm:clamp(Math.round((p.launchRpm||Math.min(3500,red*0.5))/100)*100,lo,hi)};
+  const s=Object.assign({},def,LAUNCH[key]||{});s.rpm=clamp(+s.rpm||def.rpm,lo,hi);return {ev,lo,hi,mode:ev?'off':s.mode,rpm:s.rpm};}
+function saveLaunch(key,patch){LAUNCH[key]=Object.assign({},LAUNCH[key]||{},patch);try{localStorage.setItem('backroads.launch',JSON.stringify(LAUNCH));}catch(e){}}
+function applyLaunch(key){const L=launchCfg(key);car.launchMode=L.mode;car.launchRpm=L.rpm;car.lcStage=false;car.lcGo=null;}
+function renderLaunch(){const C=CARS[pick.i],L=launchCfg(C.key),row=$('lcRow');if(!row)return;
+  row.hidden=L.ev;if(L.ev)return;
+  const segs=$('lcSegs');segs.innerHTML=[['off','Off'],['lc','Launch control'],['bb','Brake boost']].map(([v,t])=>'<button type="button" class="seg'+(L.mode===v?' on':'')+'" data-lc="'+v+'">'+t+'</button>').join('');
+  segs.querySelectorAll('[data-lc]').forEach(b=>b.addEventListener('click',()=>{saveLaunch(C.key,{mode:b.dataset.lc});renderLaunch();}));
+  const r=$('lcRpm'),v=$('lcRpmV');r.min=L.lo;r.max=L.hi;r.value=L.rpm;v.textContent=L.rpm+' rpm';$('lcRpmBox').classList.toggle('off',L.mode==='off');
+  r.title=L.mode==='bb'?'Brake boost holds at the converter stall speed, up to this rpm':'Engine speed held on the brake before the launch';
+  if(!r._b){r._b=1;r.addEventListener('input',()=>{const k=CARS[pick.i].key;saveLaunch(k,{rpm:+r.value});$('lcRpmV').textContent=r.value+' rpm';});}}
 function placeAtSpawn(free){const s=currentSpawn();car.x=s.x;car.z=s.z;car.psi=s.psi;
   // on a server, someone may already be parked on the start point: take the next free space beside or behind it
   if(free&&typeof NET!=='undefined'&&NET.on){const fx=Math.cos(s.psi),fz=-Math.sin(s.psi),rx=-fz,rz=fx;
@@ -11592,9 +13256,9 @@ function syncHelp(){const h=$('help');if(!h)return;h.querySelector('.kb').hidden
   h.querySelectorAll('[data-k]').forEach(e=>{e.textContent=keyName(CFG.kb[e.dataset.k]);});
   h.querySelectorAll('[data-p]').forEach(e=>{e.textContent=padName(CFG.pad[e.dataset.p]);});}
 function startDrive(){hudGear=hudMode='';syncHelp();t60Reset();
-  const C=CARS[pick.i];spawnCar(C.key,pick.color||C.colors[0]);placeAtSpawn(true);carObj3.grp.visible=true;applyCarEnv();lastHealth=-1;
+  const C=CARS[pick.i];spawnCar(C.key,pick.color||C.colors[0]);applyLaunch(C.key);placeAtSpawn(true);carObj3.grp.visible=true;applyCarEnv();lastHealth=-1;
   trafficReset();polReset();
-  MODE='drive';show('hud');CAMV.init=false;CAMV.yaw=0;CAMV.pitch=0;startAudio();
+  MODE='drive';show('hud');clusterBuild();CAMV.init=false;CAMV.yaw=0;CAMV.pitch=0;startAudio();
   setDriveView();setShadowSpan(55);
   $('help').classList.remove('gone');setTimeout(()=>$('help').classList.add('gone'),9000);
   toast(C.label+' · '+currentSpawn().name);
