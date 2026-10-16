@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="Back Roads: an open-world driving game with traffic, police pursuits and 180 cars with recorded engine sounds.">
+<meta name="description" content="Back Roads: an open-world driving game with traffic, police pursuits and 187 cars with recorded engine sounds.">
 </head><body>
 <script>
 /* PeerJS 1.5.5 (MIT) */
@@ -726,6 +726,7 @@ function sndPackFor(c){
     if(/camaro/.test(nm)&&v8)return 'vettec7';
     if(/viper/.test(nm))return 'viper';
     if(/mclaren/.test(nm))return 'mclaren';
+    if(/porsche/.test(nm))return 'flat6';                                   // 911 and 718 Cayman: the mod's 4.0 flat-six
     if(/\burus\b/.test(nm))return 'urus';if(/hurac[aá]n/.test(nm))return 'huracan';if(/aventador/.test(nm))return 'aventador';}
   {const nm=(c.name||'').toLowerCase();
     if(/\bbmw\b/.test(nm)){const es=c.engSound||'';
@@ -8789,6 +8790,12 @@ const CARS=[
   {key:'sq5',group:'From traffic',label:'2017 Audi SQ5',year:'2017',colors:['#5d6167','#e9e9e6','#111214','#a7abb0','#1f3a68','#8a8e94','#3a3d41'],note:'3.0 supercharged V6 · 8-speed auto · AWD',modes:['normal','sport']},
   {key:'durangoGTPlus',group:'From traffic',label:'2023 Dodge Durango GT Plus',year:'2023',colors:['#111214','#e9e9e6','#5d6167','#a7abb0','#8e1b1e','#1f3a68','#3a3d41'],note:'3.6 Pentastar V6 · 8-speed auto · AWD',modes:['normal','sport']},
   // every other drag-strip car that has its own recorded engine sound
+  {key:"porsche911",group:"Sports cars & supercars",label:"2020 Porsche 911 Carrera S",year:"2020",colors:["#d8d8d4", "#111214", "#c8102e", "#1d3f8a", "#f2b705", "#5d6167", "#2f6b3a"],note:"3.0 twin-turbo flat-six \u00b7 8-speed PDK dual-clutch \u00b7 RWD",modes:(PRESETS["porsche911"].modes||['normal','sport'])},
+  {key:"porscheGT3",group:"Sports cars & supercars",label:"2022 Porsche 911 GT3",year:"2022",colors:["#d8d8d4", "#111214", "#c8102e", "#1d3f8a", "#f2b705", "#5d6167", "#2f6b3a"],note:"4.0 flat-six \u00b7 7-speed PDK dual-clutch \u00b7 RWD",modes:(PRESETS["porscheGT3"].modes||['normal','sport'])},
+  {key:"caymanGT4",group:"Sports cars & supercars",label:"2020 Porsche 718 Cayman GT4",year:"2020",colors:["#d8d8d4", "#111214", "#c8102e", "#1d3f8a", "#f2b705", "#5d6167", "#2f6b3a"],note:"4.0 flat-six \u00b7 6-speed manual \u00b7 RWD",modes:(PRESETS["caymanGT4"].modes||['normal','sport'])},
+  {key:"p911_carrera",group:"Sports cars & supercars",label:"2020 Porsche 911 Carrera",year:"2020",colors:["#d8d8d4", "#111214", "#c8102e", "#1d3f8a", "#f2b705", "#5d6167", "#2f6b3a"],note:"3.0 twin-turbo flat-six \u00b7 8-speed PDK dual-clutch \u00b7 RWD",modes:(PRESETS["p911_carrera"].modes||['normal','sport'])},
+  {key:"p911_4s",group:"Sports cars & supercars",label:"2020 Porsche 911 Carrera 4S",year:"2020",colors:["#d8d8d4", "#111214", "#c8102e", "#1d3f8a", "#f2b705", "#5d6167", "#2f6b3a"],note:"3.0 twin-turbo flat-six \u00b7 8-speed PDK dual-clutch \u00b7 AWD",modes:(PRESETS["p911_4s"].modes||['normal','sport'])},
+  {key:"p911_turbos",group:"Sports cars & supercars",label:"2021 Porsche 911 Turbo S",year:"2021",colors:["#d8d8d4", "#111214", "#c8102e", "#1d3f8a", "#f2b705", "#5d6167", "#2f6b3a"],note:"3.7 twin-turbo flat-six \u00b7 8-speed PDK dual-clutch \u00b7 AWD",modes:(PRESETS["p911_turbos"].modes||['normal','sport'])},
   {key:"sq5_2018",group:"SUVs",label:"2018 Audi SQ5",year:"2018",colors:["#5d6167", "#e9e9e6", "#111214", "#a7abb0", "#1f3a68", "#8a8e94", "#3a3d41"],note:"3.0 turbo V6 \u00b7 8-speed auto \u00b7 AWD",modes:(PRESETS["sq5_2018"].modes||['normal','sport'])},
   {key:"g80_35t",group:"Sedans & coupes",label:"2022 Genesis G80 3.5T AWD",year:"2022",colors:["#111214", "#e9e9e6", "#5d6167", "#a7abb0", "#264a3a", "#1f3a68", "#7b1d22"],note:"3.5 twin-turbo V6 \u00b7 8-speed auto \u00b7 AWD",modes:(PRESETS["g80_35t"].modes||['normal','sport'])},
   {key:"g80_33t",group:"Sedans & coupes",label:"2018 Genesis G80 Sport 3.3T",year:"2018",colors:["#111214", "#e9e9e6", "#5d6167", "#a7abb0", "#264a3a", "#1f3a68", "#7b1d22"],note:"3.3 twin-turbo V6 \u00b7 8-speed auto \u00b7 AWD",modes:(PRESETS["g80_33t"].modes||['normal','sport'])},
