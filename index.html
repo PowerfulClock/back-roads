@@ -228,6 +228,7 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
 /* ---------- settings ---------- */
 #settings{background:rgba(12,13,15,.72);display:grid;place-items:center;padding-inline:16px}
 .sbox{width:min(640px,100%);max-height:calc(100% - 32px);overflow:auto;background:rgba(22,24,27,.97);border:1px solid var(--line);padding:18px 20px;display:grid;gap:14px}
+.ssub{font:600 13px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin:6px 0 4px}
 .shead{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .shead h2{margin:0;font-size:40px;font-weight:800;text-transform:uppercase;letter-spacing:.02em}.shead .btn{flex:0 0 auto}
 .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line)}
@@ -520,6 +521,7 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
     <div class="tabs" role="tablist">
       <button type="button" class="tab on" data-tab="graphics">Graphics</button>
       <button type="button" class="tab" data-tab="controls">Controls</button>
+      <button type="button" class="tab" data-tab="driving">Driving</button>
       <button type="button" class="tab" data-tab="gameplay">Gameplay</button>
       <button type="button" class="tab" data-tab="police">Police</button>
     </div>
@@ -9015,6 +9017,79 @@ function aiPedals(h){
   const lock=Math.max(0.58/(1+Math.pow(v/((car.unit&&car.mode==='man')?14:9),1.8)),beta>0.06?Math.min(0.5,beta*1.3):0);
   car.steer+=clamp(clamp(I.steer,-lock,lock)-car.steer,-1.6*h,1.6*h);
 }
+/* ---------------------------------------------------------------------------
+   Traction control (TCS) for combustion cars. It sits inside the drivetrain model: it reads the driven axle's wheel
+   speed and an estimate of road speed, works out the slip ratio, and intervenes in two coordinated ways:
+     - engine torque: a fast cut (spark retard / fuel cut, within one control step) plus a slower throttle closure
+       (~0.12 s, which also lets turbo boost fall), applied where the engine's torque is made;
+     - brake torque on the spinning driven axle, applied in the wheel's own spin integration (strongest at low speed,
+       scaled by the slip error, derated as the brakes heat up).
+   Engagement uses separate engage / disengage thresholds with a short sustain filter; a feed-forward from the
+   physics' own tyre grip x axle load sets the first cut, a PI loop trims it, and a rate-limited ramp gives the torque
+   back. It yields to the brakes (ABS), pauses through gear changes, and only acts on slip in the driving direction.
+   Electric cars keep their motor controller and never get an engine torque cut.
+--------------------------------------------------------------------------- */
+const TCS_DEFAULT={mode:'auto',target:1.0,engage:1.3,disengage:0.6,maxCut:0.95,maxBrake:1600,filter:0.03,recovery:0.35,lowSpeed:3.0,surfaceAdapt:true,hz:100,noise:true};
+const TCS_MODES={full:{t:1.0,e:1.0,cut:1.0,b:1.0},sport:{t:1.7,e:1.15,cut:0.8,b:0.5},track:{t:2.0,e:1.2,cut:0.85,b:0.3}};
+function tcsCfg(){return Object.assign({},TCS_DEFAULT,(typeof CFG!=='undefined'&&CFG.tcs)||{});}
+function tcsModeOf(C){if(C.mode!=='auto')return TCS_MODES[C.mode]||TCS_MODES.full;const m=car.mode||'normal';return m==='sport'?TCS_MODES.sport:(m==='track'||m==='corsa'||m==='drag')?TCS_MODES.track:TCS_MODES.full;}
+function tcsState(){return car.tcs||(car.tcs={on:false,cut:0,cmd:0,thr:0,fast:0,brake:0,vEst:null,wF:null,acc:0,sus:0,heat:0,lam:0,tgt:0,n:0});}
+function tcsReset(S){S.on=false;S.cut=0;S.cmd=0;S.sus=0;S.brake=0;}
+/* d: {vDrive, vND (undriven axle road speed, null on AWD), rEff, TdrivePre, muX, Nd, dir, braking, shifting, h} */
+function tcsUpdate(d){const S=tcsState(),C=tcsCfg(),h=d.h;
+  // --- wheel-speed sensor (noisy, filtered) and the road-speed estimate ---
+  const nz=C.noise?(Math.random()-0.5)*0.06:0,wMeas=car.omega*d.rEff+nz;
+  S.wF=S.wF==null?wMeas:S.wF+(wMeas-S.wF)*Math.min(1,h/0.012);
+  // longitudinal accelerometer (raw, a little noise)
+  const axTrue=S.uPrev==null?0:(car.u-S.uPrev)/h;S.uPrev=car.u;const ax=axTrue+(C.noise?(Math.random()-0.5)*0.12:0);
+  if(S.vEst==null)S.vEst=d.vND!=null?d.vND:Math.max(0,S.wF);
+  if(Math.abs(S.wF)<0.3&&Math.abs(ax)<0.5)S.vEst=S.wF;                 // standing still: wheels and road agree
+  S.vEst+=ax*h;                                                        // accelerometer
+  if(d.vND!=null)S.vEst+=(d.vND+nz*0.5-S.vEst)*Math.min(1,h/0.04);    // undriven wheels pull it back
+  else{   // AWD (every wheel driven): the wheels are believed at once when they read slower than the estimate (no
+          // spin can make them read low); faster readings only pull it slowly, so a gradual spin-up isn't absorbed
+    // the slow pull aims at the wheel speed less the slip the tyre model expects at this acceleration
+    const lamX=0.14*clamp(Math.abs(ax)/Math.max(1,d.muX*G*Math.max(0.3,d.Nd/(car.m*G))),0,1)*0.85,wComp=S.wF/(1+lamX);
+    if(wComp<S.vEst-0.05)S.vEst+=(wComp-S.vEst)*Math.min(1,h/0.05);else if(!S.on)S.vEst+=(wComp-S.vEst)*Math.min(1,h/1.5);}
+  const fade=x=>{S.cmd=Math.max(0,S.cmd-x);S.thr=Math.max(0,S.thr-x);S.fast=0;S.brake=0;};
+  if(!car.tc||!(d.TdrivePre>0||d.TdrivePre<0)){S.on=false;S.cut=0;fade(h*4);car.tcCut=S.cmd;return;}
+  if(d.braking){tcsReset(S);fade(h*8);car.tcCut=S.cmd;return;}      // the driver (and ABS) has the brakes: stand aside
+  // --- slip in the driving direction; below lowSpeed it becomes slip *speed* over a fixed reference ---
+  const dir=d.dir||1,vAbs=Math.abs(S.vEst),dv=(S.wF-S.vEst)*dir,lam=dv/Math.max(vAbs,C.lowSpeed);S.lam=lam;
+  const M=tcsModeOf(C),SPK=0.14;   // the tyre model's peak slip
+  const grip=clamp(d.muX/Math.max(0.3,car.mu||1),0.2,1);              // this surface's grip relative to dry asphalt
+  const tgt=SPK*C.target*M.t*(1-0.12*clamp((vAbs-20)/30,0,1));S.tgt=tgt;
+  // low-grip surfaces: a tighter engage band (spin builds on far less torque) and a deeper first cut
+  const engageAt=tgt*(1+(C.engage*M.e-1)*(C.surfaceAdapt?0.55+0.45*grip:1)),offAt=tgt*C.disengage;
+  const maxCut=C.maxCut*M.cut;
+  // --- control loop at its own rate (sample and hold) ---
+  S.acc+=h;if(S.acc+1e-9<1/C.hz)return;const dt=S.acc;S.acc=0;
+  if(!S.on){
+    if(lam>engageAt&&!d.shifting)S.sus+=dt;else S.sus=Math.max(0,S.sus-dt*2);
+    const filt=vAbs<C.lowSpeed*2?C.filter*0.3:C.filter;                // no extra delay off the line
+    if(S.sus>=filt){S.on=true;S.sus=0;
+      // feed-forward from the tyre force the surface can carry at the target slip
+      const Tmax=d.muX*d.Nd*d.rEff,Tabs=Math.abs(d.TdrivePre);
+      if(Tabs>Tmax)S.cut=Math.max(S.cut,clamp(1-Tmax/Tabs,0,maxCut)*(C.surfaceAdapt?1:0.5));}
+  }
+  let cmd=0,en=0;
+  if(S.on){en=(lam-tgt)/tgt;
+    if(en>0){if(!d.shifting)S.cut+=3.5*en*dt;}                        // integral; held through a gear change
+    else S.cut-=dt*(maxCut/Math.max(0.05,C.recovery))*clamp(-en,0.25,1);   // give the torque back on a ramp
+    S.cut=clamp(S.cut,0,maxCut);cmd=clamp(S.cut+0.3*Math.max(0,en),0,maxCut);
+    if(lam<offAt&&S.cut<0.02){S.on=false;}}
+  cmd=Math.max(cmd,clamp((car.escReq||0),0,1)*maxCut);               // stability control may ask for more
+  // the cut can't come back faster than the recovery ramp (no torque surge when grip returns)
+  if(cmd<S.cmd)cmd=Math.max(cmd,S.cmd-dt*maxCut/Math.max(0.05,C.recovery));S.cmd=cmd;
+  // split: the throttle closes slowly, spark/fuel make up the rest at once; together they give (1-cmd)
+  S.thr+=(cmd-S.thr)*Math.min(1,dt/0.12);S.thr=Math.min(S.thr,cmd);S.fast=S.thr<1?clamp(1-(1-cmd)/(1-S.thr),0,1):0;
+  // brake on the spinning driven axle: scaled by slip error, strongest at low speed, derated as the brakes heat up
+  S.heat*=Math.exp(-dt/25);
+  const heatW=clamp(1-(S.heat-2e5)/4e5,0.15,1),spdW=clamp(1-(vAbs-8)/22,0.25,1);
+  S.brake=S.on&&en>0?C.maxBrake*M.b*clamp(en/1.5,0,1)*spdW*heatW:0;
+  S.heat+=S.brake*Math.abs(car.omega)*dt;
+  car.tcCut=S.cmd;S.n++;}
+
 const c0=()=>car.spec||{};
 function flareTop(c){if(window.OLDFLARE)return car.stallRpm;return Math.min(car.stallRpm,(c.trans==='auto'||c.trans==='cvt'||c.trans==='ecvt')?1900:1450);}
 function playerPedals(h){
@@ -9143,7 +9218,8 @@ function stepDynamics(h){
     if(rpm>c.redline)rpm=c.redline;
   }
   // progressive pedal map: the first part of the travel opens the throttle quickly, like a real drive-by-wire pedal
-  const pedal=1-Math.pow(1-car.thr,1.7);
+  const evCar=!!(IND[c.ind]||{}).electric,tcsS=(!evCar&&car.tcs)?car.tcs:null;
+  const pedal=(1-Math.pow(1-car.thr,1.7))*(tcsS?1-tcsS.thr:1);   // TCS closes the throttle (and the boost follows)
   const limp=car.disabled?0:(car.health<25?0.65:1);   // a badly damaged car loses power; a wrecked one won't drive
   let tqNow=torqueAt(c,rpm)*pedal;const B=boostSetup(c);
   if(B){if(!(car.boost>=0))car.boost=0;const ss=boostSS(B,rpm),tgt=pedal*ss*(inGear?1:0.18);   // free-revving in neutral makes little boost
@@ -9152,6 +9228,8 @@ function stepDynamics(h){
     const full=torqueAt(c,rpm),na=full*B.naFrac;tqNow=na*pedal+(full-na)*Math.min(pedal,car.boost/Math.max(ss,0.08));
     car.boostPsi=B.psi*car.boost-10*(1-pedal)*(1-car.boost);}   // gauge: boost above zero, manifold vacuum below
   let Teng=inGear?tqNow*car.MD.powerMul*limp:0;
+  const TengPre=Teng/Math.max(0.05,tcsS?1-tcsS.thr:1);
+  if(tcsS&&Teng>0)Teng*=1-tcsS.fast;                               // TCS spark retard / fuel cut
   if(turb>c.redline*0.995)Teng=0;
   if(c.vmax&&Teng>0){const mph=Math.abs(car.u)*2.237;Teng*=clamp((c.vmax-mph)/2.5,0,1);}   // electronic top-speed limiter                                // rev limiter (manual mode holds the gear on it)
   if(car.state==='R'&&turb>c.redline*0.55)Teng=Math.min(Teng,0);  // reverse is governed, like the real cars
@@ -9163,6 +9241,7 @@ function stepDynamics(h){
     if(car.state==='D'&&car.thr<0.1)hold=Math.max(hold,0.8);}
   else if(car.slamT>0){car.slamT-=h;const k=car.slamT/0.19;if(Teng>0)hold=1+car.slamAmp*k*k;}
   const Tdrive=dirSign*Teng*1.35582*car.pf*mult*ov*c.eff*hold;   // N·m at the driven wheels
+  const TdrivePre=dirSign*Math.max(0,TengPre)*1.35582*car.pf*mult*ov*c.eff*hold;
 
   /* --- body-frame velocities at each axle --- */
   const d=car.steer,cd=Math.cos(d),sd=Math.sin(d);
@@ -9184,14 +9263,7 @@ function stepDynamics(h){
     // electric: the motor controller trims torque every few milliseconds, faster than one physics step, so the tyres
     // sit just under peak slip and never visibly spin up (like the drag strip game). Modelled as a hard limit on the
     // wheel speed after each step (a torque servo is too stiff to integrate here). It can't be switched off.
-    }else if(car.tc){
-    const fwdK=drive==='fwd'?1:0,MD=car.MD;
-    if(sr*Math.sign(Tdrive||1)>SP*MD.tcSlip*(1+0.8*fwdK))car.tcCut=Math.min(1,car.tcCut+h/(MD.tcRamp*(1+1.2*fwdK)));
-    else car.tcCut=Math.max(0,car.tcCut-h/0.45);
-    const omegaTgt=(Math.sign(Tdrive||1)*SP*denom+vDrive)/car.r;
-    const Tt=FxD*car.r+Irot*(omegaTgt-car.omega)/MD.tcTau;
-    Tin=Tdrive*(1-car.tcCut)+(Tdrive>=0?Math.min(Tdrive,Tt):Math.max(Tdrive,Tt))*car.tcCut;
-  }
+    }
   // brakes: ABS-limited force on both axles (60/40 split); the handbrake locks the rears
   const brakeReq=car.brk*1.05*Gm;
   let FbF=Math.min(brakeReq*0.62,muF*Nf*0.97),FbR=Math.min(brakeReq*0.38,muR*Nr*0.97);
@@ -9203,8 +9275,10 @@ function stepDynamics(h){
     // implicit in the tyre force: below peak slip the tyre is a very stiff spring on the wheel (heavy AWD cars at low
     // speed most of all), and a plain explicit step makes the wheel oscillate and drag the car back
     const kT=Math.abs(sr)<SP?muX*Nd/SP*car.r*car.r/denom:0;
-    const dOm=(Tin-FxD*car.r)/Math.max(0.5,Irot,h*kT/1.5);   // only where a plain step would go unstable
+    const Tb=tcsS?tcsS.brake:0,wDir=dirSign||1;
+    const dOm=(Tin-wDir*Tb-FxD*car.r)/Math.max(0.5,Irot,h*kT/1.5);   // only where a plain step would go unstable
     const prev=car.omega;car.omega+=dOm*h;
+    if(Tb>0&&(car.omega*car.r-vDrive)*wDir<0&&(prev*car.r-vDrive)*wDir>=0)car.omega=vDrive/car.r;   // the TCS brake can slow a spinning wheel, never drag it below road speed
     if(evTC){const lim=SP*1.0*denom/car.r,w0=vDrive/car.r,free=car.omega;car.omega=clamp(car.omega,w0-lim,w0+lim);
       car.tcCut=free!==car.omega?Math.min(1,car.tcCut+h/0.05):Math.max(0,car.tcCut-h/0.3);}
     // the converter can't drive the wheels backwards in Drive (or forwards in Reverse)
@@ -9214,6 +9288,8 @@ function stepDynamics(h){
   }
   // free-rolling axle speed for wheel animation
   car.omegaF=(drive==='fwd'?vrx:fwx)/car.r;
+  if(!evCar){const flatD=fl&&((frontDriven&&(fl[0]||fl[1]))||(rearDriven&&(fl[2]||fl[3])));
+    tcsUpdate({h,vND:drive==='awd'?null:(drive==='fwd'?vrx:fwx),rEff:car.r*(flatD?0.96:1),TdrivePre,muX,Nd,dir:dirSign||1,braking,shifting:car.shiftT>0||car.slamT>0});}
 
   /* --- lateral: slip angles, saturating tyre curve, friction circle --- */
   const latCurve=(alpha,N,muL)=>-muL*N*Math.sin(1.35*Math.atan(13*alpha));
@@ -9383,7 +9459,7 @@ function spawnCar(key,color){
   car.x=MAP.spawn.x;car.z=MAP.spawn.z;car.psi=MAP.spawn.psi;
   skidPool.forEach(m=>m.visible=false);smokePool.forEach(m=>m.visible=false);
   car.lastWheel=[null,null,null,null];
-  car.health=100;car.disabled=false;car.burnt=false;car.flareRpm=null;car.lcStage=false;car.lcGo=null;car.flat=null;car.boost=0;car.boostPsi=0;car.smoke=0;   // a fresh car: nothing carried over from the last one (flat tyres, boost, smoke)
+  car.health=100;car.disabled=false;car.burnt=false;car.flareRpm=null;car.lcStage=false;car.lcGo=null;car.tcs=null;car.tcCut=0;car.flat=null;car.boost=0;car.boostPsi=0;car.smoke=0;   // a fresh car: nothing carried over from the last one (flat tyres, boost, smoke)
   buildLightRig();
   syncCar(0);
 }
@@ -12467,8 +12543,8 @@ const PAD_FIXED={throttle:'RT (analog)',brake:'LT (analog)',left:'Left stick',ri
 const PAD_NAMES=['A','B','X','Y','LB','RB','LT','RT','View','Menu','Left stick press','Right stick press','D-pad up','D-pad down','D-pad left','D-pad right','Guide'];
 const GFX_DEFAULT={shadows:'high',scale:'auto',distance:'normal',fov:56,look:'cine',speedfx:1,mblur:1,fps:false,refl:false,reflRes:256,reflRate:2,reflDist:200,reflStr:1,trDetail:85,trDraw:700};
 const PLAY_DEFAULT={tod:'day',density:50};
-const CFG={kb:Object.assign({},KB_DEFAULT),pad:Object.assign({},PAD_DEFAULT),gfx:Object.assign({},GFX_DEFAULT),play:Object.assign({},PLAY_DEFAULT),police:Object.assign({},POLICE_DEFAULT)};
-try{const s=JSON.parse(localStorage.getItem('backroads.settings')||'null');if(s){Object.assign(CFG.kb,s.kb||{});Object.assign(CFG.pad,s.pad||{});Object.assign(CFG.gfx,s.gfx||{});Object.assign(CFG.play,s.play||{});Object.assign(CFG.police,s.police||{});}}catch(e){}
+const CFG={kb:Object.assign({},KB_DEFAULT),pad:Object.assign({},PAD_DEFAULT),gfx:Object.assign({},GFX_DEFAULT),play:Object.assign({},PLAY_DEFAULT),police:Object.assign({},POLICE_DEFAULT),tcs:Object.assign({enabled:true},TCS_DEFAULT)};
+try{const s=JSON.parse(localStorage.getItem('backroads.settings')||'null');if(s){Object.assign(CFG.kb,s.kb||{});Object.assign(CFG.pad,s.pad||{});Object.assign(CFG.gfx,s.gfx||{});Object.assign(CFG.play,s.play||{});Object.assign(CFG.police,s.police||{});Object.assign(CFG.tcs,s.tcs||{});}}catch(e){}
 delete CFG.kb.recover;delete CFG.pad.recover;CFG.gfx.refl=false;   // car reflections are switched off for now
    // 'Back on the road' was removed; drop it from older saved settings
 function saveCfg(){try{const out=(typeof NET!=='undefined'&&NET.saved)?Object.assign({},CFG,{play:NET.saved.play,police:NET.saved.police}):CFG;localStorage.setItem('backroads.settings',JSON.stringify(out));}catch(e){}}
@@ -13171,6 +13247,7 @@ function openSettings(){settingsFrom=MODE;MODE='settings';show('settings');rende
 function closeSettings(){capture=null;MODE=settingsFrom;show(settingsFrom==='pause'?'pause':'menu');}
 function seg(id,label,opts,val,on){return '<div class="srow"><span class="slab">'+label+'</span><div class="segs" role="group" aria-label="'+label+'">'+
   opts.map(([v,t])=>'<button type="button" class="seg'+(v===val?' on':'')+'" data-set="'+id+'" data-val="'+v+'">'+t+'</button>').join('')+'</div></div>';}
+function tcsFmt(f,v){v=+v;return f==='pct'?Math.round(v*100)+'%':f==='pctpk'?Math.round(v*100)+'% of peak ('+(v*14).toFixed(0)+'%)':f==='pcttg'?Math.round(v*100)+'% of target':f==='nm'?(v?Math.round(v)+' N·m':'Off'):f==='ms'?Math.round(v*1000)+' ms':f==='s'?v.toFixed(2)+' s':f==='mph'?(v*2.237).toFixed(1)+' mph':String(v);}
 function densLabel(v){return v<=0?'Off':v<20?'Very low':v<40?'Low':v<60?'Medium':v<80?'High':'Very high';}
 function setDensity(v){CFG.play.density=clamp(Math.round(v/5)*5,0,100);saveCfg();const r=$('densR'),l=$('densV');if(r)r.value=CFG.play.density;if(l)l.textContent=densLabel(CFG.play.density);}
 function renderSettings(){
@@ -13228,6 +13305,26 @@ function renderSettings(){
     h+=seg('p_respawn','Replacement for a wrecked cruiser',[[60,'1 min'],[180,'3 min'],[300,'5 min'],[600,'10 min']],+C.respawn);
     h+='<p class="snote">A wrecked cruiser stays where it is. After this time a replacement unit enters service at its station and drives out from there.</p>';
     h+=seg('p_debug','Police debug labels (developer)',[[false,'Off'],[true,'On']],C.debug);
+  }else if(settingsTab==='driving'){const T=CFG.tcs;
+    const tsl=(k,label,min,max,step,fmt,note)=>'<div class="srow"><span class="slab">'+label+'</span><div class="slide"><input type="range" data-tcs="'+k+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+T[k]+'" aria-label="'+label+'"><span class="sval" id="tv_'+k+'" data-fmt="'+fmt+'">'+tcsFmt(fmt,T[k])+'</span></div></div>'+(note?'<p class="snote">'+note+'</p>':'');
+    h+='<h3 class="ssub">Traction control</h3>';
+    h+=seg('t_enabled','Traction control',[[true,'On'],[false,'Off']],T.enabled!==false);
+    h+='<p class="snote">Every combustion car starts with it on (or off) as set here; the traction control key still switches it in the car. Electric cars use their own motor control and are not affected.</p>';
+    h+=seg('t_mode','Mode',[['auto','Follow drive mode'],['full','Full'],['sport','Sport'],['track','Track']],T.mode);
+    h+='<p class="snote">Full holds the tyres at the slip where they grip best. Sport allows about 1.7 times that and cuts less; Track about twice, for sliding. Follow drive mode uses Full in Normal, Sport in Sport, Track in Track and Drag.</p>';
+    h+=tsl('target','Target slip',0.5,2.5,0.05,'pctpk','Slip the system aims for, as a share of the slip where the tyre model makes its peak force (14%).');
+    h+=tsl('engage','Engage at',1.05,2,0.05,'pcttg','Slip, relative to the target, that has to be held for the engage filter time before it steps in.');
+    h+=tsl('disengage','Disengage below',0.2,0.95,0.05,'pcttg','It lets go once slip falls below this and the torque is fully restored (the gap stops it switching on and off).');
+    h+=tsl('maxCut','Maximum engine torque cut',0.2,1,0.05,'pct','');
+    h+=tsl('maxBrake','Maximum brake torque on the driven axle',0,3000,100,'nm','Brake on the spinning driven wheels, strongest at low speed and backed off as the brakes heat up.');
+    h+=tsl('filter','Engage filter',0,0.15,0.01,'ms','How long excess slip must last before it intervenes (a third of this when pulling away).');
+    h+=tsl('recovery','Recovery ramp',0.1,1.5,0.05,'s','Time to give full torque back once grip returns, so it never surges.');
+    h+=tsl('lowSpeed','Low-speed slip reference',1,6,0.5,'mph','Below this speed slip is judged as wheel speed minus road speed, not as a ratio, so it stays stable off the line.');
+    h+=seg('t_surfaceAdapt','Surface grip adaptation',[[true,'On'],[false,'Off']],T.surfaceAdapt);
+    h+='<p class="snote">Uses the grip of the surface under the car (asphalt, gravel, grass, water) to set the first torque cut and to engage earlier where grip is low.</p>';
+    h+=seg('t_hz','Control rate',[[50,'50 Hz'],[100,'100 Hz'],[200,'200 Hz']],+T.hz);
+    h+=seg('t_noise','Wheel-speed sensor noise',[[true,'On'],[false,'Off']],T.noise);
+    h+='<div class="srow"><span class="slab"></span><div class="segs"><button type="button" class="seg" data-tcsreset="1">Reset to defaults</button></div></div>';
   }else if(settingsTab==='controls'){
     h+='<div class="segs sub" role="group" aria-label="Device"><button type="button" class="seg'+(ctrlTab==='keyboard'?' on':'')+'" data-ctrl="keyboard">Keyboard</button><button type="button" class="seg'+(ctrlTab==='controller'?' on':'')+'" data-ctrl="controller">Controller</button></div>';
     h+='<div class="binds">';
@@ -13243,10 +13340,14 @@ function renderSettings(){
   body.innerHTML=h;
 }
 function bindSettings(){
-  $('settings').addEventListener('input',e=>{if(e.target.id==='densR')setDensity(+e.target.value);
+  $('settings').addEventListener('input',e=>{const tk=e.target.dataset&&e.target.dataset.tcs;if(tk){CFG.tcs[tk]=+e.target.value;saveCfg();const l=$('tv_'+tk);if(l)l.textContent=tcsFmt(l.dataset.fmt,CFG.tcs[tk]);return;}
+    if(e.target.id==='densR')setDensity(+e.target.value);
     const k=e.target.dataset&&e.target.dataset.prange;if(k){CFG.police[k]=+e.target.value;saveCfg();const l=$('pv_'+k);if(l)l.textContent=CFG.police[k];if(POL.ready)polRoster(false);}});
   $('settings').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
     if(t.dataset.tab){if(t.disabled)return;settingsTab=t.dataset.tab;capture=null;renderSettings();return;}
+    if(t.dataset.tcsreset){CFG.tcs=Object.assign({enabled:true},TCS_DEFAULT);saveCfg();renderSettings();return;}
+    if(t.dataset.set&&t.dataset.set.indexOf('t_')===0){let v=t.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;else if(!isNaN(+v)&&v!=='')v=+v;
+      const k=t.dataset.set.slice(2);CFG.tcs[k]=v;saveCfg();if(k==='enabled'&&MODE!=='menu'&&car.spec)car.tc=v;renderSettings();const nb=document.querySelector('#settings [data-set="'+t.dataset.set+'"][data-val="'+t.dataset.val+'"]');if(nb)nb.focus();return;}
     if(t.dataset.set&&t.dataset.set.indexOf('p_')===0){let v=t.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;else if(!isNaN(+v)&&v!=='')v=+v;
       CFG.police[t.dataset.set.slice(2)]=v;saveCfg();renderSettings();const nb=document.querySelector('#settings [data-set="'+t.dataset.set+'"][data-val="'+t.dataset.val+'"]');if(nb)nb.focus();return;}
     if(t.dataset.set){let v=t.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;else if(!isNaN(+v)&&v!=='')v=+v;
@@ -13331,7 +13432,7 @@ function syncHelp(){const h=$('help');if(!h)return;h.querySelector('.kb').hidden
   h.querySelectorAll('[data-k]').forEach(e=>{e.textContent=keyName(CFG.kb[e.dataset.k]);});
   h.querySelectorAll('[data-p]').forEach(e=>{e.textContent=padName(CFG.pad[e.dataset.p]);});}
 function startDrive(){hudGear=hudMode='';syncHelp();t60Reset();
-  const C=CARS[pick.i];spawnCar(C.key,pick.color||C.colors[0]);applyLaunch(C.key);placeAtSpawn(true);carObj3.grp.visible=true;applyCarEnv();lastHealth=-1;
+  const C=CARS[pick.i];spawnCar(C.key,pick.color||C.colors[0]);applyLaunch(C.key);car.tc=CFG.tcs.enabled!==false;placeAtSpawn(true);carObj3.grp.visible=true;applyCarEnv();lastHealth=-1;
   trafficReset();polReset();
   MODE='drive';show('hud');clusterBuild();CAMV.init=false;CAMV.yaw=0;CAMV.pitch=0;startAudio();
   setDriveView();setShadowSpan(55);
