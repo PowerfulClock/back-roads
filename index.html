@@ -9090,7 +9090,7 @@ function stepDynamics(h){
     const tgtR=car.idle+car.thr*(c.redline*1.02-car.idle);
     car.freeRpm+=(tgtR-car.freeRpm)*Math.min(1,h/(tgtR>car.freeRpm?0.22:0.45));
     if(car.freeRpm>c.redline)car.freeRpm=c.redline-250;
-    rpm=car.freeRpm;
+    rpm=car.freeRpm;car.flareRpm=car.freeRpm;
   }else{
     // converter: the engine flares toward stall speed under throttle, idles otherwise
     // a plain launch: the converter (or the clutch) only lets the engine run a little ahead of the wheels, so the revs
@@ -9102,8 +9102,12 @@ function stepDynamics(h){
     if(car.launchMode&&car.launchMode!=='off'){const lr=car.launchMode==='bb'?Math.min(car.launchRpm||2000,car.stallRpm):(car.launchRpm||3000);
       if(car.lcStage)flare=lr+Math.sin((car.t||0)*55)*35;
       else if(car.lcGo!=null){if((car.t||0)-car.lcGo<3&&car.thr>0.6&&turb<lr)flare=Math.max(flare,lr);else car.lcGo=null;}}
-    if(turb<flare){rpm=flare;const sr=turb/flare;mult=1+(c.stall-1)*Math.pow(1-sr,1.6)*Math.min(1,car.thr*1.5);}
-    else rpm=turb;
+    // the engine has inertia: pulling away it rises from idle together with the car (about 2,000 rpm a second under
+    // load) instead of jumping straight to the converter's slip limit; free on the brake (launch control) it revs faster
+    if(car.flareRpm==null)car.flareRpm=Math.max(car.idle,turb);
+    if(turb<flare){const up=car.lcStage?7000:2000;car.flareRpm+=clamp(flare-car.flareRpm,-8000*h,up*h);
+      rpm=Math.max(turb,car.flareRpm,car.idle*0.9);const sr=turb/rpm;mult=1+(c.stall-1)*Math.pow(1-sr,1.6)*Math.min(1,car.thr*1.5);}
+    else{rpm=turb;car.flareRpm=turb;}
     car.freeRpm=rpm;
     const n=c.gears.length,since=(car.t||0)-(car.lastShift||0);
     /* Tip-in delay: when you push the pedal further, the box keeps the gear it's in for about a
@@ -9379,7 +9383,7 @@ function spawnCar(key,color){
   car.x=MAP.spawn.x;car.z=MAP.spawn.z;car.psi=MAP.spawn.psi;
   skidPool.forEach(m=>m.visible=false);smokePool.forEach(m=>m.visible=false);
   car.lastWheel=[null,null,null,null];
-  car.health=100;car.disabled=false;car.burnt=false;car.flat=null;car.boost=0;car.boostPsi=0;car.smoke=0;   // a fresh car: nothing carried over from the last one (flat tyres, boost, smoke)
+  car.health=100;car.disabled=false;car.burnt=false;car.flareRpm=null;car.lcStage=false;car.lcGo=null;car.flat=null;car.boost=0;car.boostPsi=0;car.smoke=0;   // a fresh car: nothing carried over from the last one (flat tyres, boost, smoke)
   buildLightRig();
   syncCar(0);
 }
