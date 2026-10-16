@@ -9016,6 +9016,7 @@ function aiPedals(h){
   car.steer+=clamp(clamp(I.steer,-lock,lock)-car.steer,-1.6*h,1.6*h);
 }
 const c0=()=>car.spec||{};
+function flareTop(c){if(window.OLDFLARE)return car.stallRpm;return Math.min(car.stallRpm,(c.trans==='auto'||c.trans==='cvt'||c.trans==='ecvt')?1900:1450);}
 function playerPedals(h){
   if(car.state!=='D'&&car.state!=='M')car.lcStage=false;
   const ctl=controls();
@@ -9088,7 +9089,10 @@ function stepDynamics(h){
     rpm=car.freeRpm;
   }else{
     // converter: the engine flares toward stall speed under throttle, idles otherwise
-    let flare=car.idle+(car.stallRpm-car.idle)*Math.pow(car.thr,0.7);
+    // a plain launch: the converter (or the clutch) only lets the engine run a little ahead of the wheels, so the revs
+    // climb with the car instead of jumping to the stall speed; holding the revs up (and spooling the turbo on the
+    // brake) is what launch control and brake boost are for
+    let flare=car.idle+(flareTop(c)-car.idle)*Math.pow(car.thr,0.7);
     // launch control: staged on the brake the engine sits on the launch-rpm limiter; just after the launch the
     // driveline slips from that rpm until the wheels catch up (or 3 s, or the throttle comes up)
     if(car.launchMode&&car.launchMode!=='off'){const lr=car.launchMode==='bb'?Math.min(car.launchRpm||2000,car.stallRpm):(car.launchRpm||3000);
@@ -9161,7 +9165,7 @@ function stepDynamics(h){
   /* --- longitudinal: drag-sim slip-ratio model on the driven axle --- */
   const SP=0.14;
   const vDrive=drive==='fwd'?fwx:vrx;     // road speed along the driven wheels
-  const IW=5.0*(drive==='awd'?2:1),Irot=IW+(inGear?c.ie*ov*ov*(turb<car.idle+(car.stallRpm-car.idle)*Math.pow(car.thr,0.7)?0.4:1):0);
+  const IW=5.0*(drive==='awd'?2:1),Irot=IW+(inGear?c.ie*ov*ov*(turb<car.idle+(flareTop(c)-car.idle)*Math.pow(car.thr,0.7)?0.4:1):0);
   const denom=Math.max(Math.abs(vDrive),1.6);
   let sr=(car.omega*car.r-vDrive)/denom;sr=clamp(sr,-1.2,8);
   const fShape=s=>{const x=Math.abs(s),g=x<=SP?x/SP:Math.max(0.70,1-0.30*(x-SP)/0.90);return s<0?-g:g;};
