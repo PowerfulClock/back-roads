@@ -252,6 +252,7 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
 #pradio{position:absolute;left:16px;bottom:calc(212px + env(safe-area-inset-bottom,0px));max-width:min(560px,60vw);display:grid;gap:3px;pointer-events:none;
   font:500 13px var(--mono);color:#eef1f4;text-shadow:0 1px 2px #000,0 0 6px rgba(0,0,0,.8)}
 #pradio b{color:#9cc3ff;font-weight:700}
+/*QMC-CSS*/
 #qmc{--asphalt:#17191c;--asphalt-2:#1f2226;--asphalt-3:#282c31;--line:#3a3f46;
 --paint:#e8e6e1;--dim:#8b9099;--amber:#ffa219;--go:#38d07a;--foul:#e5484d;
 --laneA:#4a9fe0;--laneB:#e07a4a;}
@@ -280,27 +281,20 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
 #qmc .bmcl{margin:4px 0 2px}
 #qmc .nccl{margin:4px 0 2px}
 #qmc .nc-svg{width:100%;height:auto;display:block}
-#qmc .dg-num{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;fill:#f4f4f4}
-#qmc .dg-spd{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;fill:#fff}
-#qmc .dg-spd2{font-family:'Barlow Condensed',sans-serif;font-size:8.5px;font-weight:600;fill:#e8e8e8}
 #qmc .dg-cap{font-family:'Barlow Condensed',sans-serif;font-size:7.5px;font-weight:600;fill:#e8e8e8}
 #qmc .dg-dig{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:600;fill:#fff}
 #qmc .dg-gear{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;fill:#fff}
 #qmc .dg-sm{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;fill:#f0f0f0}
-#qmc .c8-num{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;fill:#f2f7ff}
 #qmc .c8-dig{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-style:italic;font-weight:500;fill:#fff}
 #qmc .c8-gear{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:600;fill:#fff}
 #qmc .c8-sm{font-family:'Barlow Condensed',sans-serif;font-size:8.5px;font-weight:600;fill:#dbe9ff}
 #qmc .c8-tiny{font-family:'Barlow Condensed',sans-serif;font-size:6.5px;fill:#dbe9ff}
 #qmc .c8-hd{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;fill:#9fd0ff}
 #qmc .c8-val{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;fill:#fff}
-#qmc .c7-num{font-family:'Barlow Condensed',sans-serif;font-size:8.5px;font-weight:600;fill:#f0f0f0}
-#qmc .c7-tn{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:600;fill:#fafafa}
 #qmc .c7-cap{font-family:'Barlow Condensed',sans-serif;font-size:6.5px;font-weight:600;fill:#d8d8d8}
 #qmc .c7-dig{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-style:italic;font-weight:500;fill:#fff}
 #qmc .c7-gear{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;fill:#fff}
 #qmc .c7-mode{font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:700;fill:#e8c14a}
-#qmc .lb-num{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-style:italic;font-weight:700;fill:#f4f4f4}
 #qmc .lb-gear{font-family:'Barlow Condensed',sans-serif;font-size:60px;font-style:italic;font-weight:700;fill:#ff2a2a}
 #qmc .lb-mode{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-style:italic;font-weight:700;letter-spacing:1px;fill:#ff3a2a}
 #qmc .lb-dig{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-style:italic;font-weight:600;fill:#fff}
@@ -311,6 +305,25 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
 #qmc .bm-big{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;fill:#fff}
 #qmc .bm-sm{font-family:'Roboto Mono',monospace;font-size:7.5px;fill:#eef2ff}
 #qmc .bm-mode{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:1.5px;font-weight:600;fill:#1a2a5a}
+#qmc .dials.pcl{align-items:center;gap:6px}
+#qmc .pcl .pcl-main{flex:1.35;position:relative}
+#qmc .pcl .pcl-main svg{max-width:240px}
+#qmc .pcl .pcl-side{flex:0.95}
+#qmc .pcl .pcl-side svg{max-width:170px}
+#qmc .pcl-dig{position:absolute;left:0;right:0;bottom:11%;font-family:'Roboto Mono',monospace;font-weight:700;
+  font-size:22px;color:#e9f3ff;display:flex;justify-content:center;align-items:baseline;gap:4px;
+  text-shadow:0 0 6px rgba(120,180,255,.45)}
+#qmc .pcl-dig small{font-size:10px;color:#8fb6de;font-weight:500}
+#qmc .pcl-tft{background:radial-gradient(circle at 50% 45%,#0e1a2a 0%,#070b12 80%);border:2px solid #1d2530;
+  border-radius:50%;aspect-ratio:1/1;max-width:170px;margin:0 auto;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;overflow:hidden;padding:10% 6% 6%}
+#qmc .pcl-bar{align-self:stretch;margin:0 4%;background:linear-gradient(90deg,#2a5a9a,#1f4677);color:#fff;
+  font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;padding:1px 8px;
+  border-bottom:2px solid #ff8a1f;border-radius:2px 10px 2px 2px}
+#qmc .pcl-gsvg{width:92%;height:auto;margin-top:2px}
+#qmc .pcl-gnum{font-family:'Barlow Condensed',sans-serif;font-size:8px;fill:#d6e6f7}
+#qmc .pcl-gnow{font-family:'Roboto Mono',monospace;font-size:11px;color:#cfe6ff;margin-top:-2px}
+/*/QMC-CSS*/
 #qmc{position:absolute;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(470px,46vw);pointer-events:none;z-index:2}
 #qmc .qmc-card{padding:6px 10px 4px;background:rgba(12,13,15,.82);border:1px solid #2a2a2c;box-shadow:0 6px 24px rgba(0,0,0,.45)}
 #qmc .qmc-card.cluster-muscle{background:linear-gradient(160deg,rgba(20,20,22,.9) 0%,rgba(12,12,14,.9) 100%)}
@@ -5870,7 +5883,7 @@ function suspProfile(c){
   P.kick=/dct|pdk|dual/.test((c.trans||'').toLowerCase())?0.5:/auto/.test((c.trans||'').toLowerCase())?0.8:1.2;
   return P;
 }
-/* gauge clusters, extracted from the drag strip game (Quarter Mile): one builder per car family */
+/* gauge clusters, extracted from the drag strip game (Quarter Mile) by tools/import_clusters.py */
 function ambient(){return 72;}
 function timeOfDay(){const t=(typeof CFG!=='undefined'&&CFG.play&&CFG.play.tod)||'day';return t==='night'?'night':(t==='sunset'||t==='sunrise')?'dusk':'day';}
 function dialSvg(id,ticks,redFrac,color,labels){
@@ -7112,6 +7125,54 @@ function displayImpala(l,c,tk,rf){
   o.push(minNeedle(344,92,-2,40,-120,'#ff4a1a',2.6,6),minNeedle(380,92,-2,40,110,'#ff4a1a',2.6,6));
   return svgWrap(o.join(''),chromeGrad('imc'+l),'<path d="M20 30 Q220 10 420 30 L432 120 Q420 170 360 172 H80 Q20 170 8 120 Z" fill="#131416" stroke="#2a2b2e" stroke-width="2"/>');
 }
+function chall15Spd(nm){return /redeye|demon|jailbreak|super stock/i.test(nm)?220:/hellcat/i.test(nm)?200:/scat|392|srt/i.test(nm)?180:160;}
+function displayChall15(l,c,tk,rf){
+  const o=[],nm=c.name||'',smax=chall15Spd(nm),A0=-130,SP=260,tex='c5t'+l,hubG='c5h'+l,gl='c5g'+l,redG='c5r'+l;
+  const sector=(cx,cy,r0,r1,d0,d1)=>{const a=pol(cx,cy,r1,d0),b=pol(cx,cy,r1,d1),c2=pol(cx,cy,r0,d1),d=pol(cx,cy,r0,d0),lg=Math.abs(d1-d0)>180?1:0;
+    return 'M'+a[0].toFixed(1)+' '+a[1].toFixed(1)+' A'+r1+' '+r1+' 0 '+lg+' 1 '+b[0].toFixed(1)+' '+b[1].toFixed(1)+' L'+c2[0].toFixed(1)+' '+c2[1].toFixed(1)+' A'+r0+' '+r0+' 0 '+lg+' 0 '+d[0].toFixed(1)+' '+d[1].toFixed(1)+' Z';};
+  // from the outside in, as on the real cluster: red ring, big numerals, small half-step numbers, the
+  // tick ring hugging the textured centre disc; the short needle runs from the disc's edge over the
+  // ticks only and stops short of the numerals
+  const dial=(cx,isT)=>{const cy=94,n=isT?tk:smax/20;
+    o.push('<circle cx="'+cx+'" cy="'+cy+'" r="80" fill="#0a0a0c" stroke="#2a2b2e" stroke-width="4"/>',
+      '<circle cx="'+cx+'" cy="'+cy+'" r="76" fill="none" stroke="#ff2b1f" stroke-width="2.4" filter="url(#'+gl+')"/>',
+      '<circle cx="'+cx+'" cy="'+cy+'" r="73" fill="#121214" stroke="#5a0b08" stroke-width="1"/>');
+    if(isT&&rf>0&&rf<1)o.push('<path d="'+sector(cx,cy,40,73,A0+SP*rf,A0+SP)+'" fill="url(#'+redG+')" opacity="0.92"/>');
+    o.push('<circle cx="'+cx+'" cy="'+cy+'" r="38" fill="url(#'+tex+')" stroke="#4a4c50" stroke-width="3"/>',
+      '<circle cx="'+cx+'" cy="'+cy+'" r="38" fill="url(#'+hubG+')"/>');
+    for(let i=0;i<n;i++){const p=(i+0.5)/n,q=pol(cx,cy,isT?55:54,A0+SP*p);
+      o.push(T(q[0],q[1]+2,isT?String(i*1000+500):String(i*20+10),isT?4.6:5,isT&&rf>0&&p>=rf-1e-6?'#ffd6d0':'#a9adb3',{w:500}));}
+    o.push(gDial({cx,cy,R:49,a0:A0,span:SP,redFrac:isT?rf:0,scale:uniScale(n,isT?4:1,i=>isT?i:i*20),
+      ticks:{lM:8,wM:2,lm:4,wm:1,cm:'#d8dade',cM:'#ffffff',red:'#ffffff'},lab:{r:isT?65:64.5,sz:isT?16:10.5,w:700,col:'#ffffff'},
+      needle:{id:(isT?'nd-rpm-':'nd-spd-')+l,col:'#ff6a1a',r0:40,r1:50,w:3.4,tw:1.6,glow:gl}}));
+    o.push(T(cx,cy+56,isT?'RPM':'MPH',isT?8:7.5,'#ffffff',{w:700}));
+    if(isT)o.push(T(cx,cy+62,'x1000',5,'#ffffff',{w:600}));};
+  dial(92,true);dial(348,false);
+  // centre screen, as on the Charger: compass / temp / range, big digital speed over a honeycomb,
+  // oil temperature on the left, P R N D M on the right, g and gear, odometer
+  o.push('<rect x="173" y="24" width="94" height="132" rx="6" fill="#08090b" stroke="#2c2d31" stroke-width="2"/>',
+    T(184,37,'SW',7,'#fff',{w:600}),T(220,37,Math.round(ambient())+'°F',7.5,'#fff',{w:500}),
+    T(255,34,'53',7,'#fff',{w:600}),T(255,40,'Range mi',3.6,'#ccc'),
+    '<line x1="180" y1="44" x2="260" y2="44" stroke="#3a3c42" stroke-width="0.8"/>');
+  const hex=(x,y,r)=>{let p='';for(let k=0;k<6;k++){const a=Math.PI/3*k+Math.PI/6;p+=(k?' ':'')+(x+r*Math.cos(a)).toFixed(1)+','+(y+r*Math.sin(a)).toFixed(1);}
+    return '<polygon points="'+p+'" fill="none" stroke="#4a4e57" stroke-width="0.6" opacity="0.7"/>';};
+  for(let i=0;i<5;i++)for(let j=0;j<2;j++)o.push(hex(201+i*9.5+(j?4.75:0),108+j*8.2,4.9));
+  o.push(T(220,90,'0',30,'#fff',{id:'cl-mph-'+l,w:600}),T(220,101,'MPH',6.5,'#fff',{w:600}));
+  o.push('<line x1="182" y1="58" x2="182" y2="122" stroke="#666" stroke-width="0.8"/>');
+  for(let i=0;i<=6;i++)o.push('<line x1="182" y1="'+(58+i*10.6)+'" x2="'+(i%3?184.5:186)+'" y2="'+(58+i*10.6)+'" stroke="#aaa" stroke-width="0.7"/>');
+  o.push(T(191,61,'260',4.2,'#bbb'),T(191,124,'170',4.2,'#bbb'),'<path d="M180 94 l-4 -2.5 v5 z" fill="#ff9a2a"/>',T(182,132,'OIL °F',3.8,'#aaa'));
+  const auto=c.trans!=='manual';
+  ['P','R','N','D','M'].forEach((g,i)=>o.push(T(258,64+i*11,g,7,(auto?g==='D':g==='M')?'#fff':'#777',{w:(auto?g==='D':g==='M')?700:500})));
+  o.push('<rect x="252" y="'+(auto?90:101)+'" width="12" height="11" rx="1.5" fill="none" stroke="#fff" stroke-width="0.8"/>');
+  o.push(T(220,128,'<tspan id="cl-g-'+l+'">0.00</tspan> g · <tspan id="cl-gear2-'+l+'" data-pre="'+(auto?'D':'')+'">'+(auto?'D1':'1')+'</tspan>',5.5,'#bbb'),
+    T(220,146,(5000+(nm.length*977)%40000)+' mi',5.5,'#ddd'));
+  const defs='<pattern id="'+tex+'" width="3.2" height="3.2" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'+
+      '<rect width="3.2" height="3.2" fill="#141517"/><rect width="1.6" height="1.6" fill="#232427"/><rect x="1.6" y="1.6" width="1.6" height="1.6" fill="#1c1d20"/></pattern>'+
+    '<radialGradient id="'+hubG+'" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#ffffff" stop-opacity="0.10"/><stop offset="0.6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.45"/></radialGradient>'+
+    '<radialGradient id="'+redG+'" cx="50%" cy="50%" r="50%"><stop offset="0.5" stop-color="#7a0a06"/><stop offset="0.8" stop-color="#e3170f"/><stop offset="1" stop-color="#ff4a2a"/></radialGradient>'+
+    glowDef(gl,1.3);
+  return svgWrap(o.join(''),defs,'<path d="M14 22 Q14 8 30 8 H410 Q426 8 426 22 V150 Q426 176 400 176 H40 Q14 176 14 150 Z" fill="#111214" stroke="#26272a" stroke-width="2"/>');
+}
 function displayChall11(l,c,tk,rf){
   const o=[],ch='url(#c1c'+l+')',cream='#efe8d4';
   const face=(x,y,r)=>'<circle cx="'+x+'" cy="'+y+'" r="'+(r+5)+'" fill="#1a1a1c" stroke="'+ch+'" stroke-width="3"/><circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+cream+'"/>';
@@ -7309,7 +7370,7 @@ function qmCluster(l,c){const col='#e8a20c';
       venom:/venom/i,focusrs:/focus rs/i,agera:/agera|jesko/i,regera:/regera/i,lucid:/lucid/i,tesla:/tesla/i,taurus:/taurus/i,
       mazda3:/mazda ?3\b/i,miata:/miata|mx-5/i,volvo:/volvo/i,g70:/genesis g70/i,g80:/genesis g80/i,infiniti:/infiniti/i};
     let nstyle=null;
-    const EXTRA=['charger11','charger15','chall11','accord','accord9','s650','mustangD','mustang6','mustang5','camaro6','camaro5','acura17','acura21','bmwm5','bmwcurved'];
+    const EXTRA=['charger11','charger15','chall11','chall15','accord','accord9','s650','mustangD','mustang6','mustang5','camaro6','camaro5','acura17','acura21','bmwm5','bmwcurved'];
     if(cs){if(NEWC[cs]||EXTRA.indexOf(cs)>=0)nstyle=cs;}
     else{for(const k in NEWC)if(NEWC[k].test(nm)){nstyle=k;break;}
       if(!nstyle&&isAcc)nstyle=(yr&&yr<=2017)?'accord9':'accord';
@@ -7317,6 +7378,7 @@ function qmCluster(l,c){const col='#e8a20c';
       if(!nstyle&&/charger/i.test(nm)&&yr>=2011&&yr<=2014)nstyle='charger11';
       if(!nstyle&&/charger/i.test(nm)&&yr>=2015)nstyle='charger15';
       if(!nstyle&&/challenger/i.test(nm)&&yr>=2008&&yr<=2014)nstyle='chall11';
+      if(!nstyle&&/challenger/i.test(nm)&&yr>=2015)nstyle='chall15';
       if(!nstyle&&/camaro/i.test(nm)&&yr)nstyle=yr>=2016?'camaro6':yr>=2010?'camaro5':null;
       if(!nstyle&&/acura/i.test(nm)&&yr)nstyle=yr>=2021?'acura21':'acura17';
       if(!nstyle&&/\bbmw\b/i.test(nm)){if(/\bM5\b/.test(nm))nstyle='bmwm5';else if(yr>=2023||/230i/.test(nm))nstyle='bmwcurved';}}
@@ -7325,6 +7387,7 @@ function qmCluster(l,c){const col='#e8a20c';
     const durSpd=/srt|hellcat|392/i.test(nm)?200:140;
     // needle scale must match the numbers printed on each style of speedo
     clusterMeta[l].spdMax=nstyle?({c6:/zr1/i.test(nm)?220:200,infiniti:180,g70:180,bmwm5:200,camaro6:200,camaro5:180,mustang5:140,viper:220,charger11:140,crownvic:140,impala:140,venom:270,focusrs:180,agera:260,regera:260,tesla:140,taurus:140}[nstyle]||160):porsche?225:durango?durSpd:vetteC7?200:bmw?200:(muscle||chevy||pony||audi)?160:220;
+    if(nstyle==='chall15')clusterMeta[l].spdMax=chall15Spd(nm);
     if(nstyle==='charger15')clusterMeta[l].spdMax=/hellcat/i.test(nm)?200:/scat|392/i.test(nm)?180:160;
     const d=document.createElement('div');d.className='cluster'+(darkCluster?' cluster-muscle':'');
     function pickDial(idStr,tk,rf,lbl,isT){
@@ -7344,7 +7407,7 @@ function qmCluster(l,c){const col='#e8a20c';
       const F={r8:displayR8,mclaren:displayMcLaren,accord:displayAccord10,accord9:displayAccord9,elantran:displayElantraN,s650:displayS650,
         golf:displayGolf,c6:displayC6,lincoln:displayLincoln,mazda3:displayMazda3,miata:displayMiata,volvo:displayVolvo,infiniti:displayInfiniti,g70:displayG70,g80:displayG80,
         mustangD:displayMustangDigital,mustang6:displayMustangS550,mustang5:displayMustangS197,camaro6:(a,b,cc,dd)=>displayCamaro6(a,b,cc,dd,clusterMeta[l].boosted),
-        camaro5:displayCamaro5,viper:displayViper,charger11:displayCharger11,charger15:displayCharger15,crownvic:displayCrownVic,impala:displayImpala,chall11:displayChall11,
+        camaro5:displayCamaro5,viper:displayViper,charger11:displayCharger11,charger15:displayCharger15,chall15:displayChall15,crownvic:displayCrownVic,impala:displayImpala,chall11:displayChall11,
         venom:displayVenom,focusrs:displayFocusRS,agera:displayAgera,regera:displayRegera,lucid:displayLucid,tesla:displayTesla,taurus:displayTaurus,acura17:displayAcura17,acura21:displayAcura21,bmwm5:displayBMWM5,bmwcurved:displayBMWCurved}[nstyle];
       const svgH=F(l,c,tk,rf);
       // the race loop updates gear / feet / slip alongside the digital speed, so
