@@ -6729,8 +6729,12 @@ function stepDynamics(h){
   const fShape=s=>{const x=Math.abs(s),g=x<=SP?x/SP:Math.max(0.70,1-0.30*(x-SP)/0.90);return s<0?-g:g;};
   const muX=drive==='fwd'?muF:drive==='rwd'?muR:(muF+muR)/2;let FxD=muX*fShape(sr)*Nd;
   // traction control from the drag sim, mode Normal: tolerated slip, ramp, then servo the wheel back to peak
-  let Tin=Tdrive;
-  if(car.tc){
+  let Tin=Tdrive;const evTC=(IND[c.ind]||{}).electric&&Tdrive!==0&&!window.NOEVTC;
+  if(evTC){
+    // electric: the motor controller trims torque every few milliseconds, faster than one physics step, so the tyres
+    // sit just under peak slip and never visibly spin up (like the drag strip game). Modelled as a hard limit on the
+    // wheel speed after each step (a torque servo is too stiff to integrate here). It can't be switched off.
+    }else if(car.tc){
     const fwdK=drive==='fwd'?1:0,MD=car.MD;
     if(Math.abs(sr)>SP*MD.tcSlip*(1+0.8*fwdK))car.tcCut=Math.min(1,car.tcCut+h/(MD.tcRamp*(1+1.2*fwdK)));
     else car.tcCut=Math.max(0,car.tcCut-h/0.45);
@@ -6748,6 +6752,8 @@ function stepDynamics(h){
   }else{
     const dOm=(Tin-FxD*car.r)/Math.max(0.5,Irot);
     const prev=car.omega;car.omega+=dOm*h;
+    if(evTC){const lim=SP*1.0*denom/car.r,w0=vDrive/car.r,free=car.omega;car.omega=clamp(car.omega,w0-lim,w0+lim);
+      car.tcCut=free!==car.omega?Math.min(1,car.tcCut+h/0.05):Math.max(0,car.tcCut-h/0.3);}
     // the converter can't drive the wheels backwards in Drive (or forwards in Reverse)
     if(dirSign>0&&car.omega<0&&vDrive>-0.2&&Tin>=0)car.omega=Math.max(car.omega,0);
     if(dirSign<0&&car.omega>0&&vDrive<0.2&&Tin<=0)car.omega=Math.min(car.omega,0);
