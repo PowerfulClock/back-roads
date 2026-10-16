@@ -521,7 +521,6 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
     <div class="tabs" role="tablist">
       <button type="button" class="tab on" data-tab="graphics">Graphics</button>
       <button type="button" class="tab" data-tab="controls">Controls</button>
-      <button type="button" class="tab" data-tab="driving">Driving</button>
       <button type="button" class="tab" data-tab="gameplay">Gameplay</button>
       <button type="button" class="tab" data-tab="police">Police</button>
     </div>
@@ -9031,7 +9030,7 @@ function aiPedals(h){
 --------------------------------------------------------------------------- */
 const TCS_DEFAULT={mode:'auto',target:1.0,engage:1.3,disengage:0.6,maxCut:0.95,maxBrake:1600,filter:0.03,recovery:0.35,lowSpeed:3.0,surfaceAdapt:true,hz:100,noise:true};
 const TCS_MODES={full:{t:1.0,e:1.0,cut:1.0,b:1.0},sport:{t:1.7,e:1.15,cut:0.8,b:0.5},track:{t:2.0,e:1.2,cut:0.85,b:0.3}};
-function tcsCfg(){return Object.assign({},TCS_DEFAULT,(typeof CFG!=='undefined'&&CFG.tcs)||{});}
+function tcsCfg(){return TCS_DEFAULT;}   // fixed tuning; the driver only switches it on and off (T)
 function tcsModeOf(C){if(C.mode!=='auto')return TCS_MODES[C.mode]||TCS_MODES.full;const m=car.mode||'normal';return m==='sport'?TCS_MODES.sport:(m==='track'||m==='corsa'||m==='drag')?TCS_MODES.track:TCS_MODES.full;}
 function tcsState(){return car.tcs||(car.tcs={on:false,cut:0,cmd:0,thr:0,fast:0,brake:0,vEst:null,wF:null,acc:0,sus:0,heat:0,lam:0,tgt:0,n:0});}
 function tcsReset(S){S.on=false;S.cut=0;S.cmd=0;S.sus=0;S.brake=0;}
@@ -12543,8 +12542,8 @@ const PAD_FIXED={throttle:'RT (analog)',brake:'LT (analog)',left:'Left stick',ri
 const PAD_NAMES=['A','B','X','Y','LB','RB','LT','RT','View','Menu','Left stick press','Right stick press','D-pad up','D-pad down','D-pad left','D-pad right','Guide'];
 const GFX_DEFAULT={shadows:'high',scale:'auto',distance:'normal',fov:56,look:'cine',speedfx:1,mblur:1,fps:false,refl:false,reflRes:256,reflRate:2,reflDist:200,reflStr:1,trDetail:85,trDraw:700};
 const PLAY_DEFAULT={tod:'day',density:50};
-const CFG={kb:Object.assign({},KB_DEFAULT),pad:Object.assign({},PAD_DEFAULT),gfx:Object.assign({},GFX_DEFAULT),play:Object.assign({},PLAY_DEFAULT),police:Object.assign({},POLICE_DEFAULT),tcs:Object.assign({enabled:true},TCS_DEFAULT)};
-try{const s=JSON.parse(localStorage.getItem('backroads.settings')||'null');if(s){Object.assign(CFG.kb,s.kb||{});Object.assign(CFG.pad,s.pad||{});Object.assign(CFG.gfx,s.gfx||{});Object.assign(CFG.play,s.play||{});Object.assign(CFG.police,s.police||{});Object.assign(CFG.tcs,s.tcs||{});}}catch(e){}
+const CFG={kb:Object.assign({},KB_DEFAULT),pad:Object.assign({},PAD_DEFAULT),gfx:Object.assign({},GFX_DEFAULT),play:Object.assign({},PLAY_DEFAULT),police:Object.assign({},POLICE_DEFAULT)};
+try{const s=JSON.parse(localStorage.getItem('backroads.settings')||'null');if(s){Object.assign(CFG.kb,s.kb||{});Object.assign(CFG.pad,s.pad||{});Object.assign(CFG.gfx,s.gfx||{});Object.assign(CFG.play,s.play||{});Object.assign(CFG.police,s.police||{});}}catch(e){}
 delete CFG.kb.recover;delete CFG.pad.recover;CFG.gfx.refl=false;   // car reflections are switched off for now
    // 'Back on the road' was removed; drop it from older saved settings
 function saveCfg(){try{const out=(typeof NET!=='undefined'&&NET.saved)?Object.assign({},CFG,{play:NET.saved.play,police:NET.saved.police}):CFG;localStorage.setItem('backroads.settings',JSON.stringify(out));}catch(e){}}
@@ -13247,7 +13246,6 @@ function openSettings(){settingsFrom=MODE;MODE='settings';show('settings');rende
 function closeSettings(){capture=null;MODE=settingsFrom;show(settingsFrom==='pause'?'pause':'menu');}
 function seg(id,label,opts,val,on){return '<div class="srow"><span class="slab">'+label+'</span><div class="segs" role="group" aria-label="'+label+'">'+
   opts.map(([v,t])=>'<button type="button" class="seg'+(v===val?' on':'')+'" data-set="'+id+'" data-val="'+v+'">'+t+'</button>').join('')+'</div></div>';}
-function tcsFmt(f,v){v=+v;return f==='pct'?Math.round(v*100)+'%':f==='pctpk'?Math.round(v*100)+'% of peak ('+(v*14).toFixed(0)+'%)':f==='pcttg'?Math.round(v*100)+'% of target':f==='nm'?(v?Math.round(v)+' N·m':'Off'):f==='ms'?Math.round(v*1000)+' ms':f==='s'?v.toFixed(2)+' s':f==='mph'?(v*2.237).toFixed(1)+' mph':String(v);}
 function densLabel(v){return v<=0?'Off':v<20?'Very low':v<40?'Low':v<60?'Medium':v<80?'High':'Very high';}
 function setDensity(v){CFG.play.density=clamp(Math.round(v/5)*5,0,100);saveCfg();const r=$('densR'),l=$('densV');if(r)r.value=CFG.play.density;if(l)l.textContent=densLabel(CFG.play.density);}
 function renderSettings(){
@@ -13305,26 +13303,6 @@ function renderSettings(){
     h+=seg('p_respawn','Replacement for a wrecked cruiser',[[60,'1 min'],[180,'3 min'],[300,'5 min'],[600,'10 min']],+C.respawn);
     h+='<p class="snote">A wrecked cruiser stays where it is. After this time a replacement unit enters service at its station and drives out from there.</p>';
     h+=seg('p_debug','Police debug labels (developer)',[[false,'Off'],[true,'On']],C.debug);
-  }else if(settingsTab==='driving'){const T=CFG.tcs;
-    const tsl=(k,label,min,max,step,fmt,note)=>'<div class="srow"><span class="slab">'+label+'</span><div class="slide"><input type="range" data-tcs="'+k+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+T[k]+'" aria-label="'+label+'"><span class="sval" id="tv_'+k+'" data-fmt="'+fmt+'">'+tcsFmt(fmt,T[k])+'</span></div></div>'+(note?'<p class="snote">'+note+'</p>':'');
-    h+='<h3 class="ssub">Traction control</h3>';
-    h+=seg('t_enabled','Traction control',[[true,'On'],[false,'Off']],T.enabled!==false);
-    h+='<p class="snote">Every combustion car starts with it on (or off) as set here; the traction control key still switches it in the car. Electric cars use their own motor control and are not affected.</p>';
-    h+=seg('t_mode','Mode',[['auto','Follow drive mode'],['full','Full'],['sport','Sport'],['track','Track']],T.mode);
-    h+='<p class="snote">Full holds the tyres at the slip where they grip best. Sport allows about 1.7 times that and cuts less; Track about twice, for sliding. Follow drive mode uses Full in Normal, Sport in Sport, Track in Track and Drag.</p>';
-    h+=tsl('target','Target slip',0.5,2.5,0.05,'pctpk','Slip the system aims for, as a share of the slip where the tyre model makes its peak force (14%).');
-    h+=tsl('engage','Engage at',1.05,2,0.05,'pcttg','Slip, relative to the target, that has to be held for the engage filter time before it steps in.');
-    h+=tsl('disengage','Disengage below',0.2,0.95,0.05,'pcttg','It lets go once slip falls below this and the torque is fully restored (the gap stops it switching on and off).');
-    h+=tsl('maxCut','Maximum engine torque cut',0.2,1,0.05,'pct','');
-    h+=tsl('maxBrake','Maximum brake torque on the driven axle',0,3000,100,'nm','Brake on the spinning driven wheels, strongest at low speed and backed off as the brakes heat up.');
-    h+=tsl('filter','Engage filter',0,0.15,0.01,'ms','How long excess slip must last before it intervenes (a third of this when pulling away).');
-    h+=tsl('recovery','Recovery ramp',0.1,1.5,0.05,'s','Time to give full torque back once grip returns, so it never surges.');
-    h+=tsl('lowSpeed','Low-speed slip reference',1,6,0.5,'mph','Below this speed slip is judged as wheel speed minus road speed, not as a ratio, so it stays stable off the line.');
-    h+=seg('t_surfaceAdapt','Surface grip adaptation',[[true,'On'],[false,'Off']],T.surfaceAdapt);
-    h+='<p class="snote">Uses the grip of the surface under the car (asphalt, gravel, grass, water) to set the first torque cut and to engage earlier where grip is low.</p>';
-    h+=seg('t_hz','Control rate',[[50,'50 Hz'],[100,'100 Hz'],[200,'200 Hz']],+T.hz);
-    h+=seg('t_noise','Wheel-speed sensor noise',[[true,'On'],[false,'Off']],T.noise);
-    h+='<div class="srow"><span class="slab"></span><div class="segs"><button type="button" class="seg" data-tcsreset="1">Reset to defaults</button></div></div>';
   }else if(settingsTab==='controls'){
     h+='<div class="segs sub" role="group" aria-label="Device"><button type="button" class="seg'+(ctrlTab==='keyboard'?' on':'')+'" data-ctrl="keyboard">Keyboard</button><button type="button" class="seg'+(ctrlTab==='controller'?' on':'')+'" data-ctrl="controller">Controller</button></div>';
     h+='<div class="binds">';
@@ -13340,14 +13318,11 @@ function renderSettings(){
   body.innerHTML=h;
 }
 function bindSettings(){
-  $('settings').addEventListener('input',e=>{const tk=e.target.dataset&&e.target.dataset.tcs;if(tk){CFG.tcs[tk]=+e.target.value;saveCfg();const l=$('tv_'+tk);if(l)l.textContent=tcsFmt(l.dataset.fmt,CFG.tcs[tk]);return;}
+  $('settings').addEventListener('input',e=>{
     if(e.target.id==='densR')setDensity(+e.target.value);
     const k=e.target.dataset&&e.target.dataset.prange;if(k){CFG.police[k]=+e.target.value;saveCfg();const l=$('pv_'+k);if(l)l.textContent=CFG.police[k];if(POL.ready)polRoster(false);}});
   $('settings').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
     if(t.dataset.tab){if(t.disabled)return;settingsTab=t.dataset.tab;capture=null;renderSettings();return;}
-    if(t.dataset.tcsreset){CFG.tcs=Object.assign({enabled:true},TCS_DEFAULT);saveCfg();renderSettings();return;}
-    if(t.dataset.set&&t.dataset.set.indexOf('t_')===0){let v=t.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;else if(!isNaN(+v)&&v!=='')v=+v;
-      const k=t.dataset.set.slice(2);CFG.tcs[k]=v;saveCfg();if(k==='enabled'&&MODE!=='menu'&&car.spec)car.tc=v;renderSettings();const nb=document.querySelector('#settings [data-set="'+t.dataset.set+'"][data-val="'+t.dataset.val+'"]');if(nb)nb.focus();return;}
     if(t.dataset.set&&t.dataset.set.indexOf('p_')===0){let v=t.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;else if(!isNaN(+v)&&v!=='')v=+v;
       CFG.police[t.dataset.set.slice(2)]=v;saveCfg();renderSettings();const nb=document.querySelector('#settings [data-set="'+t.dataset.set+'"][data-val="'+t.dataset.val+'"]');if(nb)nb.focus();return;}
     if(t.dataset.set){let v=t.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;else if(!isNaN(+v)&&v!=='')v=+v;
@@ -13432,7 +13407,7 @@ function syncHelp(){const h=$('help');if(!h)return;h.querySelector('.kb').hidden
   h.querySelectorAll('[data-k]').forEach(e=>{e.textContent=keyName(CFG.kb[e.dataset.k]);});
   h.querySelectorAll('[data-p]').forEach(e=>{e.textContent=padName(CFG.pad[e.dataset.p]);});}
 function startDrive(){hudGear=hudMode='';syncHelp();t60Reset();
-  const C=CARS[pick.i];spawnCar(C.key,pick.color||C.colors[0]);applyLaunch(C.key);car.tc=CFG.tcs.enabled!==false;placeAtSpawn(true);carObj3.grp.visible=true;applyCarEnv();lastHealth=-1;
+  const C=CARS[pick.i];spawnCar(C.key,pick.color||C.colors[0]);applyLaunch(C.key);car.tc=true;placeAtSpawn(true);carObj3.grp.visible=true;applyCarEnv();lastHealth=-1;
   trafficReset();polReset();
   MODE='drive';show('hud');clusterBuild();CAMV.init=false;CAMV.yaw=0;CAMV.pitch=0;startAudio();
   setDriveView();setShadowSpan(55);
