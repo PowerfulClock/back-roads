@@ -6468,6 +6468,16 @@ const CARS=[
   // sedans
   {key:'impala_ls06',group:'Sedans',label:'2006 Chevrolet Impala LS',year:'2006',colors:['#a9acb0','#111214','#e6e4df','#8e1b1e','#22406b','#b8ab8e','#5d6167'],note:'3.5 V6 · 4-speed auto · FWD',modes:['normal','sport']},
   {key:'accord_v6',group:'Sedans',label:'2017 Honda Accord V6',year:'2017',colors:['#e6e4df','#111214','#a9acb0','#5d6167','#7b1d22','#1f3554','#c9c2b0'],note:'3.5 J35 V6 · 6-speed auto · FWD',modes:['normal','sport']},
+  // electric: Tesla
+  {key:'m3_srp',group:'Electric',label:'2020 Tesla Model 3 Standard Range+',year:'2020',colors:['#e9e9e6','#111214','#5d6167','#1f3a68','#a3141c','#a7abb0'],note:'Single motor · 283 hp · RWD · single-speed',modes:(PRESETS.m3_srp.modes||['normal','sport'])},
+  {key:'m3_lr',group:'Electric',label:'2020 Tesla Model 3 Long Range',year:'2020',colors:['#e9e9e6','#111214','#5d6167','#1f3a68','#a3141c','#a7abb0'],note:'Dual motor · 346 hp · AWD · single-speed',modes:(PRESETS.m3_lr.modes||['normal','sport'])},
+  {key:'m3_perf',group:'Electric',label:'2020 Tesla Model 3 Performance',year:'2020',colors:['#e9e9e6','#111214','#5d6167','#1f3a68','#a3141c','#a7abb0'],note:'Dual motor · 487 hp · AWD · single-speed',modes:(PRESETS.m3_perf.modes||['normal','sport'])},
+  {key:'my_perf',group:'Electric',label:'2020 Tesla Model Y Performance',year:'2020',colors:['#e9e9e6','#111214','#5d6167','#1f3a68','#a3141c','#a7abb0'],note:'Dual motor · 497 hp · AWD · single-speed',modes:(PRESETS.my_perf.modes||['normal','sport'])},
+  {key:'ms_lr',group:'Electric',label:'2020 Tesla Model S Long Range',year:'2020',colors:['#e9e9e6','#111214','#5d6167','#1f3a68','#a3141c','#a7abb0'],note:'Dual motor · 478 hp · AWD · single-speed',modes:(PRESETS.ms_lr.modes||['normal','sport'])},
+  {key:'ms_perf',group:'Electric',label:'2020 Tesla Model S Performance',year:'2020',colors:['#e9e9e6','#111214','#5d6167','#1f3a68','#a3141c','#a7abb0'],note:'Dual motor · 778 hp · AWD · single-speed',modes:(PRESETS.ms_perf.modes||['normal','sport'])},
+  {key:'mx_perf',group:'Electric',label:'2020 Tesla Model X Performance',year:'2020',colors:['#e9e9e6','#111214','#5d6167','#1f3a68','#a3141c','#a7abb0'],note:'Dual motor · 778 hp · AWD · single-speed',modes:(PRESETS.mx_perf.modes||['normal','sport'])},
+  {key:'ms_plaid',group:'Electric',label:'2022 Tesla Model S Plaid',year:'2022',colors:['#e9e9e6','#111214','#5d6167','#1f3a68','#b0101a','#b9bcc0'],note:'Tri-motor · 1,020 hp · AWD · single-speed',modes:(PRESETS.ms_plaid.modes||['normal','sport'])},
+  {key:'mx_plaid',group:'Electric',label:'2022 Tesla Model X Plaid',year:'2022',colors:['#e9e9e6','#111214','#5d6167','#1f3a68','#b0101a','#b9bcc0'],note:'Tri-motor · 1,020 hp · AWD · single-speed',modes:(PRESETS.mx_plaid.modes||['normal','sport'])},
   // the traffic models, same data as the drag simulator
   {key:'accord_20t',group:'From traffic',label:'2018 Honda Accord 2.0T',year:'2018',colors:['#e9e9e6','#111214','#a7abb0','#5d6167','#8e1b1e','#1f3a68','#3a3d41'],note:'2.0 turbo I4 · 10-speed auto · FWD',modes:['normal','sport']},
   {key:'fusionsport',group:'From traffic',label:'2017 Ford Fusion Sport',year:'2017',colors:['#111214','#5d6167','#a7abb0','#e9e9e6','#7b2a33','#1f3a68','#8a8e94'],note:'2.7 EcoBoost V6 · 8-speed auto · AWD',modes:['normal','sport']},
@@ -6481,6 +6491,9 @@ const CARS=[
   {key:'sq5',group:'From traffic',label:'2017 Audi SQ5',year:'2017',colors:['#5d6167','#e9e9e6','#111214','#a7abb0','#1f3a68','#8a8e94','#3a3d41'],note:'3.0 supercharged V6 · 8-speed auto · AWD',modes:['normal','sport']},
   {key:'durangoGTPlus',group:'From traffic',label:'2023 Dodge Durango GT Plus',year:'2023',colors:['#111214','#e9e9e6','#5d6167','#a7abb0','#8e1b1e','#1f3a68','#3a3d41'],note:'3.6 Pentastar V6 · 8-speed auto · AWD',modes:['normal','sport']},
 ];
+
+// Teslas are electronically limited (mph)
+[['m3_srp',140],['m3_lr',145],['m3_perf',162],['my_perf',155],['ms_lr',155],['ms_perf',163],['mx_perf',163],['ms_plaid',200],['mx_plaid',163]].forEach(([k,v])=>{if(PRESETS[k])PRESETS[k].vmax=v;});
 
 /* ---------------------------------------------------------------- forced induction
    Boost builds with exhaust flow (engine speed x throttle), each car using its drag-sim induction data: spool time
@@ -6689,7 +6702,8 @@ function stepDynamics(h){
     const full=torqueAt(c,rpm),na=full*B.naFrac;tqNow=na*pedal+(full-na)*Math.min(pedal,car.boost/Math.max(ss,0.08));
     car.boostPsi=B.psi*car.boost-10*(1-pedal)*(1-car.boost);}   // gauge: boost above zero, manifold vacuum below
   let Teng=inGear?tqNow*car.MD.powerMul*limp:0;
-  if(turb>c.redline*0.995)Teng=0;                                // rev limiter (manual mode holds the gear on it)
+  if(turb>c.redline*0.995)Teng=0;
+  if(c.vmax&&Teng>0){const mph=Math.abs(car.u)*2.237;Teng*=clamp((c.vmax-mph)/2.5,0,1);}   // electronic top-speed limiter                                // rev limiter (manual mode holds the gear on it)
   if(car.state==='R'&&turb>c.redline*0.55)Teng=Math.min(Teng,0);  // reverse is governed, like the real cars
   // idle creep through the converter, and engine braking off throttle
   if(inGear&&car.thr<0.02&&car.brk<0.05&&turb<car.idle)Teng+=c.tq*0.16*(1-turb/car.idle);
