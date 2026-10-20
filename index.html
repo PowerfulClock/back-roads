@@ -12685,7 +12685,8 @@ function raceBind(){const box=$('race');if(box._b)return;box._b=1;
     if(sel&&sel.options.length){const o=[...sel.options].find(x=>pickMatch(CARS.find(c=>c.key===x.value),pkNorm(RS.q[s])))||sel.options[0];RS[s]=Object.assign(raceSideDefault(o.value),{tc:RS[s].tc});RS.q[s]='';raceRenderSide(s);raceSaveSetup();}}});}
 
 /* ---- the race ---- */
-function raceApply(o,S){const C=CARS.find(c=>c.key===S.key);o.mode=(C&&C.modes&&C.modes.indexOf(S.mode)>=0)?S.mode:'normal';o.MD=MODES[o.mode]||MODES.normal;
+function raceApply(o,S){const C=CARS.find(c=>c.key===S.key),m=(C&&C.modes&&C.modes.indexOf(S.mode)>=0)?S.mode:'normal';
+  {const P=car;car=o;try{setMode(m,true);}finally{car=P;}}   // the full mode change: shift profile, shift speed, suspension, schedule
   o.tc=!!S.tc;o.launchMode=S.launch||'off';o.launchRpm=S.rpm||3000;o.lcStage=false;o.lcGo=null;o.lcHold=0;o.tcs=null;o.tcCut=0;}
 function raceGrid(o,lane){o.x=RACE_X+lane*LANE_OFF;o.z=RACE_LINE+(o.halfLen||2.3);o.psi=RACE_PSI;o.u=0;o.v=0;o.yr=0;o.omega=0;o.omegaF=0;o.steer=0;o.ax=0;o.ay=0;
   o.state='D';o.gear=0;o.thr=0;o.brk=1;o.boost=0;o.flareRpm=null;o.cvtR=null;o.shiftT=0;o.slamT=0;o.lcStage=false;o.lcGo=null;}
