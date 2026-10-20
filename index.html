@@ -13754,6 +13754,8 @@ function loadYield(){return new Promise(r=>{let done=false;const go=()=>{if(!don
 async function boot(){
   if(!window.THREE){$('loading').textContent='The 3D view needs three.js from a CDN. Check your connection and reload.';return;}
   loadSet(0.02,'Starting');await loadYield();
+  // every engine recording any car uses starts downloading now, alongside the build; the screen waits for them below
+  try{const S=new Set();CARS.forEach(c=>{try{const n=sndPackFor(carSpec(c.key));if(n)S.add(n);}catch(e){}});S.forEach(n=>{try{sndLoad(n);}catch(e){}});}catch(e){}
   const steps=[['Painting textures',makeTextures],['Mixing materials',makeMats],['Starting the 3D view',initRenderer],['Laying out the county',defineMap],
     ['Building roads, towns and farms',buildMap],['Planning traffic routes',trInitNet],['Smoke and skid marks',initFx],['Drawing the minimap',drawMiniBase],
     ['Controls',()=>{bindOrbit();bindTouch();bindFullMap();bindSettings();applyGfx();syncHelp();}],['Street lights',initLampPool],['Sky and light',()=>{applyTOD();setupReflections();}]];
@@ -13769,11 +13771,12 @@ async function boot(){
   for(;;){loadSet(0.38+0.42*(todo?built/todo:1),'Traffic and police cars '+Math.min(built+1,todo)+' of '+todo);await loadYield();if(!trBuildNext())break;built++;}
   loadSet(0.81,'Compiling shaders');await loadYield();
   trWarm();try{menuCamera(0);renderer.compile(world,camera);}catch(e){}
-  // the engine recording: wait for it to decode (up to 10 s, so a slow or blocked connection can't hang the game)
-  loadSet(0.88,'Engine sounds');const t0=performance.now();
-  for(;;){const P=Object.values(SND.packs),n=P.length,ok=P.filter(q=>q.ready||q.failed).length,el=performance.now()-t0;
-    if((ok>=n&&(!pack||pack.ready||pack.failed))||el>12000)break;
-    loadSet(0.88+0.07*(n?ok/n:1),'Engine sounds '+ok+' of '+n);await new Promise(r=>setTimeout(r,100));}
+  // every engine recording: wait until they're all downloaded and decoded (a failed one is retried; after 90 s the game
+  // starts anyway and the rest keep loading in the background, so a slow or blocked connection can't hang it)
+  loadSet(0.84,'Engine sounds');const t0=performance.now();
+  for(;;){const P=Object.values(SND.packs),n=P.length,ok=P.filter(q=>q.ready||q.dead).length,el=performance.now()-t0;
+    if(ok>=n||el>90000)break;
+    loadSet(0.84+0.11*(n?ok/n:1),'Engine sounds '+ok+' of '+n);await new Promise(r=>setTimeout(r,100));}
   // draw the first frames behind the screen so the first look at the menu doesn't stutter
   loadSet(0.95,'First frames');show('menu');$('loading').hidden=false;
   last=performance.now();requestAnimationFrame(t=>{last=t;frame(t);});
