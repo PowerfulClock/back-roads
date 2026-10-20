@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="Back Roads: an open-world driving game with traffic, police pursuits and 187 cars with recorded engine sounds.">
+<meta name="description" content="Back Roads: an open-world driving game with traffic, police pursuits 226 cars and street racing.">
 </head><body>
 <script>
 /* PeerJS 1.5.5 (MIT) */
@@ -336,6 +336,35 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
 #lcbar.armed{border-color:#38d07a;color:#7dffb0}
 #hud:not(.qmc-on) #lcbar{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 @media (max-width:700px){#qmc{width:min(330px,62vw);bottom:calc(64px + env(safe-area-inset-bottom,0px))}}
+/* street race */
+.rpanel{position:absolute;right:0;top:0;bottom:0;width:min(980px,100%);overflow:auto;padding:28px 32px 40px;background:linear-gradient(90deg,rgba(14,16,19,.55),rgba(14,16,19,.94) 18%);box-sizing:border-box}
+.rhead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:14px}.rhead h2{margin:2px 0 0;font-size:44px;font-weight:800;text-transform:uppercase;line-height:1}
+.rbtns{display:flex;gap:8px}
+.rcols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.rside{background:rgba(26,29,33,.9);border:1px solid var(--line);padding:14px;min-width:0}
+.rside h3{margin:0 0 8px;font:600 12px var(--mono);letter-spacing:.16em;color:var(--amber);text-transform:uppercase}
+.rside input[type=search]{width:100%;box-sizing:border-box;background:rgba(14,16,19,.9);border:1px solid var(--line);color:var(--paper);font:500 14px var(--display);padding:7px 10px;outline:none}
+.rside input[type=search]:focus{border-color:var(--amber)}
+.rside select{width:100%;margin-top:6px;background:rgba(14,16,19,.9);color:var(--paper);border:1px solid var(--line);font:500 14px var(--display);padding:4px;height:150px}
+.rside select optgroup{color:var(--amber);font:600 11px var(--mono)}
+.rname{margin:10px 0 2px;font-size:20px;font-weight:700;line-height:1.1}.rspec{font:500 11px var(--mono);color:var(--dim);margin-bottom:8px}
+.rrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}.rrow>label{font:500 10px var(--mono);letter-spacing:.12em;color:var(--dim);text-transform:uppercase;min-width:66px}
+.rrow .seg{font-size:13px;padding:4px 9px}.rrow .sw{width:22px;height:22px}
+.rrow input[type=range]{flex:1;min-width:90px;accent-color:var(--amber)}.rrow .rv{font:600 12px var(--mono);min-width:70px;text-align:right}
+.rrow.off{opacity:.35;pointer-events:none}
+.rdist{margin-top:16px;background:rgba(26,29,33,.9);border:1px solid var(--line);padding:14px}
+@media (max-width:760px){.rcols{grid-template-columns:1fr}.rpanel{padding:18px 16px 30px;background:rgba(14,16,19,.94)}}
+#raceHud{position:absolute;left:50%;top:calc(64px + env(safe-area-inset-top,0px));transform:translateX(-50%);text-align:center;pointer-events:none;max-width:min(720px,92vw)}
+#rhTop{font:800 30px/1.1 var(--display);letter-spacing:.04em;text-transform:uppercase;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.8)}
+#rhSub{font:500 13px var(--mono);letter-spacing:.06em;color:#e8e6e1;text-shadow:0 1px 4px #000;margin-top:4px}
+#rhTop .hk{display:inline-block;width:22px;height:22px;border-radius:50%;border:2px solid #fff;margin:0 6px;vertical-align:middle}#rhTop .hk.on{background:#ffb21e;border-color:#ffb21e;box-shadow:0 0 14px #ffb21e}
+#rhTop.go{color:#3cf08a}
+#rhGo{pointer-events:auto;margin-top:8px;font:700 14px var(--mono);letter-spacing:.1em;background:rgba(18,20,23,.88);color:#fff;border:1px solid var(--amber);padding:7px 16px;cursor:pointer}
+#raceRes{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);width:min(620px,92vw);background:rgba(16,18,21,.95);border:1px solid var(--line);padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+#raceRes h2{margin:0;font-size:40px;font-weight:800;text-transform:uppercase}#raceRes h2.win{color:#3cf08a}#raceRes h2.lose{color:#ff6b5e}
+#raceRes .rr-sub{font:500 12px var(--mono);color:var(--dim);margin:4px 0 14px}
+#raceRes table{width:100%;border-collapse:collapse;font:500 13px var(--mono)}#raceRes th{text-align:left;color:var(--dim);font-weight:500;padding:4px 6px}#raceRes td{padding:5px 6px;border-top:1px solid var(--line)}#raceRes td.n{text-align:right;font-variant-numeric:tabular-nums}
+#raceRes .rbtns{margin-top:16px;justify-content:flex-end}
 #pcomm{position:absolute;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(460px,70vw);text-align:center;pointer-events:none}
 #pcomm span{display:block;font:700 13px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:#fff;text-shadow:0 1px 3px #000;margin-bottom:6px}
 #pcomm .pbar{height:8px;background:rgba(10,12,15,.7);border:1px solid rgba(255,255,255,.35);display:flex;justify-content:center}
@@ -407,6 +436,7 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
     <nav class="menu-btns" aria-label="Game mode">
       <button class="mbtn primary" id="btnFree" type="button">Free Roam <small>Offline · your settings</small></button>
       <button class="mbtn" id="btnServers" type="button">Servers <small>Online · up to 4 players</small></button>
+      <button class="mbtn" id="btnRace" type="button">Street Race <small>Offline · one on one, up to a mile</small></button>
       <button class="mbtn" id="btnModesBack" type="button">Back</button>
     </nav>
   </div>
@@ -484,6 +514,8 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
   <div id="precog"></div>
   <div id="hitflash"></div>
   <div id="qmc" hidden></div>
+  <div id="raceHud" hidden><div id="rhTop"></div><div id="rhSub"></div><button id="rhGo" type="button" hidden>Start (Space)</button></div>
+  <div id="raceRes" hidden></div>
   <div id="lcbar" hidden></div>
   <div class="cluster">
     <div id="hp" class="hp" data-lvl="ok"><span class="hpl">VEHICLE</span><div class="hpbar"><i id="hpFill"></i></div><span id="hpTxt">100%</span></div>
@@ -502,6 +534,16 @@ kbd{font:600 11px var(--mono);border:1px solid var(--line);border-bottom-width:2
   <canvas id="fmCanvas"></canvas>
   <div class="fmhead"><b id="fmTitle">Map</b><span id="fmCursor"></span><button id="fmClose" type="button">Close</button></div>
   <div class="fmfoot"><div id="fmLegend"></div><div id="fmHint"></div></div>
+</section>
+
+<section id="race" class="layer" hidden>
+  <div class="rpanel">
+    <div class="rhead"><div><div class="eyebrow">Perimeter Road, east straight</div><h2>Street Race</h2></div>
+      <div class="rbtns"><button class="btn" id="rsBack" type="button">Back</button><button class="btn go" id="rsGo" type="button">Race</button></div></div>
+    <div class="rcols"><div class="rside" id="rsYou"></div><div class="rside" id="rsOpp"></div></div>
+    <div class="rdist" id="rsDist"></div>
+    <p class="snote">You line up in the right lane, your opponent in the left. Press SPACE when you're ready: they honk three times and go on the third. Hold brake and gas together beforehand to stage your own launch control or brake boost.</p>
+  </div>
 </section>
 
 <section id="pause" class="layer" hidden>
@@ -8789,6 +8831,46 @@ const CARS=[
   {key:'taurussho',group:'From traffic',label:'2019 Ford Taurus SHO',year:'2019',colors:['#111214','#e9e9e6','#5d6167','#a7abb0','#7b2a33','#1f3a68','#71757b'],note:'3.5 EcoBoost V6 · 8-speed auto · AWD',modes:['normal','sport']},
   {key:'sq5',group:'From traffic',label:'2017 Audi SQ5',year:'2017',colors:['#5d6167','#e9e9e6','#111214','#a7abb0','#1f3a68','#8a8e94','#3a3d41'],note:'3.0 supercharged V6 · 8-speed auto · AWD',modes:['normal','sport']},
   {key:'durangoGTPlus',group:'From traffic',label:'2023 Dodge Durango GT Plus',year:'2023',colors:['#111214','#e9e9e6','#5d6167','#a7abb0','#8e1b1e','#1f3a68','#3a3d41'],note:'3.6 Pentastar V6 · 8-speed auto · AWD',modes:['normal','sport']},
+  // the rest of the drag-strip cars (synthesised engine sound)
+  {key:"elantraN",group:"Hot hatches & compacts",label:"2023 Hyundai Elantra N (DCT)",year:"2023",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 8-speed dual-clutch \u00b7 FWD",modes:(PRESETS["elantraN"].modes||['normal','sport'])},
+  {key:"r8v10",group:"Sports cars & supercars",label:"2020 Audi R8 V10 Performance",year:"2020",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"5.2 V10 \u00b7 7-speed dual-clutch \u00b7 AWD",modes:(PRESETS["r8v10"].modes||['normal','sport'])},
+  {key:"gti_mk8",group:"Hot hatches & compacts",label:"2022 Volkswagen Golf GTI (Mk8)",year:"2022",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 7-speed dual-clutch \u00b7 FWD",modes:(PRESETS["gti_mk8"].modes||['normal','sport'])},
+  {key:"golfr_mk8",group:"Hot hatches & compacts",label:"2022 Volkswagen Golf R (Mk8)",year:"2022",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 7-speed dual-clutch \u00b7 AWD",modes:(PRESETS["golfr_mk8"].modes||['normal','sport'])},
+  {key:"gti_mk8m",group:"Hot hatches & compacts",label:"2022 Volkswagen Golf GTI 6-Speed Manual (Mk8)",year:"2022",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 6-speed manual \u00b7 FWD",modes:(PRESETS["gti_mk8m"].modes||['normal','sport'])},
+  {key:"gti_cs",group:"Hot hatches & compacts",label:"2021 Volkswagen Golf GTI Clubsport (Mk8)",year:"2021",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 7-speed dual-clutch \u00b7 FWD",modes:(PRESETS["gti_cs"].modes||['normal','sport'])},
+  {key:"golf8_15",group:"Hot hatches & compacts",label:"2021 Volkswagen Golf 1.5 eTSI (Mk8)",year:"2021",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"1.5 turbo I4 \u00b7 7-speed dual-clutch \u00b7 FWD",modes:(PRESETS["golf8_15"].modes||['normal','sport'])},
+  {key:"golfr_mk8m",group:"Hot hatches & compacts",label:"2022 Volkswagen Golf R 6-Speed Manual (Mk8)",year:"2022",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 6-speed manual \u00b7 AWD",modes:(PRESETS["golfr_mk8m"].modes||['normal','sport'])},
+  {key:"golfr_20th",group:"Hot hatches & compacts",label:"2023 Volkswagen Golf R 20th Anniversary Edition (Mk8)",year:"2023",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 7-speed dual-clutch \u00b7 AWD",modes:(PRESETS["golfr_20th"].modes||['normal','sport'])},
+  {key:"gti_mk85",group:"Hot hatches & compacts",label:"2025 Volkswagen Golf GTI (Mk8.5)",year:"2025",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 7-speed dual-clutch \u00b7 FWD",modes:(PRESETS["gti_mk85"].modes||['normal','sport'])},
+  {key:"golfr_mk85",group:"Hot hatches & compacts",label:"2025 Volkswagen Golf R (Mk8.5)",year:"2025",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 7-speed dual-clutch \u00b7 AWD",modes:(PRESETS["golfr_mk85"].modes||['normal','sport'])},
+  {key:"mx5_2024",group:"Hot hatches & compacts",label:"2024 Mazda MX-5 Miata",year:"2024",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 I4 \u00b7 6-speed manual \u00b7 RWD",modes:(PRESETS["mx5_2024"].modes||['normal','sport'])},
+  {key:"focusrs",group:"Hot hatches & compacts",label:"2017 Ford Focus RS",year:"2017",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.3 turbo I4 \u00b7 6-speed manual \u00b7 AWD",modes:(PRESETS["focusrs"].modes||['normal','sport'])},
+  {key:"g70_25t",group:"Sedans & coupes",label:"2022 Genesis G70 2.5T AWD",year:"2022",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.5 turbo I4 \u00b7 8-speed auto \u00b7 AWD",modes:(PRESETS["g70_25t"].modes||['normal','sport'])},
+  {key:"mkz_20t",group:"Sedans & coupes",label:"2017 Lincoln MKZ 2.0T FWD",year:"2017",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 6-speed auto \u00b7 FWD",modes:(PRESETS["mkz_20t"].modes||['normal','sport'])},
+  {key:"mkz_hyb",group:"Sedans & coupes",label:"2017 Lincoln MKZ Hybrid (eCVT)",year:"2017",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 I4 \u00b7 eCVT \u00b7 FWD",modes:(PRESETS["mkz_hyb"].modes||['normal','sport'])},
+  {key:"s60_t6",group:"Sedans & coupes",label:"2019 Volvo S60 T6 AWD",year:"2019",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 twincharged I4 \u00b7 8-speed auto \u00b7 AWD",modes:(PRESETS["s60_t6"].modes||['normal','sport'])},
+  {key:"s60_t8",group:"Sedans & coupes",label:"2020 Volvo S60 T8 Polestar",year:"2020",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 twincharged I4 \u00b7 8-speed auto \u00b7 AWD",modes:(PRESETS["s60_t8"].modes||['normal','sport'])},
+  {key:"tlx_24",group:"Sedans & coupes",label:"2017 Acura TLX 2.4",year:"2017",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.4 I4 \u00b7 8-speed dual-clutch \u00b7 FWD",modes:(PRESETS["tlx_24"].modes||['normal','sport'])},
+  {key:"tlx_20t",group:"Sedans & coupes",label:"2021 Acura TLX 2.0T SH-AWD",year:"2021",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 10-speed auto \u00b7 AWD",modes:(PRESETS["tlx_20t"].modes||['normal','sport'])},
+  {key:"veyron",group:"Sports cars & supercars",label:"2008 Bugatti Veyron 16.4",year:"2008",colors:["#1d3f8a", "#111214", "#e9e9e6", "#c8102e", "#5d6167", "#e8a20c"],note:"8.0 quad-turbo W16 \u00b7 7-speed dual-clutch \u00b7 AWD",modes:(PRESETS["veyron"].modes||['normal','sport'])},
+  {key:"veyron_ss",group:"Sports cars & supercars",label:"2011 Bugatti Veyron Super Sport",year:"2011",colors:["#1d3f8a", "#111214", "#e9e9e6", "#c8102e", "#5d6167", "#e8a20c"],note:"8.0 quad-turbo W16 \u00b7 7-speed dual-clutch \u00b7 AWD",modes:(PRESETS["veyron_ss"].modes||['normal','sport'])},
+  {key:"chiron",group:"Sports cars & supercars",label:"2018 Bugatti Chiron",year:"2018",colors:["#1d3f8a", "#111214", "#e9e9e6", "#c8102e", "#5d6167", "#e8a20c"],note:"8.0 quad-turbo W16 \u00b7 7-speed dual-clutch \u00b7 AWD",modes:(PRESETS["chiron"].modes||['normal','sport'])},
+  {key:"agera_rs",group:"Sports cars & supercars",label:"2017 Koenigsegg Agera RS",year:"2017",colors:["#e9e9e6", "#111214", "#f2b705", "#1d3f8a", "#c8102e", "#5d6167"],note:"5.0 twin-turbo flat-plane V8 \u00b7 7-speed dual-clutch \u00b7 RWD",modes:(PRESETS["agera_rs"].modes||['normal','sport'])},
+  {key:"jesko",group:"Sports cars & supercars",label:"2023 Koenigsegg Jesko Absolut",year:"2023",colors:["#e9e9e6", "#111214", "#f2b705", "#1d3f8a", "#c8102e", "#5d6167"],note:"5.0 twin-turbo flat-plane V8 \u00b7 9-speed dual-clutch \u00b7 RWD",modes:(PRESETS["jesko"].modes||['normal','sport'])},
+  {key:"regera",group:"Sports cars & supercars",label:"2019 Koenigsegg Regera",year:"2019",colors:["#e9e9e6", "#111214", "#f2b705", "#1d3f8a", "#c8102e", "#5d6167"],note:"5.0 twin-turbo flat-plane V8 \u00b7 1-speed dual-clutch \u00b7 RWD",modes:(PRESETS["regera"].modes||['normal','sport'])},
+  {key:"venom_gt",group:"Sports cars & supercars",label:"2014 Hennessey Venom GT",year:"2014",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"7.0 twin-turbo V8 \u00b7 6-speed manual \u00b7 RWD",modes:(PRESETS["venom_gt"].modes||['normal','sport'])},
+  {key:"impala_ss06",group:"Sedans & coupes",label:"2006 Chevrolet Impala SS",year:"2006",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"5.3 V8 \u00b7 4-speed auto \u00b7 FWD",modes:(PRESETS["impala_ss06"].modes||['normal','sport'])},
+  {key:"rs7_2026",group:"Sedans & coupes",label:"2026 Audi RS7 Performance",year:"2026",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"4.0 twin-turbo V8 \u00b7 8-speed auto \u00b7 AWD",modes:(PRESETS["rs7_2026"].modes||['normal','sport'])},
+  {key:"lucidDreamP",group:"Electric",label:"2022 Lucid Air Dream Edition P",year:"2022",colors:["#e9e9e6", "#111214", "#5d6167", "#2a3f5f", "#b8ab8e", "#a7abb0"],note:"Electric \u00b7 single-speed \u00b7 AWD",modes:(PRESETS["lucidDreamP"].modes||['normal','sport'])},
+  {key:"lucidSapphire",group:"Electric",label:"2025 Lucid Air Sapphire",year:"2025",colors:["#e9e9e6", "#111214", "#5d6167", "#2a3f5f", "#b8ab8e", "#a7abb0"],note:"Electric \u00b7 single-speed \u00b7 AWD",modes:(PRESETS["lucidSapphire"].modes||['normal','sport'])},
+  {key:"q60_1720trwd",group:"Sedans & coupes",label:"2017 Infiniti Q60 2.0t",year:"2017",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 7-speed auto \u00b7 RWD",modes:(PRESETS["q60_1720trwd"].modes||['normal','sport'])},
+  {key:"q60_1720tawd",group:"Sedans & coupes",label:"2017 Infiniti Q60 2.0t AWD",year:"2017",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 7-speed auto \u00b7 AWD",modes:(PRESETS["q60_1720tawd"].modes||['normal','sport'])},
+  {key:"q60_1720tprwd",group:"Sedans & coupes",label:"2017 Infiniti Q60 2.0t Premium",year:"2017",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 7-speed auto \u00b7 RWD",modes:(PRESETS["q60_1720tprwd"].modes||['normal','sport'])},
+  {key:"q60_1720tpawd",group:"Sedans & coupes",label:"2017 Infiniti Q60 2.0t Premium AWD",year:"2017",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 7-speed auto \u00b7 AWD",modes:(PRESETS["q60_1720tpawd"].modes||['normal','sport'])},
+  {key:"bmw230irwd",group:"BMW",label:"2024 BMW 230i",year:"2024",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 8-speed auto \u00b7 RWD",modes:(PRESETS["bmw230irwd"].modes||['normal','sport'])},
+  {key:"bmw330i",group:"BMW",label:"2023 BMW 330i",year:"2023",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 8-speed auto \u00b7 RWD",modes:(PRESETS["bmw330i"].modes||['normal','sport'])},
+  {key:"bmw430i",group:"BMW",label:"2023 BMW 430i",year:"2023",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 8-speed auto \u00b7 RWD",modes:(PRESETS["bmw430i"].modes||['normal','sport'])},
+  {key:"x3_30i",group:"BMW",label:"2022 BMW X3 xDrive30i",year:"2022",colors:["#e9e9e6", "#111214", "#5d6167", "#a7abb0", "#1f3a68", "#8e1b1e", "#2f6b3a"],note:"2.0 turbo I4 \u00b7 8-speed auto \u00b7 AWD",modes:(PRESETS["x3_30i"].modes||['normal','sport'])},
   // every other drag-strip car that has its own recorded engine sound
   {key:"porsche911",group:"Sports cars & supercars",label:"2020 Porsche 911 Carrera S",year:"2020",colors:["#d8d8d4", "#111214", "#c8102e", "#1d3f8a", "#f2b705", "#5d6167", "#2f6b3a"],note:"3.0 twin-turbo flat-six \u00b7 8-speed PDK dual-clutch \u00b7 RWD",modes:(PRESETS["porsche911"].modes||['normal','sport'])},
   {key:"porscheGT3",group:"Sports cars & supercars",label:"2022 Porsche 911 GT3",year:"2022",colors:["#d8d8d4", "#111214", "#c8102e", "#1d3f8a", "#f2b705", "#5d6167", "#2f6b3a"],note:"4.0 flat-six \u00b7 7-speed PDK dual-clutch \u00b7 RWD",modes:(PRESETS["porscheGT3"].modes||['normal','sport'])},
@@ -8920,7 +9002,7 @@ const CARS=[
   {key:"x7_40i",group:"BMW",label:"2023 BMW X7 xDrive40i",year:"2023",colors:["#1c3f94", "#111214", "#e9e9e6", "#5d6167", "#a7abb0", "#8e1b1e", "#3f6e4a"],note:"3.0 turbo I6 \u00b7 8-speed auto \u00b7 AWD",modes:(PRESETS["x7_40i"].modes||['normal','sport'])},
 ];
 
-{const G=['Muscle cars','Sports cars & supercars','BMW','Sedans & coupes','SUVs','Police & fleet','Electric','From traffic','More cars'],
+{const G=['Muscle cars','Sports cars & supercars','BMW','Sedans & coupes','Hot hatches & compacts','SUVs','Police & fleet','Electric','From traffic','More cars'],
   rank=C=>{const i=G.indexOf(C.group);return i<0?99:i;},orig=new Map(CARS.map((C,i)=>[C,i]));
   const key=C=>C.label.replace(/^\d{4}\s+/,'')+' '+C.year;
   CARS.sort((a,b)=>rank(a)-rank(b)||(a.group==='Electric'?orig.get(a)-orig.get(b):key(a).localeCompare(key(b))));}
@@ -9162,7 +9244,12 @@ function stepDynamics(h){
   /* --- engine + torque converter + gearbox (drag-sim engine model) --- */
   const inGear=car.state==='D'||car.state==='M'||car.state==='R';
   const dirSign=car.state==='R'?-1:inGear?1:0;
-  const ov=car.state==='R'?car.revRatio*c.fd:c.gears[car.gear]*c.fd;
+  // a CVT (or a hybrid's eCVT) has no fixed gears: its ratio slides between the two limits to hold the engine where
+  // the throttle asks (near peak power when floored)
+  const cvt=c.trans==='cvt'||c.trans==='ecvt';
+  if(cvt&&car.state!=='R'){const G0=c.gears[0],G1=c.gears[c.gears.length-1],rpmT=car.idle+((c.hpRpm||5500)*0.95-car.idle)*Math.pow(car.thr,0.8);
+    const want=clamp(rpmT*2*Math.PI/60/Math.max(Math.abs(car.omega),0.1)/c.fd,G1,G0);if(car.cvtR==null)car.cvtR=G0;car.cvtR+=(want-car.cvtR)*Math.min(1,h/0.3);car.gear=0;}
+  const ov=car.state==='R'?car.revRatio*c.fd:cvt?car.cvtR*c.fd:c.gears[car.gear]*c.fd;
   const wheelRpm=Math.abs(car.omega)*60/(2*Math.PI);
   const turb=inGear?wheelRpm*ov:0;
   let rpm,mult=1;
@@ -9208,7 +9295,7 @@ function stepDynamics(h){
     if(sporty&&car.state==='D'&&car.thr<car.thrPeak-0.2&&car.u>1.5){car.liftUntil=T+3.0;car.thrPeak=car.thr;}
     if(!sporty||car.state!=='D')car.liftUntil=0;
     const liftHold=car.liftUntil>T;
-    if(car.state==='D'&&car.shiftT<=0&&since>0.35){
+    if(car.state==='D'&&car.shiftT<=0&&since>0.35&&!cvt){
       const up=schedUp(c,car.thr),floor=schedFloor(c,tipHold?car.thrRef:car.thr);
       const nextUp=car.gear<n-1?turb*c.gears[car.gear+1]/c.gears[car.gear]:0;
       if(car.gear<n-1&&car.brk<0.3&&turb>flare*0.95&&(turb>up&&!liftHold&&nextUp>=floor*0.9||turb>c.redline-250))beginShift(car.gear+1,rpm);
@@ -9246,7 +9333,9 @@ function stepDynamics(h){
   if(car.shiftT>0){car.shiftT-=h;const k=clamp(1-car.shiftT/Math.max(h,car.shiftDur),0,1);hold=car.shiftP?shiftTorque(car.shiftP,k):1-car.MD.hold;
     if(car.state==='D'&&car.thr<0.1)hold=Math.max(hold,0.8);}
   else if(car.slamT>0){car.slamT-=h;const k=car.slamT/0.19;if(Teng>0)hold=1+car.slamAmp*k*k;}
-  const Tdrive=dirSign*Teng*1.35582*car.pf*mult*ov*c.eff*hold;   // N·m at the driven wheels
+  let Tdrive=dirSign*Teng*1.35582*car.pf*mult*ov*c.eff*hold;   // N·m at the driven wheels
+  // a hybrid's electric motor adds its own torque at the wheels, through a fixed reduction, power-limited
+  if(c.hybHp&&c.trans==='ecvt'&&dirSign>0&&!car.disabled)Tdrive+=pedal*Math.min(c.hybTq*1.35582*c.fd*0.45,c.hybHp*745.7*0.8/Math.max(Math.abs(car.omega),1));
   const TdrivePre=dirSign*Math.max(0,TengPre)*1.35582*car.pf*mult*ov*c.eff*hold;
 
   /* --- body-frame velocities at each axle --- */
@@ -9465,7 +9554,7 @@ function spawnCar(key,color){
   car.x=MAP.spawn.x;car.z=MAP.spawn.z;car.psi=MAP.spawn.psi;
   skidPool.forEach(m=>m.visible=false);smokePool.forEach(m=>m.visible=false);
   car.lastWheel=[null,null,null,null];
-  car.health=100;car.disabled=false;car.burnt=false;car.flareRpm=null;car.lcStage=false;car.lcGo=null;car.tcs=null;car.tcCut=0;car.flat=null;car.boost=0;car.boostPsi=0;car.smoke=0;   // a fresh car: nothing carried over from the last one (flat tyres, boost, smoke)
+  car.health=100;car.disabled=false;car.burnt=false;car.flareRpm=null;car.lcStage=false;car.lcGo=null;car.tcs=null;car.tcCut=0;car.cvtR=null;car.flat=null;car.boost=0;car.boostPsi=0;car.smoke=0;   // a fresh car: nothing carried over from the last one (flat tyres, boost, smoke)
   buildLightRig();
   syncCar(0);
 }
@@ -10037,6 +10126,7 @@ function trClear(){trAudioStop();polSirenStop();boomClear();TRAFFIC.cars.slice()
 function aiCrashed(a,hit,by){if(!a||!a.ai)return;
   if(!a.acc&&!a.parked){(TRAFFIC.log=TRAFFIC.log||[]).push(Math.round(TRAFFIC.t)+'s #'+a.id+' '+(a.pers.kind)+' hit '+hit.toFixed(1)+' by '+(by?(by===PLAYER?'player':by.id?'#'+by.id+(by.sim||''):by):'static')+' at '+a.x.toFixed(0)+','+a.z.toFixed(0)+' psi'+a.psi.toFixed(2)+' v'+a.u.toFixed(1)+(by&&by.psi!=null?' other psi'+by.psi.toFixed(2)+' v'+by.u.toFixed(1):'')+(a.av?' av'+a.av.ph:'')+(a.lc?' lc'+a.lc.ph:'')+' onConn'+(a.path[a.k]&&a.path[a.k].ri<0?1:0));if(TRAFFIC.log.length>40)TRAFFIC.log.shift();}
   if(a.unit){polUnitHit(a,hit,by);return;}
+  if(a.race)return;   // the race opponent shrugs off contact and keeps going
   if(a.parked){a.awake=true;return;}
   // the hit hurts the car (same scale as the player's car); one that is used up explodes and stays a burnt-out wreck
   if(hit>2.2&&!a.burnt){a.health=Math.max(0,(a.health==null?100:a.health)-0.33*Math.pow(hit-2.2,1.7));if(a.health<=0){if(!a.acc)trAccident(a);carExplode(a,a.root);return;}}
@@ -10502,7 +10592,7 @@ function trafficFrame(dt){
   // police are not traffic: they are the persistent units of the police system
   /* remove the ones that are far away (fading if you could see them go); police, and other players' cars, are not traffic */
   const v=Math.hypot(PLAYER.u,PLAYER.v),Rd=trRing(Tg,v)[1]+lerp(90,70,Tg.cw);
-  for(const a of cars.slice()){if(a.unit||a.remote){a.alpha=1;continue;}const d=netPlayerD(a.x,a.z);   // online: kept while any player is near
+  for(const a of cars.slice()){if(a.unit||a.remote||a.race){a.alpha=1;continue;}const d=netPlayerD(a.x,a.z);   // online: kept while any player is near
     if(a.fade>0){a.alpha=Math.min(1,a.alpha+dt/1.4);
       const far=a.parked?1e9:a.acc?280:Rd;
       if(d>far||(a.deadEnd&&a.gen.done&&a.k>=a.path.length-3)||(a.stuckT>80&&d>130)||(moving>Tg.hard&&d>160)){if(trSeen(a.x,a.z,3)&&d<900)a.fade=-1;else{trRemove(a);continue;}}}
@@ -10512,10 +10602,10 @@ function trafficFrame(dt){
   try{
     for(const a of cars){if(!a.alive||a.remote)continue;const d=netPlayerD(a.x,a.z);   // other players' cars are moved by the network
       if(a.parked){if(!a.awake)continue;if(d>40&&Math.hypot(a.u,a.v)<0.05){a.awake=false;continue;}}
-      else if(a.sim==='phys'&&d>(a.emerg?470:195)&&!a.acc&&!(a.unit&&(a.mode==='man'||a.mode==='rev')))trToKin(a);
+      else if(a.sim==='phys'&&d>(a.emerg?470:195)&&!a.acc&&!a.race&&!(a.unit&&(a.mode==='man'||a.mode==='rev')))trToKin(a);
       else if(a.sim==='kin'&&d<(a.emerg?440:170))trToPhys(a);
-      a.thinkT+=dt;const every=a.sim==='kin'?0.16:d>90?1/30:0;
-      if(!a.parked&&a.thinkT>=every){a.surf=surfaceAt(a.x,a.z);(a.unit?polThink:trThink)(a,a.thinkT,ALL);a.thinkT=0;}
+      a.thinkT+=dt;const every=a.race?0:a.sim==='kin'?0.16:d>90?1/30:0;
+      if(!a.parked&&a.thinkT>=every){a.surf=surfaceAt(a.x,a.z);(a.race?raceThink:a.unit?polThink:trThink)(a,a.thinkT,ALL);a.thinkT=0;}
       if(a.sim==='phys'){a.pacc=(a.pacc||0)+dt;car=a;let n=0;while(a.pacc>=h&&n<24){stepCar(h);collide();a.pacc-=h;n++;}car=P0;}
       else if(!(a.unit&&(a.mode==='hold'||a.mode==='rev'||a.mode==='parked')))trKin(a,dt);}
   }finally{car=P0;}
@@ -12534,6 +12624,160 @@ function nwBgSetup(){if(NW_TICK!==null)return;NW_TICK=false;
   document.addEventListener('visibilitychange',()=>{if(NW_TICK)NW_TICK.postMessage(document.hidden&&NET.on?50:0);
     if(NET.on&&AC){try{document.hidden?AC.suspend():(MODE==='drive'&&AC.resume());}catch(e){}}});}
 /* ---------------------------------------------------------------------------
+   STREET RACE (offline): you against one opponent on the long straight east side of the Perimeter Road (x = 760).
+   You line up in the right lane, the opponent in the left (the oncoming lane), both noses on the start line, heading
+   north (-z). SPACE starts it: the opponent honks three times and launches on the third; you go when you see it.
+   Both cars can run launch control or brake boost at a set rpm, a drive mode and traction control on or off, like
+   the drag strip game. The road is closed for the race: no traffic, no police.
+--------------------------------------------------------------------------- */
+const RACE={on:false,phase:'off',cfg:null,a:null,meshes:[],t:0};
+const RACE_X=760,RACE_LINE=1240,RACE_PSI=Math.PI/2,RACE_MAXD=1609.344;   // start line z; heading -z
+const RACE_FR=[[1/8,'1/8 mile'],[1/4,'1/4 mile'],[1/2,'1/2 mile'],[3/4,'3/4 mile'],[1,'1 mile']];
+let RS=null;
+function raceDistText(m){const mi=m/RACE_MAXD;for(const [f,t] of RACE_FR)if(Math.abs(mi-f)<0.004)return t+' ('+Math.round(f*5280).toLocaleString()+' ft)';
+  return Math.round(m*3.28084).toLocaleString()+' ft ('+mi.toFixed(2)+' mi)';}
+function raceSideDefault(key){const L=launchCfg(key),C=CARS.find(c=>c.key===key)||CARS[0];return {key,color:C.colors[0],mode:'normal',launch:L.mode,rpm:L.rpm,tc:true};}
+function raceSetupInit(){let s=null;try{s=JSON.parse(localStorage.getItem('backroads.race')||'null');}catch(e){}
+  const has=k=>CARS.some(c=>c.key===k);
+  const you=(s&&s.you&&has(s.you.key))?s.you:raceSideDefault(CARS[pick.i].key);
+  let ok=CARS.filter(c=>c.key!==you.key&&c.group!=='From traffic');const o=(s&&s.opp&&has(s.opp.key))?s.opp:raceSideDefault(ok[Math.floor(Math.random()*ok.length)].key);
+  RS={you,opp:o,dist:s&&s.dist>50?Math.min(RACE_MAXD,s.dist):RACE_MAXD/4,q:{you:'',opp:''}};}
+function raceSaveSetup(){try{localStorage.setItem('backroads.race',JSON.stringify({you:RS.you,opp:RS.opp,dist:RS.dist}));}catch(e){}}
+function openRace(){if(NET.on)return;MODE='racesetup';HILLS.visible=true;show('race');raceSetupInit();raceRender();}
+function raceRender(){raceRenderSide('you');raceRenderSide('opp');raceRenderDist();}
+function raceRenderSide(side){const S=RS[side],box=$(side==='you'?'rsYou':'rsOpp'),C=CARS.find(c=>c.key===S.key)||CARS[0],p=PRESETS[C.key]||{},L=launchCfg(C.key);
+  const q=pkNorm(RS.q[side]||'');let opts='',g=null;
+  CARS.forEach(c=>{if(q&&!pickMatch(c,q)&&c.key!==S.key)return;if(c.group!==g){if(g!==null)opts+='</optgroup>';g=c.group;opts+='<optgroup label="'+g+'">';}
+    opts+='<option value="'+c.key+'"'+(c.key===S.key?' selected':'')+'>'+c.label+'</option>';});if(g!==null)opts+='</optgroup>';
+  const modes=(C.modes&&C.modes.length?C.modes:['normal']);if(modes.indexOf(S.mode)<0)S.mode=modes[0];
+  const seg=(k,v,t,on)=>'<button type="button" class="seg'+(on?' on':'')+'" data-rs="'+k+'" data-side="'+side+'" data-v="'+v+'">'+t+'</button>';
+  let h='<h3>'+(side==='you'?'You · right lane':'Opponent · left lane')+'</h3>'+
+    '<input type="search" data-rsq="'+side+'" placeholder="Search cars…" value="'+(RS.q[side]||'').replace(/"/g,'&quot;')+'" aria-label="Search cars">'+
+    '<select data-rscar="'+side+'" size="8" aria-label="Car">'+opts+'</select>'+
+    '<div class="rname">'+C.label+'</div><div class="rspec">'+p.hp+' hp · '+p.tq+' lb-ft · '+(p.weight||0).toLocaleString()+' lb · '+C.note+'</div>'+
+    '<div class="rrow"><label>Paint</label>'+C.colors.map(col=>'<button type="button" class="sw'+((S.color||C.colors[0])===col?' on':'')+'" style="background:'+col+'" data-rs="color" data-side="'+side+'" data-v="'+col+'" aria-label="Paint"></button>').join('')+'</div>'+
+    '<div class="rrow"><label>Mode</label>'+modes.map(m=>seg('mode',m,(MODES[m]||{label:m}).label,S.mode===m)).join('')+'</div>';
+  if(!L.ev){if(['off','lc','bb'].indexOf(S.launch)<0)S.launch=L.mode;S.rpm=clamp(+S.rpm||L.rpm,L.lo,L.hi);
+    h+='<div class="rrow"><label>Launch</label>'+seg('launch','off','Off',S.launch==='off')+seg('launch','lc','Launch control',S.launch==='lc')+seg('launch','bb','Brake boost',S.launch==='bb')+'</div>'+
+      '<div class="rrow'+(S.launch==='off'?' off':'')+'"><label>Launch rpm</label><input type="range" data-rsrpm="'+side+'" min="'+L.lo+'" max="'+L.hi+'" step="100" value="'+S.rpm+'"><span class="rv" id="rsRpmV_'+side+'">'+S.rpm+' rpm</span></div>';}
+  else{S.launch='off';h+='<div class="rrow"><label>Launch</label><span class="rspec" style="margin:0">Electric: the motor controller launches it</span></div>';}
+  h+='<div class="rrow"><label>Traction</label>'+seg('tc',1,'TC on',S.tc)+seg('tc',0,'TC off',!S.tc)+'</div>';
+  box.innerHTML=h;}
+function raceRenderDist(){const b=$('rsDist');
+  b.innerHTML='<div class="rrow" style="margin:0"><label>Distance</label>'+RACE_FR.map(([f,t])=>'<button type="button" class="seg'+(Math.abs(RS.dist-f*RACE_MAXD)<5?' on':'')+'" data-rsdist="'+(f*RACE_MAXD)+'">'+t+'</button>').join('')+'</div>'+
+    '<div class="rrow"><label>Custom</label><input type="range" id="rsDistR" min="100" max="'+RACE_MAXD.toFixed(0)+'" step="10" value="'+Math.round(RS.dist)+'"><span class="rv" id="rsDistV" style="min-width:150px">'+raceDistText(RS.dist)+'</span></div>';}
+function raceBind(){const box=$('race');if(box._b)return;box._b=1;
+  box.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
+    if(t.id==='rsBack'){MODE='modes';show('modes');return;}
+    if(t.id==='rsGo'){raceSaveSetup();raceStart();return;}
+    if(t.dataset.rsdist){RS.dist=+t.dataset.rsdist;raceRenderDist();raceSaveSetup();return;}
+    const k=t.dataset.rs,side=t.dataset.side;if(!k||!side)return;const S=RS[side];
+    if(k==='color')S.color=t.dataset.v;else if(k==='mode')S.mode=t.dataset.v;else if(k==='launch')S.launch=t.dataset.v;else if(k==='tc')S.tc=t.dataset.v==='1';
+    raceRenderSide(side);raceSaveSetup();});
+  box.addEventListener('change',e=>{const s=e.target.dataset&&e.target.dataset.rscar;if(s){const key=e.target.value;RS[s]=Object.assign(raceSideDefault(key),{tc:RS[s].tc});raceRenderSide(s);raceSaveSetup();}});
+  box.addEventListener('input',e=>{const d=e.target.dataset||{};
+    if(d.rsq){RS.q[d.rsq]=e.target.value;const pos=e.target.selectionStart;raceRenderSide(d.rsq);const i=document.querySelector('[data-rsq="'+d.rsq+'"]');if(i){i.focus();try{i.setSelectionRange(pos,pos);}catch(x){}}return;}
+    if(d.rsrpm){RS[d.rsrpm].rpm=+e.target.value;$('rsRpmV_'+d.rsrpm).textContent=e.target.value+' rpm';raceSaveSetup();return;}
+    if(e.target.id==='rsDistR'){RS.dist=+e.target.value;$('rsDistV').textContent=raceDistText(RS.dist);document.querySelectorAll('[data-rsdist]').forEach(b=>b.classList.toggle('on',Math.abs(RS.dist-b.dataset.rsdist)<5));raceSaveSetup();}});
+  box.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.rsq){e.preventDefault();const s=e.target.dataset.rsq,sel=document.querySelector('[data-rscar="'+s+'"]');
+    if(sel&&sel.options.length){const o=[...sel.options].find(x=>pickMatch(CARS.find(c=>c.key===x.value),pkNorm(RS.q[s])))||sel.options[0];RS[s]=Object.assign(raceSideDefault(o.value),{tc:RS[s].tc});RS.q[s]='';raceRenderSide(s);raceSaveSetup();}}});}
+
+/* ---- the race ---- */
+function raceApply(o,S){const C=CARS.find(c=>c.key===S.key);o.mode=(C&&C.modes&&C.modes.indexOf(S.mode)>=0)?S.mode:'normal';o.MD=MODES[o.mode]||MODES.normal;
+  o.tc=!!S.tc;o.launchMode=S.launch||'off';o.launchRpm=S.rpm||3000;o.lcStage=false;o.lcGo=null;o.lcHold=0;o.tcs=null;o.tcCut=0;}
+function raceGrid(o,lane){o.x=RACE_X+lane*LANE_OFF;o.z=RACE_LINE+(o.halfLen||2.3);o.psi=RACE_PSI;o.u=0;o.v=0;o.yr=0;o.omega=0;o.omegaF=0;o.steer=0;o.ax=0;o.ay=0;
+  o.state='D';o.gear=0;o.thr=0;o.brk=1;o.boost=0;o.flareRpm=null;o.cvtR=null;o.shiftT=0;o.slamT=0;o.lcStage=false;o.lcGo=null;}
+function raceProgress(o){return RACE_LINE-(o.z-(o.halfLen||2.3));}   // nose past the start line, metres
+function raceStart(){const C=RACE.cfg=JSON.parse(JSON.stringify(RS));
+  if(!RACE.saved)RACE.saved={play:CFG.play,police:CFG.police};
+  CFG.play=Object.assign({},CFG.play,{density:0});CFG.police=Object.assign({},CFG.police,{state:0,city:0});   // closed road
+  const Y=C.you,O=C.opp;pick.i=Math.max(0,CARS.findIndex(c=>c.key===Y.key));pick.color=Y.color;
+  hudGear=hudMode='';syncHelp();t60Reset();
+  spawnCar(Y.key,Y.color);raceApply(car,Y);raceGrid(car,1);carObj3.grp.visible=true;applyCarEnv();lastHealth=-1;syncCar(0);
+  trafficReset();polReset();
+  RACE.a=raceMakeOpp(O);
+  MODE='drive';show('hud');clusterBuild();CAMV.init=false;CAMV.yaw=0;CAMV.pitch=0;startAudio();setDriveView();setShadowSpan(55);
+  RACE.on=true;raceLines();raceReset();$('help').classList.add('gone');$('rhGo').onclick=()=>raceKey();}
+function raceMakeOpp(O){const a=netMakeCar(O.key,O.color||null,RACE_X-LANE_OFF,RACE_LINE+3,RACE_PSI);if(!a)return null;
+  Object.assign(a,{remote:false,race:true,persist:true,ai:true,mode:'normal',alpha:1,fade:1});raceApply(a,O);trToPhys(a);a.parked=false;a.awake=true;
+  a.paintHex=O.color;return a;}
+function raceReset(){const R=RACE;R.phase='stage';R.t=0;R.ct=0;R.hk=0;R.goT=null;R.pMove=R.oMove=R.pFin=R.oFin=R.pGo=null;R.jump=null;R.gap=null;R.done=false;
+  raceApply(car,R.cfg.you);raceGrid(car,1);car.state='P';if(R.a&&R.a.alive){raceApply(R.a,R.cfg.opp);raceGrid(R.a,-1);R.a.in={thr:0,brk:1,steer:0,hand:0};}
+  $('raceRes').hidden=true;raceHud();}
+function raceKey(){const R=RACE;if(!R.on)return false;
+  if(R.phase==='stage'){   // back on the line if you've rolled off it, then the countdown
+    if(Math.abs(raceProgress(car))>1.5||Math.abs(car.x-(RACE_X+LANE_OFF))>1.2||Math.abs(car.u)>0.4){const L=car.launchMode,st=car.lcStage;raceGrid(car,1);car.launchMode=L;car.state=st?'D':'P';}
+    R.phase='count';R.ct=0;R.hk=0;R.p0=raceProgress(car);raceHud();return true;}
+  return R.phase==='count'||R.phase==='race';}
+const RACE_HONK=[0,0.85,1.7];
+function raceFrame(dt){const R=RACE;if(!R.on)return;const a=R.a;if(!a||!a.alive){raceExit();return;}R.t+=dt;
+  const sp=raceProgress(car),so=raceProgress(a);
+  if(R.phase==='count'){R.ct+=dt;
+    while(R.hk<3&&R.ct>=RACE_HONK[R.hk]){trHorn(a,R.hk===2?0.55:0.32);R.hk++;if(R.hk===3){R.phase='race';R.goT=R.t;}}
+    if(R.jump==null&&sp-R.p0>0.5&&car.thr>0.15)R.jump=R.ct-RACE_HONK[2];}   // on the gas and rolling before the third honk (idle creep doesn't count)
+  if((R.phase==='race'||R.phase==='count')&&R.pGo==null&&car.thr>0.15&&!car.lcStage&&car.brk<0.1)R.pGo=R.t;   // foot off the brake, on the gas
+  if(R.phase==='race'||R.phase==='count'){if(R.pMove==null&&car.thr>0.15&&!car.lcStage&&sp-(R.p0||0)>0.12)R.pMove=R.t;}   // on the gas and moving (idle creep doesn't count)
+  if(R.phase==='race'){if(R.oMove==null&&so>0.12)R.oMove=R.t;
+    const D=R.cfg.dist;
+    if(R.pFin==null&&sp>=D){R.pFin=R.t;R.pTrap=Math.abs(car.u)*MPH_PER_MS;if(R.oFin==null)R.gap=D-so;}
+    if(R.oFin==null&&so>=D){R.oFin=R.t;R.oTrap=Math.abs(a.u)*MPH_PER_MS;if(R.pFin==null)R.gap=D-sp;}
+    const first=Math.min(R.pFin==null?1e9:R.pFin,R.oFin==null?1e9:R.oFin);
+    if((R.pFin!=null&&R.oFin!=null)||(first<1e9&&R.t-first>25)){R.phase='done';raceResults();}}
+  raceHud();}
+/* the opponent: pure-pursuit lane keeping in the left lane, the launch on the third honk, flat out to the line */
+function raceThink(a,dt){const R=RACE,I=a.in;
+  const xL=RACE_X-LANE_OFF,look=Math.max(12,Math.abs(a.u)*0.8),dx=xL-a.x,dz=-look;
+  const fx=Math.cos(a.psi),fz=-Math.sin(a.psi),lx=-Math.sin(a.psi),lz=-Math.cos(a.psi),f=dx*fx+dz*fz,l=dx*lx+dz*lz;
+  I.steer=clamp(Math.atan2(2*(a.L||2.8)*l,f*f+l*l),-0.45,0.45);I.hand=0;
+  if(!R.on||R.phase==='stage'||R.phase==='off'){I.thr=0;I.brk=1;a.lcStage=false;return;}
+  const lc=a.launchMode&&a.launchMode!=='off'&&!(IND[a.spec.ind]||{}).electric;
+  if(R.phase==='count'){I.brk=1;I.thr=lc?1:0;a.lcStage=lc&&R.ct>0.15;return;}   // revs up on the brake from the first honk
+  const fin=R.oFin!=null;
+  if(!fin){if(a.lcStage){a.lcStage=false;a.lcGo=a.t||0;}if(I.brk>0){I.brk=0;a.brk=0;}I.thr=1;}
+  else{I.thr=0;I.brk=Math.abs(a.u)>1?0.6:1;}}
+function raceResults(){const R=RACE,a=R.a,Y=CARS.find(c=>c.key===R.cfg.you.key),O=CARS.find(c=>c.key===R.cfg.opp.key);
+  const pT=R.pFin!=null?R.pFin-R.goT:null,oT=R.oFin!=null?R.oFin-R.goT:null,react=R.jump!=null?R.jump:(R.pGo!=null?R.pGo-R.goT:(R.pMove!=null?R.pMove-R.goT:null));
+  const pET=R.pFin!=null&&R.pMove!=null?R.pFin-R.pMove:null,oET=R.oFin!=null&&R.oMove!=null?R.oFin-R.oMove:null;
+  const jumped=R.jump!=null&&R.jump<0;
+  let win=pT!=null&&(oT==null||pT<oT);if(jumped)win=false;
+  const f2=v=>v==null?'—':v.toFixed(3)+' s',mph=v=>v==null?'—':v.toFixed(1)+' mph';
+  const margin=pT!=null&&oT!=null?Math.abs(pT-oT).toFixed(3)+' s'+(R.gap!=null?' · '+Math.round(R.gap*3.28084)+' ft':''):(R.gap!=null?Math.round(R.gap*3.28084)+' ft':'');
+  const el=$('raceRes');
+  el.innerHTML='<h2 class="'+(win?'win':'lose')+'">'+(jumped?'Jump start':win?'You win':'You lose')+'</h2>'+
+    '<div class="rr-sub">'+raceDistText(R.cfg.dist)+(margin?' · by '+margin:'')+(jumped?' · you rolled '+Math.abs(R.jump).toFixed(2)+' s before the third honk':'')+'</div>'+
+    '<table><tr><th></th><th>'+(Y?Y.label:'You')+'</th><th>'+(O?O.label:'Opponent')+'</th></tr>'+
+    '<tr><td>Reaction</td><td class="n">'+(react==null?'—':(react<0?'−':'+')+Math.abs(react).toFixed(3)+' s')+'</td><td class="n">'+(R.oMove!=null?'+'+(R.oMove-R.goT).toFixed(3)+' s':'—')+'</td></tr>'+
+    '<tr><td>Elapsed time</td><td class="n">'+f2(pET)+'</td><td class="n">'+f2(oET)+'</td></tr>'+
+    '<tr><td>From the 3rd honk</td><td class="n">'+f2(pT)+'</td><td class="n">'+f2(oT)+'</td></tr>'+
+    '<tr><td>Trap speed</td><td class="n">'+mph(R.pFin!=null?R.pTrap:null)+'</td><td class="n">'+mph(R.oFin!=null?R.oTrap:null)+'</td></tr>'+
+    '<tr><td>Launch</td><td class="n">'+raceLaunchText(R.cfg.you)+'</td><td class="n">'+raceLaunchText(R.cfg.opp)+'</td></tr></table>'+
+    '<div class="rbtns"><button class="btn" id="rrExit" type="button">Main menu</button><button class="btn" id="rrSetup" type="button">Change setup</button><button class="btn go" id="rrAgain" type="button">Race again</button></div>';
+  el.hidden=false;
+  $('rrAgain').onclick=()=>raceReset();$('rrSetup').onclick=()=>{raceExit(true);openRace();};$('rrExit').onclick=()=>{raceExit(true);toMenu();};}
+function raceLaunchText(S){return (S.launch==='lc'?'LC '+S.rpm:S.launch==='bb'?'BB '+S.rpm:'none')+' · TC '+(S.tc?'on':'off');}
+function raceHud(){const R=RACE,box=$('raceHud');if(!box)return;box.hidden=!R.on||R.phase==='done';if(box.hidden)return;
+  const top=$('rhTop'),sub=$('rhSub'),go=$('rhGo'),O=CARS.find(c=>c.key===R.cfg.opp.key);
+  if(R.phase==='stage'){top.className='';top.textContent='Street race · '+raceDistText(R.cfg.dist).split(' (')[0];
+    sub.textContent='vs '+(O?O.label:'')+' — press SPACE when ready'+(car.launchMode&&car.launchMode!=='off'?' (hold brake + gas first to stage your launch)':'');go.hidden=false;}
+  else if(R.phase==='count'){top.className='';top.innerHTML=[0,1,2].map(i=>'<span class="hk'+(i<R.hk?' on':'')+'"></span>').join('');sub.textContent='Go on the third honk';go.hidden=true;}
+  else{const sp=raceProgress(car),so=raceProgress(R.a),D=R.cfg.dist;top.className=R.t-R.goT<1.2?'go':'';
+    top.textContent=R.t-R.goT<1.2?'GO':((R.t-R.goT).toFixed(2)+' s');
+    sub.textContent=Math.max(0,Math.round((D-sp)*3.28084)).toLocaleString()+' ft to go · '+(sp>=so?'ahead by ':'behind by ')+Math.abs(Math.round((sp-so)*3.28084))+' ft';go.hidden=true;}}
+/* start line, finish line (chequered) and posts at the finish */
+function raceLines(){raceClearLines();const W=ROAD_W+1.2,D=RACE.cfg.dist;
+  const mk=(z,tex,col,len)=>{const m=new TH.Mesh(new TH.PlaneGeometry(W,len),new TH.MeshBasicMaterial({map:tex||null,color:col||0xffffff,transparent:!!tex,polygonOffset:true,polygonOffsetFactor:-10,polygonOffsetUnits:-20}));
+    m.rotation.x=-Math.PI/2;m.position.set(RACE_X,GROUND_Y+0.03,z);world.add(m);RACE.meshes.push(m);};
+  const c=document.createElement('canvas');c.width=128;c.height=16;const x=c.getContext('2d');for(let i=0;i<16;i++)for(let j=0;j<2;j++){x.fillStyle=(i+j)%2?'#111':'#f4f4f4';x.fillRect(i*8,j*8,8,8);}
+  const t=new TH.CanvasTexture(c);t.magFilter=TH.NearestFilter;
+  mk(RACE_LINE+0.25,null,0xf2f2f2,0.5);mk(RACE_LINE-D-0.6,t,0xffffff,1.2);
+  [-1,1].forEach(s=>{const p=new TH.Mesh(new TH.CylinderGeometry(0.09,0.09,3.2,8),new TH.MeshLambertMaterial({color:0xff7a1a,emissive:0x552200}));
+    p.position.set(RACE_X+s*(ROAD_W/2+0.9),GROUND_Y+1.6,RACE_LINE-D-0.6);world.add(p);RACE.meshes.push(p);
+    const b=new TH.Mesh(new TH.BoxGeometry(0.06,0.5,1.2),new TH.MeshBasicMaterial({map:t}));b.position.set(RACE_X+s*(ROAD_W/2+0.9),GROUND_Y+3.0,RACE_LINE-D-0.6);world.add(b);RACE.meshes.push(b);});}
+function raceClearLines(){RACE.meshes.forEach(m=>{world.remove(m);if(m.geometry)m.geometry.dispose();});RACE.meshes=[];}
+function raceExit(keep){const R=RACE;if(!R.on&&!R.saved)return;R.on=false;R.phase='off';raceClearLines();
+  if(R.a&&R.a.alive)trRemove(R.a);R.a=null;$('raceHud').hidden=true;$('raceRes').hidden=true;
+  if(R.saved){CFG.play=R.saved.play;CFG.police=R.saved.police;R.saved=null;}}
+/* ---------------------------------------------------------------------------
    Settings (saved in this browser): graphics and control bindings
 --------------------------------------------------------------------------- */
 const $=id=>document.getElementById(id);
@@ -12571,6 +12815,8 @@ window.addEventListener('keydown',e=>{
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].indexOf(e.code)>=0&&MODE!=='menu')e.preventDefault();
   if(MODE==='settings'){if(e.code==='Escape')closeSettings();return;}
   if(MODE==='map'){if((act==='map'||e.code==='Escape')&&!e.repeat)closeMap();else if((e.code==='Delete'||e.code==='Backspace')&&!e.repeat)clearWaypoint();KEYS[e.code]=true;return;}
+  if(MODE==='drive'&&RACE.on&&e.code==='Space'&&!e.repeat&&RACE.phase==='stage'){e.preventDefault();raceKey();return;}
+  if(MODE==='racesetup'&&e.code==='Escape'){MODE='modes';show('modes');return;}
   if(MODE==='drive'||MODE==='pause'){
     if(act==='pause'&&!e.repeat){togglePause();return;}
     if(MODE!=='drive')return;
@@ -13349,8 +13595,8 @@ function bindSettings(){
 --------------------------------------------------------------------------- */
 let MODE='menu';
 let pick={i:Math.max(0,CARS.findIndex(C=>C.key==='chall11sxt')),color:null},spawnIdx=0,customSpawn=null;
-function show(id){['menu','modes','servers','select','hud','pause','settings'].forEach(k=>{$(k).hidden=(k!==id&&!(id==='pause'&&k==='hud'));});}
-function toMenu(){if(NET.on||NET.room)netExit();trClear();POL.ready=false;polComm(null);MODE='menu';HILLS.visible=false;stopAudio();if(carObj3)carObj3.grp.visible=false;show('menu');$('fullmap').hidden=true;
+function show(id){['menu','modes','servers','select','hud','pause','settings','race'].forEach(k=>{$(k).hidden=(k!==id&&!(id==='pause'&&k==='hud'));});}
+function toMenu(){if(RACE.on||RACE.saved)raceExit(true);if(NET.on||NET.room)netExit();trClear();POL.ready=false;polComm(null);MODE='menu';HILLS.visible=false;stopAudio();if(carObj3)carObj3.grp.visible=false;show('menu');$('fullmap').hidden=true;
   world.fog.near=5000;world.fog.far=14000;camera.near=5;camera.far=16000;camera.updateProjectionMatrix();skyDome.scale.setScalar(1);setShadowSpan(60);}
 function toSelect(){MODE='select';HILLS.visible=true;show('select');{const b=$('selNet');b.hidden=!NET.on;if(NET.on){const sv=NET_SERVERS.find(q=>q.id===NET.srv)||NET_SERVERS[0];b.textContent='Online · '+sv.name+' · playing as '+NET.name;}}renderPicks();renderSpawns();previewPick();setDriveView();}
 function currentSpawn(){return spawnIdx<0&&customSpawn?customSpawn:MAP.spawns[spawnIdx]||MAP.spawns[0];}
@@ -13428,6 +13674,7 @@ $('btnSettings').addEventListener('click',openSettings);
 $('btnMode').addEventListener('click',openModes);
 $('btnFree').addEventListener('click',toSelect);
 $('btnServers').addEventListener('click',openServers);
+$('btnRace').addEventListener('click',()=>{raceBind();openRace();});
 $('btnModesBack').addEventListener('click',()=>{MODE='menu';show('menu');});
 $('btnSrvBack').addEventListener('click',netBackFromServers);
 $('netNameOk').addEventListener('click',()=>netJoin($('netNameIn').value));
@@ -13437,7 +13684,7 @@ $('btnBack').addEventListener('click',()=>{if(NET.on){netLeaveGame();stopAudio()
 $('btnSpawn').addEventListener('click',startDrive);
 $('btnResume').addEventListener('click',togglePause);
 $('btnPSettings').addEventListener('click',openSettings);
-$('btnChange').addEventListener('click',()=>{if(AC)AC.resume();stopAudio();toSelect();});
+$('btnChange').addEventListener('click',()=>{if(AC)AC.resume();stopAudio();if(RACE.on){raceExit(true);trClear();POL.ready=false;raceBind();openRace();return;}toSelect();});
 $('btnQuit').addEventListener('click',()=>{if(AC)AC.resume();toMenu();});
 $('btnPause').addEventListener('click',togglePause);
 $('btnMap').addEventListener('click',()=>{if(MODE==='drive')openMap('waypoint');});
@@ -13461,7 +13708,7 @@ function frame(now,bg){   // bg: a tick from the background worker while the tab
     let n=0;while(acc>=H&&n<20){const u0=car.u;stepCar(H);collide();try{trafficCollide();}catch(e){if(!window.__colErr){window.__colErr=1;console.error('collision error',e);}}t60Step(H,u0);acc-=H;n++;}
     if(car.crash>0){if(!bg&&!held)crashSound(car.crash);car.crash=0;}
     if(bg)return;
-    syncCar(dt);trafficVisuals(dt);healthFrame(dt);stepSmoke(dt);boomFrame(dt);if(!held){driveCamera(dt);navFrame(dt);drawHud();audioFrame();trAudio();updateReflections(dt);}else if(MODE!=='map'){driveCamera(dt);updateReflections(dt);}   // paused online: keep showing the live world behind the menu
+    syncCar(dt);trafficVisuals(dt);healthFrame(dt);stepSmoke(dt);boomFrame(dt);if(RACE.on)raceFrame(dt);if(!held){driveCamera(dt);navFrame(dt);drawHud();audioFrame();trAudio();updateReflections(dt);}else if(MODE!=='map'){driveCamera(dt);updateReflections(dt);}   // paused online: keep showing the live world behind the menu
     if(MODE==='map')drawFullMap();
   }else if(bg)return;
   else if(MODE==='map'){drawFullMap();if(FM.prevMode==='select')previewCamera(dt);}
