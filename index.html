@@ -737,7 +737,9 @@ function volGain(v){const f=v/100;return f*f;}
 function audioOut(ctx){return (ctx&&ctx.master)||ctx.destination;}
 function audioCtx(){
   if(!AC){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;AC=new C();
-    AC.master=AC.createGain();AC.master.gain.value=volGain(volSetting());AC.master.connect(AC.destination);}
+    AC.master=AC.createGain();AC.master.gain.value=volGain(volSetting());
+    // a brick-wall limiter after the master volume: engines, sirens, horns and traffic stacking up no longer clip into crackle
+    try{const K=AC.createDynamicsCompressor();K.threshold.value=-4;K.knee.value=4;K.ratio.value=20;K.attack.value=0.002;K.release.value=0.12;AC.master.connect(K);K.connect(AC.destination);AC.limiter=K;}catch(e){AC.master.connect(AC.destination);}}
   if(AC.state==='suspended')AC.resume();
   return AC;
 }
@@ -771,7 +773,11 @@ function sndPackFor(c){
     if(/viper/.test(nm))return 'viper';
     if(/mclaren/.test(nm))return 'mclaren';
     if(/porsche/.test(nm))return 'flat6';                                   // 911 and 718 Cayman: the mod's 4.0 flat-six
-    if(/\burus\b/.test(nm))return 'urus';if(/hurac[aá]n/.test(nm))return 'huracan';if(/aventador/.test(nm))return 'aventador';}
+    if(/\burus\b/.test(nm))return 'urus';if(/hurac[aá]n/.test(nm))return 'huracan';if(/aventador/.test(nm))return 'aventador';
+    // engines shared with a recording we have: the R8's 5.2 V10 is the Huracán's, the RS7's 4.0 TFSI the Urus's,
+    // and the Venom GT (twin-turbo LS7) and '06 Impala SS (LS4) are GM small-blocks like the C6
+    if(/\br8\b/.test(nm)&&/^v10/.test(c.engSound||''))return 'huracan';if(/\brs ?7\b/.test(nm))return 'urus';
+    if(/venom gt/.test(nm)||/impala ss/.test(nm))return 'vettec6';}
   {const nm=(c.name||'').toLowerCase();
     if(/\bbmw\b/.test(nm)){const es=c.engSound||'';
       if(/\bm2\b/.test(nm))return 'bmwm2';                                  // S58 (M2 mod)
@@ -785,8 +791,9 @@ function sndPackFor(c){
   return null;}
 function sndLoad(name){
   if(!name)return null;if(SND.packs[name])return SND.packs[name];
-  const rec={ready:false,layers:null};SND.packs[name]=rec;
-  (async()=>{try{
+  const rec={ready:false,layers:null,tries:0};SND.packs[name]=rec;
+  // a download or decode that fails is tried again a few times (a dropped request no longer leaves the car on the stand-in synth)
+  const go=async()=>{rec.tries++;rec.failed=false;try{
     if(!SND.idx)SND.idx=await fetch('sounds/index.json'+(window.QM_VER?'?v='+window.QM_VER:'')).then(r=>{if(!r.ok)throw new Error('idx');return r.json();});
     const meta=SND.idx[name];if(!meta)throw new Error('pack');
     const file=meta.file||name,base=SND.idx[file];if(!base)throw new Error('file');
@@ -798,7 +805,9 @@ function sndLoad(name){
       const b=new AudioBuffer({length:len,sampleRate:dec.sampleRate,numberOfChannels:1});
       b.copyToChannel(data.subarray(st,st+len),0);return{rpm,buf:b};});
     rec.layers=layers;rec.gain=meta.gain||1;rec.tone=meta.tone||1;rec.bright=meta.bright!=null?meta.bright:(base.bright||0);rec.grain=!!base.grain;rec.ready=true;
-  }catch(e){rec.failed=true;}})();
+  }catch(e){rec.failed=true;const m=String(e&&e.message);
+    if(m==='pack'||m==='file'||rec.tries>=4)rec.dead=true;else setTimeout(go,1500*rec.tries);}};
+  go();
   return rec;}
 class SampleEngine{
   constructor(ctx,pack,dest){
@@ -983,7 +992,8 @@ class EngineVoice{
     this.wob.start(t);
     [this.osc,this.osc2,this.sub,this.whine].forEach(o=>o.start(t));
     this.noise.start(t);this.scr.start(t);
-    this.out.gain.setTargetAtTime(0.9*(cfg.vol||1),t,0.05);
+    this.wait=!!(pack&&!pack.ready&&!pack.dead&&!this.electric);   // its recording is still on the way: hold the synth silent, the voice is rebuilt once it lands
+    this.out.gain.setTargetAtTime(this.wait?0:0.9*(cfg.vol||1),t,0.05);
     this.smp=(pack&&pack.ready&&!this.electric)?(pack.grain?new GrainEngine(ctx,pack,this.out):new SampleEngine(ctx,pack,this.out)):null;
   }
   update(rpm,load,boost,slipAmt,shifting,mph){
@@ -10626,8 +10636,9 @@ function trAudio(){
     .sort((p,q)=>p[0]-q[0]).slice(0,4).map(q=>q[1]);
   for(let i=TR_V.length-1;i>=0;i--){const e=TR_V[i];if(near.indexOf(e.a)<0){try{e.v.stop();}catch(x){}TR_V.splice(i,1);}}
   near.forEach(a=>{if(TR_V.some(e=>e.a===a))return;const c=a.spec;
-    try{const pack=sndLoad(sndPackFor(c));const v=new EngineVoice(AC,ENGINES[c.engSound]||ENGINES.v6||ENGINES.i4,0,(IND[c.ind]||IND.na).boosted,c.ind,pack);TR_V.push({a,v,seq:a.shiftSeq||0});}catch(x){}});
+    try{const pack=sndLoad(sndPackFor(c));const v=new EngineVoice(AC,ENGINES[c.engSound]||ENGINES.v6||ENGINES.i4,0,(IND[c.ind]||IND.na).boosted,c.ind,pack);v.pack=pack;TR_V.push({a,v,seq:a.shiftSeq||0});}catch(x){}});
   const t=AC.currentTime;
+  for(let i=TR_V.length-1;i>=0;i--){const v=TR_V[i].v;if(v.wait){const pk=v.pack;if(pk&&(pk.ready||pk.dead)){try{v.stop();}catch(x){}TR_V.splice(i,1);}}}   // recording arrived: rebuilt next frame
   TR_V.forEach(e=>{const a=e.a,v=e.v,P=v.panner;
     if(v.is3d&&P){if(P.positionX){P.positionX.setTargetAtTime(a.x,t,0.03);P.positionY.setTargetAtTime(0.6,t,0.03);P.positionZ.setTargetAtTime(a.z,t,0.03);}else if(P.setPosition)P.setPosition(a.x,0.6,a.z);}
     let sh=false;if((a.shiftSeq||0)!==e.seq){e.seq=a.shiftSeq;sh=true;if(a.shiftDir<0&&v.blip)v.blip();}
@@ -12649,6 +12660,7 @@ function raceSaveSetup(){try{localStorage.setItem('backroads.race',JSON.stringif
 function openRace(){if(NET.on)return;MODE='racesetup';HILLS.visible=true;show('race');raceSetupInit();raceRender();}
 function raceRender(){raceRenderSide('you');raceRenderSide('opp');raceRenderDist();}
 function raceRenderSide(side){const S=RS[side],box=$(side==='you'?'rsYou':'rsOpp'),C=CARS.find(c=>c.key===S.key)||CARS[0],p=PRESETS[C.key]||{},L=launchCfg(C.key);
+  try{sndLoad(sndPackFor(carSpec(C.key)));}catch(e){}   // start fetching its recording now, so it's ready on the line
   const q=pkNorm(RS.q[side]||'');let opts='',g=null;
   CARS.forEach(c=>{if(q&&!pickMatch(c,q)&&c.key!==S.key)return;if(c.group!==g){if(g!==null)opts+='</optgroup>';g=c.group;opts+='<optgroup label="'+g+'">';}
     opts+='<option value="'+c.key+'"'+(c.key===S.key?' selected':'')+'>'+c.label+'</option>';});if(g!==null)opts+='</optgroup>';
@@ -13101,7 +13113,7 @@ function audioFrame(){
   if(L.positionX){set(L.positionX,p.x);set(L.positionY,p.y);set(L.positionZ,p.z);set(L.forwardX,f.x);set(L.forwardY,f.y);set(L.forwardZ,f.z);set(L.upX,0);set(L.upY,1);set(L.upZ,0);}
   else if(L.setPosition){L.setPosition(p.x,p.y,p.z);L.setOrientation(f.x,f.y,f.z,0,1,0);}
   if(voice.is3d&&voice.panner){const P=voice.panner;if(P.positionX){set(P.positionX,car.x);set(P.positionY,0.6);set(P.positionZ,car.z);}else if(P.setPosition)P.setPosition(car.x,0.6,car.z);}
-  if(!voice.recorded&&voice.pack&&voice.pack.ready){makeVoice();if(!voice)return;}
+  if(!voice.recorded&&voice.pack){const pk=voice.pack;if(pk.ready||(voice.wait&&pk.dead)){makeVoice();if(!voice)return;}}   // swap in the recording once it lands (sndLoad retries a failed download)
   const slide=Math.max(car.slideF,car.slideR);
   const squeal=car.surf==='asphalt'&&slide>1.6?Math.min(1,(slide-1.2)/6):0;
   let shifting=false;
