@@ -9867,13 +9867,15 @@ function playerPedals(h){
     if(kbB){if(speed>0.6)wantBrk=1;else{car.revT+=h;wantBrk=1;if(car.revT>(lcOn?0.5:0.18)&&speed<0.6){car.state='R';car.revT=0;}}}else car.revT=0;}
   }else{ // reverse
     wantThr=Math.max(kbB?1:0,padT);wantBrk=padB;
-    if(kbF){if(speed<-0.6)wantBrk=1;else{car.revT+=h;wantBrk=1;if(car.revT>0.18&&speed>-0.6){car.state='D';car.gear=0;car.revT=0;}}}else car.revT=0;
+    // gas while reversing brakes the car; once it's (nearly) stopped it drops straight into Drive and pulls away
+    if(kbF){if(speed<-0.6)wantBrk=1;else{car.state='D';car.gear=0;car.revT=0;wantBrk=0;wantThr=1;car.brk=0;}}else car.revT=0;
   }
   // a keyboard key snaps; a trigger is already analog, so it only gets the throttle body's own lag
   const evIn=!!(IND[c0().ind]||{}).electric;   // an EV's motor controller answers the pedal almost at once: no throttle-body lag
   const tauUp=evIn?(PAD.on&&padT>0?0.02:0.035):(PAD.on&&padT>0?0.06:0.18);
   car.thr+=(wantThr-car.thr)*Math.min(1,h/(wantThr>car.thr?tauUp:0.07));
-  car.brk+=(wantBrk-car.brk)*Math.min(1,h/0.08);
+  // the foot comes off the brake at once (a key snaps; a trigger is already analog and only gets a little smoothing)
+  if(wantBrk<car.brk&&!(PAD.on&&padB>0))car.brk=wantBrk;else car.brk+=(wantBrk-car.brk)*Math.min(1,h/(wantBrk<car.brk?0.03:0.08));
   if(car.lcSnap){car.brk=0;car.lcSnap=false;}   // a launch: the foot comes straight off the brake
   car.hand=(ctl.hand||(PAD.on&&PAD.hand))?1:0;
   // steering: rate-limited, with the lock reduced at speed
