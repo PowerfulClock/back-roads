@@ -9848,7 +9848,7 @@ function playerPedals(h){
   const live=MODE==='drive'&&!document.hidden,padT=live&&PAD.on?PAD.thr:0,padB=live&&PAD.on?PAD.brk:0;   // menus or a hidden tab: hands off
   if(car.state==='P'){
     if(kbF){car.state='D';car.gear=0;}else if(kbB){car.state='R';}
-    wantBrk=1;wantThr=padT;                       // blipping in Park just revs the engine
+    if(kbF){wantThr=1;car.brk=0;}else{wantBrk=1;wantThr=padT;}   // gas in Park drives off at once (no brake held on for the first moment); blipping a trigger in Park just revs it
   }else if(car.state==='N'){
     if(kbF){car.state='D';car.gear=autoPick();}else if(kbB&&Math.abs(speed)<1){car.state='R';}
     wantThr=padT;wantBrk=padB;
@@ -9870,7 +9870,8 @@ function playerPedals(h){
     if(kbF){if(speed<-0.6)wantBrk=1;else{car.revT+=h;wantBrk=1;if(car.revT>0.18&&speed>-0.6){car.state='D';car.gear=0;car.revT=0;}}}else car.revT=0;
   }
   // a keyboard key snaps; a trigger is already analog, so it only gets the throttle body's own lag
-  const tauUp=PAD.on&&padT>0?0.06:0.18;
+  const evIn=!!(IND[c0().ind]||{}).electric;   // an EV's motor controller answers the pedal almost at once: no throttle-body lag
+  const tauUp=evIn?(PAD.on&&padT>0?0.02:0.035):(PAD.on&&padT>0?0.06:0.18);
   car.thr+=(wantThr-car.thr)*Math.min(1,h/(wantThr>car.thr?tauUp:0.07));
   car.brk+=(wantBrk-car.brk)*Math.min(1,h/0.08);
   if(car.lcSnap){car.brk=0;car.lcSnap=false;}   // a launch: the foot comes straight off the brake
