@@ -9928,15 +9928,26 @@ function stepDynamics(h){
     // launch control: staged on the brake the engine sits on the launch-rpm limiter; just after the launch the
     // driveline slips from that rpm until the wheels catch up (or 3 s, or the throttle comes up)
     if(car.launchMode&&car.launchMode!=='off'){const lr=car.launchMode==='bb'?Math.min(car.launchRpm||2000,car.stallRpm):(car.launchRpm||3000);
-      if(car.lcStage)flare=lr+Math.sin((car.t||0)*55)*35;
-      else if(car.lcGo!=null){if((car.t||0)-car.lcGo<3&&car.thr>0.6&&turb<lr)flare=Math.max(flare,lr);else car.lcGo=null;}}
+      if(car.lcStage){flare=lr+Math.sin((car.t||0)*55)*35;car.lcRpm=null;}
+      else if(car.lcGo!=null){
+        // the clutch bites: the engine is dragged down from the launch rpm toward wheel speed, and the energy in the
+        // spinning flywheel goes into the tyres on top of the engine's own torque (see lcDump below). Launch too high
+        // and that spike breaks the tyres loose (wheelspin, traction control cuts in); too low and it bogs off boost
+        if(car.lcRpm==null)car.lcRpm=lr;
+        if((car.t||0)-car.lcGo<3&&car.thr>0.6&&turb<car.lcRpm){const LCT=window.LCT||0.08;   // a launch-control clutch bites in under a tenth of a second
+          const opt=window.LCO||Math.max(3000,Math.min(5500,(c.tqRpm||4000)*1.05));   // where the clutch settles the engine: around its torque peak
+          car.lcRpm+=(Math.max(turb,Math.min(lr,opt),flareTop(c))-car.lcRpm)*Math.min(1,h/LCT);flare=Math.max(flare,car.lcRpm);}
+        else{car.lcGo=null;car.lcRpm=null;}}}
     // the engine has inertia: pulling away it rises from idle together with the car (about 2,000 rpm a second under
     // load) instead of jumping straight to the converter's slip limit; free on the brake (launch control) it revs faster
     if(car.flareRpm==null)car.flareRpm=Math.max(car.idle,turb);
-    if(turb<flare){const up=car.lcStage?7000:2000;car.flareRpm+=clamp(flare-car.flareRpm,-8000*h,up*h);
+    if(turb<flare){const up=car.lcStage?7000:2000,dn=car.lcGo!=null?(window.LCD||30000):8000;car.flareRpm+=clamp(flare-car.flareRpm,-dn*h,up*h);   // the clutch biting at a launch drags the revs down much faster
       rpm=Math.max(turb,car.flareRpm,car.idle*0.9);const sr=turb/rpm;mult=1+(c.stall-1)*Math.pow(1-sr,1.6)*Math.min(1,car.thr*1.5);}
     else{rpm=turb;car.flareRpm=turb;}
     car.freeRpm=rpm;
+    // flywheel energy released while the clutch pulls the revs down after a launch (I·dω/dt at the crank, N·m)
+    car.lcDump=0;if(car.lcGo!=null&&car.lcPrev!=null&&car.lcPrev>rpm)car.lcDump=c.ie*(window.LCI||1)*((car.lcPrev-rpm)*2*Math.PI/60)/h;
+    car.lcPrev=car.lcGo!=null?rpm:null;
     const n=c.gears.length,since=(car.t||0)-(car.lastShift||0);
     /* Tip-in delay: when you push the pedal further, the box keeps the gear it's in for about a
        second (you get the extra throttle in that gear straight away), then decides whether to kick
@@ -9983,6 +9994,7 @@ function stepDynamics(h){
   let Teng=inGear?tqNow*car.MD.powerMul*limp:0;
   const TengPre=Teng/Math.max(0.05,tcsS?1-tcsS.thr:1);
   if(tcsS&&Teng>0)Teng*=1-tcsS.fast;                               // TCS spark retard / fuel cut
+  if(inGear&&car.lcDump>0)Teng+=car.lcDump/1.35582;   // the flywheel's energy at a launch goes through the clutch whatever the ignition does: traction control can't cut it
   if(turb>c.redline*0.995)Teng=0;
   if(c.vmax&&Teng>0){const mph=Math.abs(car.u)*2.237;Teng*=clamp((c.vmax-mph)/2.5,0,1);}   // electronic top-speed limiter                                // rev limiter (manual mode holds the gear on it)
   if(car.state==='R'&&turb>c.redline*0.55)Teng=Math.min(Teng,0);  // reverse is governed, like the real cars
