@@ -107,6 +107,8 @@ h1 span{display:block;color:transparent;-webkit-text-stroke:2px var(--paper)}
 #hud{pointer-events:none}
 #speedfx{position:absolute;inset:0;opacity:0;pointer-events:none;background:radial-gradient(ellipse 75% 70% at 50% 46%,rgba(0,0,0,0) 55%,rgba(0,0,0,.28) 80%,rgba(0,0,0,.6) 100%)}
 #hud>*{pointer-events:none}
+#hud>#raceRes{pointer-events:auto;z-index:8}
+canvas,img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none}
 .where{position:absolute;left:16px;top:calc(14px + env(safe-area-inset-top,0px));font-size:22px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;text-shadow:0 1px 4px rgba(0,0,0,.7)}
 #chat{position:fixed;left:16px;top:calc(70px + env(safe-area-inset-top,0px));width:min(380px,calc(100vw - 32px));z-index:6;pointer-events:none;display:grid;gap:6px;font:500 14px var(--display)}
 #chat.open{pointer-events:auto}
@@ -13671,6 +13673,9 @@ function togglePause(){if(MODE==='drive'){MODE='pause';trAudioStop();show('pause
 
 $('btnPlay').addEventListener('click',toSelect);
 $('btnSettings').addEventListener('click',openSettings);
+// no browser context menu over the game (copy image, save image, inspect...); text boxes keep theirs for copy and paste
+window.addEventListener('contextmenu',e=>{const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'))return;e.preventDefault();});
+window.addEventListener('dragstart',e=>{if(e.target&&(e.target.tagName==='CANVAS'||e.target.tagName==='IMG'))e.preventDefault();});
 $('btnMode').addEventListener('click',openModes);
 $('btnFree').addEventListener('click',toSelect);
 $('btnServers').addEventListener('click',openServers);
