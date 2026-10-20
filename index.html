@@ -10608,7 +10608,8 @@ function trafficFrame(dt){
       else if(a.sim==='kin'&&d<(a.emerg?440:170))trToPhys(a);
       a.thinkT+=dt;const every=a.race?0:a.sim==='kin'?0.16:d>90?1/30:0;
       if(!a.parked&&a.thinkT>=every){a.surf=surfaceAt(a.x,a.z);(a.race?raceThink:a.unit?polThink:trThink)(a,a.thinkT,ALL);a.thinkT=0;}
-      if(a.sim==='phys'){a.pacc=(a.pacc||0)+dt;car=a;let n=0;while(a.pacc>=h&&n<24){stepCar(h);collide();a.pacc-=h;n++;}car=P0;}
+      if(a.sim==='phys'&&a.race&&window.RACE_LOCK!==false){}   // street-race opponent: stepped in lockstep with the player (ui.js frame loop)
+      else if(a.sim==='phys'){a.pacc=(a.pacc||0)+dt;car=a;let n=0;while(a.pacc>=h&&n<24){stepCar(h);collide();a.pacc-=h;n++;}car=P0;}
       else if(!(a.unit&&(a.mode==='hold'||a.mode==='rev'||a.mode==='parked')))trKin(a,dt);}
   }finally{car=P0;}
   // traffic against traffic
@@ -13711,7 +13712,7 @@ function frame(now,bg){   // bg: a tick from the background worker while the tab
     car.surf=surfaceAt(car.x,car.z);
     // a bug in the AI must never freeze the game: report it once and keep running
     try{policeFrame(dt);trafficFrame(dt);}catch(e){if(!window.__simErr){window.__simErr=1;console.error('simulation error',e);}}
-    let n=0;while(acc>=H&&n<20){const u0=car.u;stepCar(H);collide();try{trafficCollide();}catch(e){if(!window.__colErr){window.__colErr=1;console.error('collision error',e);}}t60Step(H,u0);acc-=H;n++;}
+    let n=0;while(acc>=H&&n<20){const u0=car.u;stepCar(H);collide();if(RACE.on&&RACE.a&&RACE.a.alive&&RACE.a.sim==='phys'&&window.RACE_LOCK!==false){const P=car;car=RACE.a;try{stepCar(H);collide();}finally{car=P;}}try{trafficCollide();}catch(e){if(!window.__colErr){window.__colErr=1;console.error('collision error',e);}}t60Step(H,u0);acc-=H;n++;}
     if(car.crash>0){if(!bg&&!held)crashSound(car.crash);car.crash=0;}
     if(bg)return;
     syncCar(dt);trafficVisuals(dt);healthFrame(dt);stepSmoke(dt);boomFrame(dt);if(RACE.on)raceFrame(dt);if(!held){driveCamera(dt);navFrame(dt);drawHud();audioFrame();trAudio();updateReflections(dt);}else if(MODE!=='map'){driveCamera(dt);updateReflections(dt);}   // paused online: keep showing the live world behind the menu
