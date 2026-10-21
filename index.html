@@ -8460,6 +8460,7 @@ class Merger{
     [[a,ua],[b,ub],[c,uc],[a,ua],[c,uc],[d,ud]].forEach(([v,uv])=>{e.p.push(v[0],v[1],v[2]);e.n.push(nx,ny,nz);e.u.push(uv[0],uv[1]);});}
   /* a box whose walls carry real-world texture coordinates (one window bay every `bay` m, one floor every `fl` m) */
   facadeBox(wallMat,topMat,cx,cz,w,d,h,rot,bay,fl,y0){y0=y0||0;const c=Math.cos(rot||0),s=Math.sin(rot||0);
+    if(typeof MAP!=='undefined'&&MAP)(MAP.tops||(MAP.tops=[])).push({x:cx+OFF.x,z:cz+OFF.z,top:y0+h});   // roof heights, for line of sight from the air
     const atlas=wallMat&&wallMat.emissiveMap,F=atlas?FAC_CELLS:1,ou=atlas?Math.floor(R()*F):0,ov=atlas?Math.floor(R()*F):0;let run=ou;
     const P=(lx,lz)=>[cx+lx*c+lz*s,0,cz-lx*s+lz*c];
     const cs=[P(-w/2,-d/2),P(w/2,-d/2),P(w/2,d/2),P(-w/2,d/2)];
@@ -9030,7 +9031,7 @@ function buildCityPolice(G,M,x0,z0,x1,z1,trees){
   for(let i=0;i<bays;i++){const x=bx0+1.5+i*3;M.add(MAT.paintYellow,new TH.BoxGeometry(1.8,0.14,0.25),mtx(x,0.07,walkZ-0.35));
     spawns.push({x,z:z0+bayDepth/2+0.2,psiNoseIn:-Math.PI/2,psiNoseOut:Math.PI/2,bay:i+1});}
   MAP.lamps.push({x:cx-12,y:3.2,z:walkZ+0.4},{x:cx+12,y:3.2,z:walkZ+0.4});
-  MAP.cityPolice={name:'Harlan Police Dept.',x:cx,z:bz,spawns,walkZ,road:'4th Street',nearT:1};
+  MAP.cityPolice={name:'Harlan Police Dept.',x:cx,z:bz,spawns,walkZ,road:'4th Street',nearT:1,roofY:h+0.7,padX:cx-9,padZ:bz};   // Air 1's helipad is on the roof, left of the radio mast
   poi('police','Harlan Police Dept.',cx,bz);
   MAP.spawns.push({name:'Harlan Police Dept.',x:cx+bw/2+12,z:z0+3,psi:0});
 }
@@ -11476,7 +11477,7 @@ function polRoster(init){
 function polReset(){
   // the whole roster exists from the start of the drive: make sure the cruiser models are ready first
   [...UNIT_MODELS.state,...UNIT_MODELS.city].forEach(k=>{if(TPL[k]===undefined){try{trBuildTemplate(k);}catch(e){console.warn(e);}}});
-POL.units=[];POL.inc=null;POL.warrant=null;POL.strips.forEach(s=>s.mesh&&world.remove(s.mesh));POL.strips=[];POL.stop=null;POL.arrest=null;POL.replace=[];POL.pit=null;POL.box=null;POL.rbox=null;
+if(!NET.on)heliReset();POL.units=[];POL.inc=null;POL.warrant=null;POL.strips.forEach(s=>s.mesh&&world.remove(s.mesh));POL.strips=[];POL.stop=null;POL.arrest=null;POL.replace=[];POL.pit=null;POL.box=null;POL.rbox=null;
   POL.lines=[];POL.radioQ=[];POL.nextId={state:21,city:21};POL.t=0;POL.pt={};polStations();if(!POL.spots)POL.spots=polTrapSpots();POL.spots.forEach(s=>s.used=null);
   POL.st.state&&POL.st.state.bays.forEach(b=>b.unit=null);POL.st.city&&POL.st.city.bays.forEach(b=>b.unit=null);
   polRoster(true);POL.ready=true;polHud(true);}
@@ -11742,7 +11743,7 @@ function polLevel(n,reason){const I=POL.inc;if(!I||n<=I.level)return;I.level=Mat
   const say=['','',' Suspect continuing to flee. Requesting backup.',' Pursuit is high risk. Tactical options authorized.',' Critical incident. All '+(I.lkp.town?'city':'state')+' units and available assistance respond.',' All agencies: coordinated search for the suspect, all available units.'];
   polSay('Dispatch','Pursuit now level '+I.level+'.'+say[I.level]+(reason?' ('+reason+')':''),3);polDispatch(true);}
 function polIncidentStep(dt){const I=POL.inc;if(!I)return;const T=POL.pt;
-  const seers=POL.units.filter(u=>u.k.vis&&u.st!=='wrecked'&&u.st!=='parked');I.vis=seers.length>0;
+  const seers=POL.units.filter(u=>u.k.vis&&u.st!=='wrecked'&&u.st!=='parked');{const hs=heliSeer();if(hs)seers.push(hs);}I.vis=seers.length>0;
   if(I.vis){const s=seers.sort((p,q)=>Math.hypot(p.a.x-PLAYER.x,p.a.z-PLAYER.z)-Math.hypot(q.a.x-PLAYER.x,q.a.z-PLAYER.z))[0];
     const was=I.lostSaid;I.lkp=polLKP(s);I.lastVisT=POL.t;I.pursuitT+=dt;I.maxMph=Math.max(I.maxMph,T.mph);if(T.wrongT>2)I.wrong=true;
     if(T.hitT&&POL.t-T.hitT<1.2&&!I.hitCount){I.hits++;I.hitCount=true;}if(!(T.hitT&&POL.t-T.hitT<1.2))I.hitCount=false;
@@ -13232,6 +13233,7 @@ function nwPayload(){const out={},me=nwMePeer(),others=nwDrivers().filter(p=>!p.
         (a.sigL?1:0)|(a.sigR?2:0)|(a.hazard?4:0)|(a.in&&a.in.brk>0.3?8:0)|(a.burnt?16:0)]]);}
     tr.sort((p,q)=>p[0]-q[0]);out.tr=tr.slice(0,32).map(q=>q[1]);}
   else out.tr=[];
+  if(nwIsAuth()){const hp=heliPack();if(hp)out.hl=hp;}   // Air 1: one per server, flown by the world host
   out.sp=POL.strips.filter(S=>!S.remote).map(S=>{if(!S.nid)S.nid=++NW.sid;return [S.nid,nr1(S.x),nr1(S.z),Math.round(S.ax*1000)/1000,Math.round(S.az*1000)/1000,nr1(S.len)];});
   return out;}
 
@@ -13251,6 +13253,7 @@ function nwTick(dt){if(!nwActive())return;const me=nwMePeer();if(!me)return;cons
 /* ---- every frame: other games' units, traffic and spike strips, where their owners put them ---- */
 function nwFrame(dt){if(!nwActive())return;const now=performance.now(),wall=Date.now(),seenTr=new Set(),seenSp=new Set();
   nwDrivers().forEach(p=>{if(p.sameTab)return;const P=p.presence;
+    if(P.hl&&p.peer===nwAuthPeer())heliRecv(P.hl);
     (Array.isArray(P.pu)?P.pu:[]).forEach(q=>{if(!Array.isArray(q)||q.length<10)return;const id=String(q[0]);
       if(nwOwner(id)!==p.peer)return;NW.heard[id]=wall;
       let u=POL.units.find(x=>x.id===id);if(!u){u=nwMakeUnit(id,q[1],q[2],q[3],q[4]);if(!u)return;}
@@ -13301,6 +13304,558 @@ function nwBgSetup(){if(NW_TICK!==null)return;NW_TICK=false;
     NW_TICK.onmessage=()=>{if(document.hidden&&NET.on)frame(performance.now(),true);};}catch(e){NW_TICK=false;}
   document.addEventListener('visibilitychange',()=>{if(NW_TICK)NW_TICK.postMessage(document.hidden&&NET.on?50:0);
     if(NET.on&&AC){try{document.hidden?AC.suspend():(MODE==='drive'&&AC.resume());}catch(e){}}});}
+/* ---------------------------------------------------------------------------
+   AIR 1 MODEL: the Bell 407-type police helicopter from the Model Workshop, built from the four-view blueprint.
+   Kept in its own scope (its loft helpers would otherwise clash with the game's names). buildPoliceHeli() returns
+   the group in metres, X forward (nose), Y up from the bottom of the skids, Z to the right, origin at the mast.
+--------------------------------------------------------------------------- */
+const HELI_MODEL=(()=>{const THREE=window.THREE;
+/* =====================================================================
+   Police helicopter (Bell 407 type), built from the scaled four-view blueprint.
+   Same method as the Drag Strip cars: tables read off the drawing (side profile,
+   plan half-widths), lofted cross-sections, per-triangle material classes for the
+   glass and paint split, and trim placed on the measured surfaces.
+   Blueprint units: 1 px = 0.0272 m. X forward (nose +), Y up from the ground
+   (bottom of the skids), Z to the aircraft's right. Origin X = main rotor mast.
+   ===================================================================== */
+const HPX=0.0272;
+function tabF(T){return x=>{if(x>=T[0][0])return T[0][1];for(let i=1;i<T.length;i++)if(x>=T[i][0]){const a=T[i-1],b=T[i],t=(x-b[0])/(a[0]-b[0]);return b[1]+(a[1]-b[1])*t;}return T[T.length-1][1];};}
+
+/* loft: rings of section points along x, triangles sorted into material groups by classify() */
+function loftMesh(xs,secFn,classify,mats){
+  const pos=[],N=secFn(xs[0]).length,byMat=mats.map(()=>[]);
+  xs.forEach(x=>secFn(x).forEach(([z,y])=>pos.push(x,y,z)));
+  const V=i=>[pos[i*3],pos[i*3+1],pos[i*3+2]];
+  const tri=(a,b,c)=>{const A=V(a),B=V(b),C=V(c);byMat[classify((A[0]+B[0]+C[0])/3,(A[1]+B[1]+C[1])/3,(A[2]+B[2]+C[2])/3)].push(a,b,c);};
+  for(let i=0;i<xs.length-1;i++)for(let j=0;j<N;j++){const r0=i*N,r1=(i+1)*N,j2=(j+1)%N;tri(r0+j,r1+j,r0+j2);tri(r0+j2,r1+j,r1+j2);}
+  [0,xs.length-1].forEach(i=>{let cx=0,cy=0,cz=0;for(let j=0;j<N;j++){const p=V(i*N+j);cx+=p[0];cy+=p[1];cz+=p[2];}
+    const base=pos.length/3;for(let j=0;j<N;j++){const p=V(i*N+j);pos.push(p[0],p[1],p[2]);}
+    const c=pos.length/3;pos.push(cx/N,cy/N,cz/N);for(let j=0;j<N;j++)tri(c,base+j,base+(j+1)%N);});
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  let idx=[];byMat.forEach((l,m)=>{if(l.length)g.addGroup(idx.length,l.length,m);for(let i=0;i<l.length;i++)idx.push(l[i]);});
+  g.setIndex(idx);g.computeVertexNormals();
+  const mesh=new THREE.Mesh(g,mats);mesh.castShadow=true;mesh.receiveShadow=true;return mesh;
+}
+/* rounded-rectangle section whose flanks bulge out to wm at height ym (fuselage pods, cowls) */
+function bulgeSection(wb,wm,wt,yb,ym,yt,rb,rt,nA,nS){
+  const R=[[0.0001,yb]];
+  const arc=(cz,cy,r,a0,a1)=>{for(let k=0;k<=nA;k++){const a=(a0+(a1-a0)*k/nA)*Math.PI/180;R.push([Math.max(0.0001,cz+r*Math.cos(a)),cy+r*Math.sin(a)]);}};
+  rb=Math.max(0.05,Math.min(rb,wb*0.95,(yt-yb)*0.48));rt=Math.max(0.05,Math.min(rt,wt*0.95,(yt-yb)*0.48));
+  arc(wb-rb,yb+rb,rb,-90,0);
+  const P0=[wb,yb+rb],P2=[wt,yt-rt],M=[wm,Math.min(Math.max(ym,P0[1]+0.01),P2[1]-0.01)];
+  const P1=[2*M[0]-(P0[0]+P2[0])/2,2*M[1]-(P0[1]+P2[1])/2];
+  for(let k=1;k<nS;k++){const t=k/nS,u=1-t;R.push([u*u*P0[0]+2*u*t*P1[0]+t*t*P2[0],u*u*P0[1]+2*u*t*P1[1]+t*t*P2[1]]);}
+  arc(wt-rt,yt-rt,rt,0,90);
+  R.push([0.0001,yt]);
+  const L=R.slice(1,-1).reverse().map(([z,y])=>[-z,y]);
+  return R.concat(L);
+}
+function ellipseSection(yc,rv,rh,n){const R=[];for(let k=0;k<n;k++){const a=-Math.PI/2+k/n*Math.PI*2;R.push([rh*Math.cos(a),yc+rv*Math.sin(a)]);}return R;}
+/* z of the right-hand surface of a section at height y */
+function ringZ(ring,y){let best=null;for(let i=0;i<ring.length-1;i++){const a=ring[i],b=ring[i+1];if(a[0]<0||b[0]<0)continue;
+    const lo=Math.min(a[1],b[1]),hi=Math.max(a[1],b[1]);if(y<lo||y>hi||hi===lo)continue;const t=(y-a[1])/(b[1]-a[1]),z=a[0]+(b[0]-a[0])*t;if(best===null||z>best)best=z;}
+  return best===null?0:best;}
+/* rounded polygon outline */
+function roundPoly(pts,r,seg){const out=[],n=pts.length;seg=seg||5;
+  for(let i=0;i<n;i++){const p0=pts[(i+n-1)%n],p1=pts[i],p2=pts[(i+1)%n];
+    const l1=Math.hypot(p0[0]-p1[0],p0[1]-p1[1]),l2=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]),rr=Math.min(r,l1*0.48,l2*0.48);
+    const a=[p1[0]+(p0[0]-p1[0])/l1*rr,p1[1]+(p0[1]-p1[1])/l1*rr],b=[p1[0]+(p2[0]-p1[0])/l2*rr,p1[1]+(p2[1]-p1[1])/l2*rr];
+    for(let k=0;k<=seg;k++){const t=k/seg,u=1-t;out.push([u*u*a[0]+2*u*t*p1[0]+t*t*b[0],u*u*a[1]+2*u*t*p1[1]+t*t*b[1]]);}}
+  return out;}
+
+function buildPoliceHeli(livery){
+  const L=livery||HELI_LIVERIES[0];
+  const grp=new THREE.Group(),body=new THREE.Group();grp.add(body);
+  const mk=(c,r,m,o,phys)=>{const q=new (phys?THREE.MeshPhysicalMaterial:THREE.MeshStandardMaterial)(Object.assign({color:c,roughness:r,metalness:m||0,side:THREE.DoubleSide},o||{}));
+    q.color.convertSRGBToLinear();if(q.emissive)q.emissive.convertSRGBToLinear();return q;};
+  const M={top:mk(L.top,0.3,0.25,{clearcoat:0.7,clearcoatRoughness:0.2},true),low:mk(L.low,0.32,0.35,{clearcoat:0.7,clearcoatRoughness:0.2},true),
+    stripe:mk(L.stripe,0.3,0.5,{clearcoat:0.6},true),
+    glass:mk(0x0a1018,0.04,0.7,{envMapIntensity:1.4}),dark:mk(0x0d0e10,0.7,0.2),rubber:mk(0x070708,0.9,0),
+    metal:mk(0x9a9fa6,0.35,0.85),steel:mk(0x5d6168,0.42,0.8),alu:mk(0xc4c8cd,0.3,0.9),soot:mk(0x2b2622,0.75,0.5),
+    blade:mk(0x2a2c30,0.55,0.3),tip:mk(0xe9e6dc,0.4,0.1),
+    navR:mk(0xff2a1e,0.3,0,{emissive:0xff1a10,emissiveIntensity:1.2}),navG:mk(0x2cff6a,0.3,0,{emissive:0x10ff50,emissiveIntensity:1.2}),
+    white:mk(0xffffff,0.2,0,{emissive:0xffffff,emissiveIntensity:0.6}),
+    red:mk(0xff2a24,0.25,0,{emissive:0xff1010,emissiveIntensity:0.15}),blue:mk(0x2a5cff,0.25,0,{emissive:0x1040ff,emissiveIntensity:0.15}),
+    lens:mk(0xfff6e0,0.1,0,{emissive:0xfff2d0,emissiveIntensity:0.25})};
+  const add=(o,x,y,z,par)=>{if(x!=null)o.position.set(x,y,z);o.castShadow=true;(par||body).add(o);return o;};
+
+  /* ---------------- main fuselage pod ---------------- */
+  const KEEL=tabF([[136,42],[132,37.5],[129,35.3],[122,31.5],[116,29.7],[99,28],[74,27],[14,27.7],[-20,29.5],[-38,32],[-61,37],[-84,47],[-101,65.3]]);
+  const TOP=tabF([[136,42],[134,46.5],[132,50.3],[128,55],[124,59],[119,63],[114,67],[108,71.3],[102,75.3],[95,79],[89,82],[82,84.5],[74,86],[-101,87]]);
+  const PLAN=tabF([[136,1],[135.5,8],[134,13],[132,16.5],[128,20.5],[124,23],[119,25.5],[114,27.5],[106,29.5],[99,31],[88,32.5],[74,33],[-20,33],[-28,30],[-40,25.5],[-55,21],[-70,17.5],[-86,14],[-101,10]]);
+  const podSec=x=>{const yb=KEEL(x),yt=TOP(x),h=yt-yb,wm=PLAN(x);
+    return bulgeSection(wm*0.86,wm,wm*0.8,yb,yb+0.43*h,yt,Math.min(h*0.32,wm*0.6),Math.min(h*0.34,wm*0.62),16,30);};
+  const RC=new Map(),ringAt=(fn,key,x)=>{const k=key+(Math.round(x*20)/20);let r=RC.get(k);if(!r){r=fn(Math.round(x*20)/20);RC.set(k,r);}return r;};
+  const podZ=(x,y)=>ringZ(ringAt(podSec,'p',x),y);
+  // windshield: everything ahead of the slanted A-post, above the dash line; chin windows below
+  const aPost=y=>73+(83.7-y)/51.7*21;
+  const dashL=x=>44+(x-94)*9/35.6;
+  const pmats=[M.top,M.low,M.glass,M.dark,M.stripe];
+  const pxs=[];for(let x=-101;x<136;x+=0.4)pxs.push(+x.toFixed(2));pxs.push(135.7,136);
+  body.add(loftMesh(pxs,podSec,(x,y,z)=>{const az=Math.abs(z);
+    if(x>aPost(y)&&y>dashL(x)&&(x>79||y<TOP(x)-1.6))return az<0.55?3:2;
+    if(x>97&&y>27.6&&y<40.4&&az>4.6&&az<25.4)return 2;
+    if(y<44.6)return 1;return 0;},pmats));
+
+  /* ---------------- engine / transmission cowl ---------------- */
+  const CW=tabF([[68,0.5],[64,6],[58,11],[50,15],[40,18],[28,20],[10,21],[-30,21],[-45,19.5],[-60,17],[-76,13.5],[-92,10],[-101,8.5]]);
+  const CT=tabF([[68,84],[64,89],[58,93],[50,96],[40,97.5],[28,98],[23,100],[19,105],[16,107],[-24,107.5],[-34,106],[-46,104],[-60,100.5],[-76,96],[-90,91.5],[-101,88]]);
+  const cowlSec=x=>{const w=CW(x),yb=80,yt=CT(x),wt=w*0.72;return bulgeSection(w,(w+wt)/2+0.05,wt,yb,(yb+yt)/2,yt,0.4,Math.min(0.55*(yt-yb),wt*0.9),5,10);};
+  const cowlZ=(x,y)=>ringZ(ringAt(cowlSec,'c',x),y);
+  const cxs=[];for(let x=-101;x<=68;x+=0.5)cxs.push(x);
+  body.add(loftMesh(cxs,cowlSec,()=>0,[M.top]));
+
+  /* ---------------- tail boom ---------------- */
+  const BY=tabF([[-96,76],[-240,85],[-250,86]]),BV=tabF([[-96,11.2],[-240,6.6],[-252,4.0]]),BH=tabF([[-96,9.5],[-240,4.6],[-252,2.8]]);
+  const boomSec=x=>ellipseSection(BY(x),BV(x),BH(x),40);
+  const boomZ=(x,y)=>{const r=(y-BY(x))/BV(x);return BH(x)*Math.sqrt(Math.max(0,1-r*r));};
+  const bxs=[];for(let x=-252;x<=-96;x+=1)bxs.push(x);
+  body.add(loftMesh(bxs,boomSec,()=>0,[L.boomLow?M.low:M.top]));
+
+  /* ---------------- surface sheets: windows, frames, panel lines, lettering ---------------- */
+  const sheetGeo=(V,I,UV)=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(V,3));if(UV)g.setAttribute('uv',new THREE.Float32BufferAttribute(UV,2));g.setIndex(I);g.computeVertexNormals();return g;};
+  const P3=(zFn,s,off)=>(x,y)=>[x,y,s*(zFn(x,y)+off)];
+  const polySheet=(outline,zFn,off,mat,R)=>{R=R||8;[1,-1].forEach(s=>{const p=P3(zFn,s,off),V=[],I=[];
+      let cx=0,cy=0;outline.forEach(q=>{cx+=q[0];cy+=q[1];});cx/=outline.length;cy/=outline.length;
+      V.push(...p(cx,cy));const n=outline.length;
+      for(let k=1;k<=R;k++)outline.forEach(q=>V.push(...p(cx+(q[0]-cx)*k/R,cy+(q[1]-cy)*k/R)));
+      for(let i=0;i<n;i++)I.push(0,1+i,1+(i+1)%n);
+      for(let k=1;k<R;k++)for(let i=0;i<n;i++){const a=1+(k-1)*n+i,b=1+(k-1)*n+(i+1)%n,c=a+n,d=b+n;I.push(a,c,b,b,c,d);}
+      add(new THREE.Mesh(sheetGeo(V,I),mat));});};
+  const offsetPoly=(pts,w)=>{let A=0;for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];A+=a[0]*b[1]-b[0]*a[1];}const sg=A>0?1:-1;
+    return pts.map((q,i)=>{const a=pts[(i+pts.length-1)%pts.length],b=pts[(i+1)%pts.length];let dx=b[0]-a[0],dy=b[1]-a[1];const l=Math.hypot(dx,dy)||1;return[q[0]+sg*dy/l*w,q[1]-sg*dx/l*w];});};
+  const ringSheet=(inner,outer,zFn,off,mat)=>{[1,-1].forEach(s=>{const p=P3(zFn,s,off),V=[],I=[],n=inner.length;
+      inner.forEach(q=>V.push(...p(q[0],q[1])));outer.forEach(q=>V.push(...p(q[0],q[1])));
+      for(let i=0;i<n;i++){const j=(i+1)%n;I.push(i,n+i,j,j,n+i,n+j);}add(new THREE.Mesh(sheetGeo(V,I),mat));});};
+  const lineSheet=(pl,w,zFn,off,mat)=>{[1,-1].forEach(s=>{const p=P3(zFn,s,off),V=[],I=[];
+      pl.forEach((q,i)=>{const a=pl[Math.max(0,i-1)],b=pl[Math.min(pl.length-1,i+1)];let dx=b[0]-a[0],dy=b[1]-a[1];const l=Math.hypot(dx,dy)||1;
+        V.push(...p(q[0]-dy/l*w/2,q[1]+dx/l*w/2),...p(q[0]+dy/l*w/2,q[1]-dx/l*w/2));});
+      for(let i=0;i<pl.length-1;i++){const a=i*2;I.push(a,a+2,a+1,a+1,a+2,a+3);}add(new THREE.Mesh(sheetGeo(V,I),mat));});};
+  const dense=(pts,step)=>{const o=[];for(let i=0;i<pts.length-1;i++){const a=pts[i],b=pts[i+1],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/step));
+    for(let k=0;k<n;k++)o.push([a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n]);}o.push(pts[pts.length-1]);return o;};
+  const texts=[];
+  const textSheet=(x0,x1,y0,y1,zFn,off,txt,col,font,slant)=>{const cv=document.createElement('canvas');cv.width=1024;cv.height=Math.round(1024*(y1-y0)/(x1-x0));
+    const tex=new THREE.CanvasTexture(cv);tex.encoding=THREE.sRGBEncoding;tex.anisotropy=8;
+    const draw=()=>{const c=cv.getContext('2d');c.clearRect(0,0,cv.width,cv.height);c.fillStyle=col;c.textAlign='center';c.textBaseline='middle';
+      let fs=cv.height*0.92;c.font=font.replace('%',fs);while(c.measureText(txt).width>cv.width*0.98&&fs>8){fs-=2;c.font=font.replace('%',fs);}
+      c.save();c.translate(cv.width/2,cv.height/2+fs*0.04);if(slant)c.transform(1,0,-slant,1,0,0);c.fillText(txt,0,0);c.restore();tex.needsUpdate=true;};
+    draw();texts.push(draw);
+    const mat=new THREE.MeshStandardMaterial({map:tex,transparent:true,roughness:0.35,metalness:0.1,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,depthWrite:false});
+    [1,-1].forEach(s=>{const p=P3(zFn,s,off),V=[],I=[],UV=[],NX=48,NY=6;
+      for(let i=0;i<=NX;i++)for(let j=0;j<=NY;j++){const x=x0+(x1-x0)*i/NX,y=y0+(y1-y0)*j/NY;V.push(...p(x,y));UV.push(s>0?i/NX:1-i/NX,j/NY);}
+      for(let i=0;i<NX;i++)for(let j=0;j<NY;j++){const a=i*(NY+1)+j,b=a+NY+1;I.push(a,b,a+1,a+1,b,b+1);}
+      const m=new THREE.Mesh(sheetGeo(V,I,UV),mat);m.renderOrder=2;add(m);});};
+
+  // cabin side windows: front door (slanted to follow the A-post), rear door, aft cabin
+  const W=[roundPoly([[73.7,79.6],[52.3,78.6],[52.3,49],[82.3,49]],4.5,6),
+    roundPoly([[48.8,77.3],[29.3,77.3],[29.3,48.7],[48.8,48.7]],5,6),
+    roundPoly([[22.3,77.3],[-16,77.3],[-16,47.3],[22.3,47.3]],6,6)];
+  const closeD=(o,st)=>dense(o.concat([o[0]]),st).slice(0,-1);
+  W.forEach(o=>{o=closeD(o,0.7);polySheet(o,podZ,0.12,M.glass,14);ringSheet(o,offsetPoly(o,1.3),podZ,0.16,M.dark);});
+  // windshield frame: A-post and centre post edges
+  lineSheet(dense([[72.4,85.6],[74.5,80],[94.2,32]],0.8),1.4,podZ,0.14,M.dark);
+  {const dl=[];for(let x=93.5;x<=128.5;x+=0.5)dl.push([x,dashL(x)]);lineSheet(dl,1.3,podZ,0.14,M.dark);}
+  // livery stripe over the paint split
+  {const st=[];for(let x=-76;x<=133.5;x+=0.5)st.push([x,44.6]);lineSheet(st,1.8,podZ,0.13,M.stripe);}
+  // door and panel seams
+  const seam=(pl)=>lineSheet(dense(pl,0.8),0.35,podZ,0.1,M.dark);
+  seam([[73.4,84.2],[50.6,84.2],[50.6,30.5]]);seam([[94.6,31.6],[50.6,30.5]]);
+  seam([[50.6,84.2],[-19.5,84.2],[-19.5,30.5],[50.6,30.5]]);seam([[25.8,84.2],[25.8,30.5]]);
+  {const bd=roundPoly([[-26,62],[-61,62],[-61,38.5],[-26,38.5]],3,4);seam(bd.concat([bd[0]]));}                 // baggage door
+  [[56,60.5],[30,60.5],[-23,58]].forEach(([x,y])=>{const h=new THREE.Mesh(new THREE.BoxGeometry(4,1.1,0.9),M.alu);
+    [1,-1].forEach(s=>add(h.clone(),x,y,s*(podZ(x,y)+0.3)));});
+  // cowl: louvres, side intake, oil-cooler grille
+  for(let i=0;i<5;i++){const x=-28-i*6.6;polySheet(closeD(roundPoly([[x,94.5],[x-3.2,94.5],[x-3.2,88],[x,88]],1,3),0.5),cowlZ,0.1,M.dark,4);}
+  polySheet(closeD(roundPoly([[0,93],[-17,93],[-17,86.5],[0,86.5]],3,5),0.6),cowlZ,0.1,M.dark,6);
+  for(let i=0;i<3;i++)lineSheet(dense([[-1.5,88.2+i*1.6],[-15.5,88.2+i*1.6]],0.6),0.4,cowlZ,0.16,M.steel);
+  lineSheet(dense([[64,88.8],[30,88.6],[-24,88.6],[-60,88]],1),0.35,cowlZ,0.08,M.dark);
+  // lettering
+  const F="800 %px 'Barlow Condensed','Arial Narrow',Impact,sans-serif";
+  textSheet(-40,26,30.5,42.5,podZ,0.2,'POLICE',L.textLow,F);
+  textSheet(-164,-104,BY(-134)-4.6,BY(-134)+4.6,boomZ,0.15,'POLICE',L.textBoom,F);
+  textSheet(64,92,32.5,41,podZ,0.2,'AIR 1',L.textLow,F);
+
+  /* ---------------- tail surfaces ---------------- */
+  const finShape=(pts,th,mat)=>{const s=new THREE.Shape();s.moveTo(pts[0][0],pts[0][1]);pts.slice(1).forEach(p=>s.lineTo(p[0],p[1]));
+    const g=new THREE.ExtrudeGeometry(s,{depth:th*0.4,bevelEnabled:true,bevelThickness:th*0.3,bevelSize:th*0.28,bevelSegments:3,curveSegments:8});g.translate(0,0,-th*0.2);
+    return add(new THREE.Mesh(g,mat));};
+  finShape([[-220,84],[-243,136],[-258,136],[-254.5,84]],2.6,L.finLow?M.low:M.top);
+  finShape([[-226,82],[-238,51.5],[-250,51.5],[-249,82]],2.4,L.finLow?M.low:M.top);
+  // tail-rotor gearbox fairing on top of the fin root, tail skid stinger
+  {const gb=new THREE.Mesh(new THREE.SphereGeometry(5,20,14),M.top);gb.scale.set(1.5,1,0.8);add(gb,-240,88,0);
+    const pts=[[-240,52],[-252,49.5],[-262,49.5],[-265,52]].map(([x,y])=>new THREE.Vector3(x,y,0));
+    add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),24,0.7,8),M.steel));}
+  // horizontal stabiliser with swept end plates
+  {const s=new THREE.Shape(),c=24,t=1.9;s.moveTo(0,0);for(let i=0;i<=20;i++){const u=i/20,yt=5*t*(0.2969*Math.sqrt(u)-0.126*u-0.3516*u*u+0.2843*u*u*u-0.1015*u*u*u*u);s.lineTo(-u*c,yt);}
+    for(let i=20;i>=0;i--){const u=i/20,yt=5*t*(0.2969*Math.sqrt(u)-0.126*u-0.3516*u*u+0.2843*u*u*u-0.1015*u*u*u*u);s.lineTo(-u*c,-yt*0.5);}
+    const g=new THREE.ExtrudeGeometry(s,{depth:84,bevelEnabled:false,curveSegments:4});g.translate(0,0,-42);add(new THREE.Mesh(g,M.top),-168,79.5,0);
+    [1,-1].forEach(sd=>{const ep=finShape([[-161,79],[-166,92],[-184,97],[-188,57],[-176,57]],1.5,L.finLow?M.low:M.top);ep.position.z=sd*42.6;
+      const nl=new THREE.Mesh(new THREE.SphereGeometry(0.9,10,8),sd>0?M.navG:M.navR);add(nl,-163,80,sd*43.6);});}
+  // beacon on the fin, white tail strobe
+  const beacon=add(new THREE.Mesh(new THREE.SphereGeometry(1.4,12,10),M.navR),-251,137.3,0);
+  const tailStrobe=add(new THREE.Mesh(new THREE.SphereGeometry(0.9,10,8),M.white),-253.2,86,0);
+
+  /* ---------------- tail rotor (left side) ---------------- */
+  const trHub=new THREE.Group();trHub.position.set(-238,87,-12);body.add(trHub);
+  {const sh=new THREE.Mesh(new THREE.CylinderGeometry(1.6,2.2,10,14),M.steel);sh.rotation.x=Math.PI/2;sh.position.z=5;trHub.add(sh);
+    const hub=new THREE.Mesh(new THREE.CylinderGeometry(2.6,2.6,2.4,16),M.metal);hub.rotation.x=Math.PI/2;trHub.add(hub);}
+  const tailRotor=new THREE.Group();trHub.add(tailRotor);
+  for(let k=0;k<2;k++){const b=new THREE.Group();b.rotation.z=k*Math.PI;
+    const bl=new THREE.Mesh(new THREE.BoxGeometry(4.2,26,0.8),M.blade);bl.position.y=17.5;bl.rotation.y=0.18;b.add(bl);
+    const tp=new THREE.Mesh(new THREE.BoxGeometry(4.25,3,0.85),M.tip);tp.position.y=29;tp.rotation.y=0.18;b.add(tp);
+    const gr=new THREE.Mesh(new THREE.BoxGeometry(3,4.5,1.6),M.metal);gr.position.y=3.5;b.add(gr);tailRotor.add(b);}
+  tailRotor.traverse(o=>o.castShadow=true);
+
+  /* ---------------- main rotor ---------------- */
+  const mast=new THREE.Group();mast.position.set(2,0,0);body.add(mast);
+  {const c=(r1,r2,h,y,m)=>{const o=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,22),m);o.position.y=y;o.castShadow=true;mast.add(o);return o;};
+    c(5.5,7,4,108.5,M.top);             // mast base fairing
+    c(2.6,2.6,22,118,M.steel);          // mast
+    c(7.2,7.2,1.6,113.5,M.metal);c(6.2,6.2,1.4,115.2,M.alu); // swashplate
+  }
+  const rotor=new THREE.Group();rotor.position.y=128.5;mast.add(rotor);
+  {const hub=new THREE.Mesh(new THREE.CylinderGeometry(6.5,7,3.6,24),M.metal);rotor.add(hub);
+    const cap=new THREE.Mesh(new THREE.SphereGeometry(4.2,18,10,0,Math.PI*2,0,Math.PI/2),M.steel);cap.position.y=1.8;rotor.add(cap);
+    const yoke=new THREE.Mesh(new THREE.BoxGeometry(34,1.6,7),M.steel);rotor.add(yoke);const y2=yoke.clone();y2.rotation.y=Math.PI/2;rotor.add(y2);
+    for(let k=0;k<4;k++){const b=new THREE.Group();b.rotation.y=k*Math.PI/2;
+      const grip=new THREE.Mesh(new THREE.BoxGeometry(10,3,6),M.metal);grip.position.x=19;b.add(grip);
+      const pl=new THREE.Mesh(new THREE.CylinderGeometry(0.45,0.45,13,6),M.alu);pl.position.set(15,-7,3.6);b.add(pl);
+      const bl=new THREE.Group();bl.position.x=22;bl.rotation.z=-0.02;b.add(bl);
+      // blade: tapered planform, thin airfoil, 6 degrees of pitch
+      const s=new THREE.Shape(),R=174;s.moveTo(0,-5);s.lineTo(R-2,-5);s.lineTo(R,-3.2);s.lineTo(R,3.6);s.lineTo(R-3,5);s.lineTo(0,5);
+      const g=new THREE.ExtrudeGeometry(s,{depth:0.6,bevelEnabled:true,bevelThickness:0.35,bevelSize:0.3,bevelSegments:2});g.rotateX(Math.PI/2);
+      const m=new THREE.Mesh(g,M.blade);m.rotation.x=0.1;bl.add(m);
+      const tip=new THREE.Mesh(new THREE.BoxGeometry(9,1.5,10.4),M.tip);tip.position.x=R-6;tip.rotation.x=0.1;bl.add(tip);
+      b.traverse(o=>o.castShadow=true);rotor.add(b);}
+  }
+  const blur=new THREE.Mesh(new THREE.RingGeometry(20,196,64,1),new THREE.MeshBasicMaterial({color:0x8a9099,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));
+  blur.rotation.x=-Math.PI/2;blur.position.y=0.4;rotor.add(blur);
+  // exhaust stack
+  {const ex=new THREE.Mesh(new THREE.CylinderGeometry(3.2,3.6,7,16,1,true),M.soot);ex.position.set(-40,108.5,0);ex.rotation.z=0.55;add(ex);
+    const inr=new THREE.Mesh(new THREE.CircleGeometry(3.1,16),M.rubber);inr.position.set(-41.9,111.4,0);inr.rotation.set(-Math.PI/2,0.55,0,'YXZ');add(inr);}
+
+  /* ---------------- skid gear ---------------- */
+  const tube=(pts,r,mat)=>add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(...p))),Math.max(20,pts.length*12),r,10),mat));
+  [1,-1].forEach(s=>{
+    tube([[-34,1.9,s*50],[40,1.9,s*50],[82,1.9,s*50],[89,2.4,s*50],[93,4.2,s*50],[94.6,6.6,s*50]],1.7,M.alu);   // skid with the upturned toe
+    [-34.6].forEach(x=>{const cp=new THREE.Mesh(new THREE.SphereGeometry(1.7,10,8),M.alu);add(cp,x,1.9,s*50);});
+    tube([[76,15.6,s*37],[-38,15.6,s*37]],1.1,M.alu);                                                   // boarding step
+    [[76],[-38]].forEach(([x])=>tube([[x,15.6,s*37],[x+(x>0?-3:3),17.5,s*35.5]],0.8,M.alu));
+    // wear shoes on the skid bottoms
+    [[30],[-8]].forEach(([x])=>{const sh=new THREE.Mesh(new THREE.BoxGeometry(14,0.7,2.6),M.steel);add(sh,x,0.4,s*50);});
+  });
+  [64,-21].forEach(x=>{const arc=[[50,1.9],[49.2,7],[46,13],[40,18],[30,21.6],[15,23.2],[0,23.6]];
+    tube(arc.map(([z,y])=>[x,y,z]).concat(arc.slice(0,-1).reverse().map(([z,y])=>[x,y,-z])),1.5,M.alu);
+    [1,-1].forEach(s=>{const sd=new THREE.Mesh(new THREE.BoxGeometry(4.5,4.5,4.5),M.dark);add(sd,x,26.2,s*18);});});
+
+  /* ---------------- nose fittings and police equipment ---------------- */
+  {const pt=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.5,7,8),M.alu);pt.rotation.z=Math.PI/2;add(pt,139,42.2,0);}
+  // wire-strike cutters, roof and chin
+  finShape([[67,85.5],[71,85.5],[91.5,99.5],[89.5,99.8]],0.9,M.steel);
+  finShape([[96,30],[100,29],[118,14.6],[116.5,14]],0.9,M.steel);
+  // FLIR turret under the nose
+  const flir=new THREE.Group();flir.position.set(109,19.5,9.5);body.add(flir);
+  {const post=new THREE.Mesh(new THREE.CylinderGeometry(2.2,3,10,12),M.dark);post.position.y=6;flir.add(post);
+    const ball=new THREE.Mesh(new THREE.SphereGeometry(6.4,28,20),mk(0xd9dadc,0.4,0.2));flir.add(ball);
+    const win=new THREE.Mesh(new THREE.CircleGeometry(2.6,20),M.glass);win.position.set(6.25,-0.6,1.2);win.rotation.y=Math.PI/2;flir.add(win);
+    const win2=new THREE.Mesh(new THREE.CircleGeometry(1.5,16),M.glass);win2.position.set(6.25,-0.4,-2.6);win2.rotation.y=Math.PI/2;flir.add(win2);
+    flir.traverse(o=>o.castShadow=true);}
+  // searchlight on the left side, on a gimbal below the cabin
+  const sl=new THREE.Group();sl.position.set(78,19,-29);body.add(sl);
+  {const arm=new THREE.Mesh(new THREE.BoxGeometry(3,3,8),M.dark);arm.position.set(0,6,3);sl.add(arm);
+    const yoke=new THREE.Mesh(new THREE.TorusGeometry(5.2,0.6,8,20,Math.PI),M.dark);yoke.rotation.set(0,Math.PI/2,Math.PI);yoke.position.y=1;sl.add(yoke);
+    const head=new THREE.Group();head.rotation.z=-0.32;sl.add(head);
+    const can=new THREE.Mesh(new THREE.CylinderGeometry(4.6,4.2,10,24),mk(0x1a1b1e,0.5,0.4));can.rotation.z=Math.PI/2;head.add(can);
+    const lens=new THREE.Mesh(new THREE.CircleGeometry(4.2,24),M.lens);lens.position.x=5.05;lens.rotation.y=Math.PI/2;head.add(lens);
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(4.4,0.5,8,24),M.metal);rim.position.x=5.05;rim.rotation.y=Math.PI/2;head.add(rim);
+    sl.traverse(o=>o.castShadow=true);sl.userData.head=head;}
+  // red / blue strobes under the belly, PA speaker
+  const strobes=[];[[24,-6,M.red],[24,6,M.blue],[-12,-6,M.blue],[-12,6,M.red]].forEach(([x,z,m])=>{const d=new THREE.Mesh(new THREE.SphereGeometry(1.5,14,8,0,Math.PI*2,Math.PI/2,Math.PI/2),m.clone());
+    add(d,x,KEEL(x)+0.4,z);strobes.push(d);});
+  {const pa=new THREE.Mesh(new THREE.BoxGeometry(7,3.2,5),M.dark);add(pa,6,KEEL(6)-1.2,0);
+    for(let i=0;i<5;i++){const g=new THREE.Mesh(new THREE.BoxGeometry(6.4,0.25,0.3),M.steel);add(g,6,KEEL(6)-1.6+i*0.0,-2.55+i*1.2);}}
+  // antennas: belly blade, boom top whip, roof GPS
+  finShape([[-40,KEEL(-40)+1],[-46,KEEL(-46)+1],[-48,KEEL(-46)-6],[-44.5,KEEL(-46)-6]],0.7,M.dark);
+  {const w=new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.35,10,6),M.dark);w.position.set(-140,BY(-140)+BV(-140)+5,0);w.rotation.z=0.4;add(w);
+    const gps=new THREE.Mesh(new THREE.CylinderGeometry(1.8,2,0.9,14),M.tip);add(gps,46,CT(46)+0.3,0);}
+
+  grp.scale.setScalar(HPX);
+  grp.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+  return{grp,rotor,tailRotor,blur,beacon,tailStrobe,strobes,searchlight:sl,texts,M,
+    lengthM:(140+265)*HPX};
+}
+const HELI_LIVERIES=[
+  {name:'Navy and white',top:0xf2f3f0,low:0x16264a,stripe:0xc9a23a,textLow:'#f2f3f0',textBoom:'#16264a'},
+  {name:'Black and white',top:0xf1f1ee,low:0x0f1012,stripe:0x9b1d20,textLow:'#f1f1ee',textBoom:'#0f1012'},
+  {name:'Sheriff green',top:0xf0f0ea,low:0x1e4a30,stripe:0xc9a23a,textLow:'#f0f0ea',textBoom:'#1e4a30'},
+  {name:'All navy',top:0x1a2b52,low:0x101a33,stripe:0xc9a23a,textLow:'#f2f3f0',textBoom:'#f2f3f0',boomLow:false,finLow:false}];
+return {buildPoliceHeli,HELI_LIVERIES};})();
+/* ---------------------------------------------------------------------------
+   AIR 1: THE POLICE HELICOPTER
+   One per server, single player or online. It lives on the roof of Harlan PD. When anyone is wanted at 4 stars or
+   more the rotors start, it lifts off, climbs and heads for where the suspect was last reported. Once it has eyes on
+   the car it never tries to stop it: it just keeps it in sight from about 125 m up (circling when the car is slow or
+   stopped, trailing it when it runs) and calls the position in, which keeps every ground unit pointed at the car.
+   Outrun it (it tops out at 80 mph) or get a building between you and it for a few seconds and it loses you: it
+   then searches in widening circles around where it last saw you, spotlight sweeping at night, until the ground
+   units call the search off; then it flies home and lands.
+
+   Flight is a real helicopter's, simplified: the rotor's thrust acts along the rotor mast, so to go anywhere it
+   tilts (nose down to speed up, banks to turn); the attitude takes time to change; climb and descent come from the
+   collective (total thrust); drag caps the speed; the nose weathervanes into the airflow; and there is no lift
+   until the rotor is up to speed. The AI only chooses where it wants to be; the physics gets it there.
+
+   Online the world host flies it (see networld.js) and everyone else follows the host's positions.
+--------------------------------------------------------------------------- */
+const HELI_ALT=125,HELI_VMAX=35.76,HELI_ORB=140,HELI_TILT=0.44,HELI_G=9.81,HELI_KD=4.57/(37*37);
+const HELI={obj:null,ready:false,x:0,y:0,z:0,vx:0,vy:0,vz:0,yaw:0,yr:0,pit:0,pr:0,rol:0,rr:0,T:HELI_G,rpm:0,acc:0,
+  st:'parked',stT:0,tgt:null,tgtId:null,see:false,seeHold:0,lostT:0,lk:null,sc:null,searchT:0,losT:0,losOk:false,
+  aim:{x:0,y:0,z:0},spotOn:false,spot:null,beam:null,pad:null,snd:null,rx:null,said:{},gust:[0,0],flash:0};
+const HELI_CODES={parked:'p',spinup:'u',lift:'l',locate:'o',track:'t',search:'s',return:'b',land:'d',spindown:'w'};
+const HELI_CODES_R=Object.fromEntries(Object.entries(HELI_CODES).map(([k,v])=>[v,k]));
+function heliAirborne(){return HELI.st!=='parked'&&HELI.st!=='spinup'&&HELI.st!=='spindown';}
+function heliOnCall(){return HELI.st==='locate'||HELI.st==='track'||HELI.st==='search';}
+
+/* building heights for line of sight: each building takes the tallest roof drawn over its footprint */
+function heliHeights(){const T=MAP.tops||[];
+  MAP.buildings.forEach(b=>{let h=0;const c=Math.cos(b.rot||0),s=Math.sin(b.rot||0);
+    for(const t of T){const lx=(t.x-b.x)*c-(t.z-b.z)*s,lz=(t.x-b.x)*s+(t.z-b.z)*c;if(Math.abs(lx)<=b.w/2+0.5&&Math.abs(lz)<=b.d/2+0.5)h=Math.max(h,t.top);}
+    b.h=h||6;});}
+/* can Air 1 see a point on the ground? (a straight line from the helicopter to the car, through no building) */
+function heliLOS(tx,tz){const x0=HELI.x,y0=HELI.y-1.2,z0=HELI.z,dx=tx-x0,dz=tz-z0,d=Math.hypot(dx,dz),n=Math.max(1,Math.ceil(d/3));
+  for(let i=1;i<n;i++){const f=i/n,px=x0+dx*f,pz=z0+dz*f,py=y0+(1.1-y0)*f;if(py>40)continue;   // no building here is taller than 40 m
+    for(const b of RN.bld.near(px,pz)){if((b.h||6)<py)continue;const c=Math.cos(b.rot||0),s=Math.sin(b.rot||0),lx=(px-b.x)*c-(pz-b.z)*s,lz=(px-b.x)*s+(pz-b.z)*c;
+      if(Math.abs(lx)<b.w/2&&Math.abs(lz)<b.d/2)return false;}}
+  return true;}
+
+/* ---------------------------------------------------------------- setup */
+function heliInit(){try{
+  const S=MAP.cityPolice;if(!S||!window.THREE)return;heliHeights();
+  HELI.pad={x:S.padX!=null?S.padX:S.x,z:S.padZ!=null?S.padZ:S.z,y:S.roofY||8.5,yaw:0};
+  const m=HELI_MODEL.buildPoliceHeli(HELI_MODEL.HELI_LIVERIES[0]);HELI.obj=m;
+  m.grp.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=false;}});
+  m.grp.rotation.order='YZX';world.add(m.grp);
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>m.texts.forEach(d=>d()));
+  // the roof helipad: concrete deck, yellow touchdown circle and the H
+  {const cv=document.createElement('canvas');cv.width=cv.height=256;const x=cv.getContext('2d');x.fillStyle='#6f7174';x.fillRect(0,0,256,256);
+    for(let i=0;i<1600;i++){const v=95+Math.random()*40|0;x.fillStyle=`rgba(${v},${v},${v},.35)`;x.fillRect(Math.random()*256,Math.random()*256,2,2);}
+    x.strokeStyle='#e8c232';x.lineWidth=9;x.beginPath();x.arc(128,128,96,0,7);x.stroke();x.fillStyle='#f0efe9';x.fillRect(92,74,18,108);x.fillRect(146,74,18,108);x.fillRect(92,119,72,18);
+    x.strokeStyle='#f0efe9';x.lineWidth=5;x.strokeRect(8,8,240,240);const t=new TH.CanvasTexture(cv);t.encoding=TH.sRGBEncoding;
+    const pad=new TH.Mesh(new TH.BoxGeometry(13,0.16,13),[MAT_HPAD_SIDE(),MAT_HPAD_SIDE(),new TH.MeshStandardMaterial({map:t,roughness:0.9}),MAT_HPAD_SIDE(),MAT_HPAD_SIDE(),MAT_HPAD_SIDE()]);
+    pad.position.set(HELI.pad.x,HELI.pad.y+0.08,HELI.pad.z);pad.receiveShadow=true;world.add(pad);HELI.pad.y+=0.16;}
+  // the searchlight: one spot light, always in the scene (switching lights on and off would recompile every shader)
+  const sp=new TH.SpotLight(0xfff1d8,0,620,0.075,0.45,1);sp.visible=true;world.add(sp);world.add(sp.target);HELI.spot=sp;
+  const bg=new TH.CylinderGeometry(0.02,1,1,24,1,true);bg.translate(0,-0.5,0);
+  HELI.beam=new TH.Mesh(bg,new TH.MeshBasicMaterial({color:0xfff2d6,transparent:true,opacity:0,depthWrite:false,blending:TH.AdditiveBlending,side:TH.DoubleSide,fog:false}));
+  HELI.beam.frustumCulled=false;HELI.beam.visible=false;world.add(HELI.beam);
+  heliReset();HELI.ready=true;heliVisual(0);
+}catch(e){console.warn('Air 1:',e);HELI.ready=false;}}
+function MAT_HPAD_SIDE(){return new TH.MeshStandardMaterial({color:0x5c5e60,roughness:0.95});}
+function heliReset(){if(!HELI.pad)return;Object.assign(HELI,{x:HELI.pad.x,y:HELI.pad.y,z:HELI.pad.z,vx:0,vy:0,vz:0,yaw:HELI.pad.yaw,yr:0,pit:0,pr:0,rol:0,rr:0,
+  T:0,rpm:0,acc:0,st:'parked',stT:0,tgt:null,tgtId:null,see:false,seeHold:0,lostT:0,lk:null,sc:null,searchT:0,losT:0,losOk:false,spotOn:false,rx:null,said:{}});}
+function heliSet(st){if(HELI.st!==st){HELI.st=st;HELI.stT=0;}}
+
+/* ---------------------------------------------------------------- who it's after */
+function heliMyId(){return NET.on?nwMePeer():'me';}
+function heliTargets(){const out=[];
+  if(!NET.on){if(POL.inc&&POL.inc.level>=4&&MODE!=='menu'){const v=trVel(PLAYER);out.push({id:'me',lv:POL.inc.level,x:PLAYER.x,z:PLAYER.z,vx:v[0],vz:v[1],
+      lkx:POL.inc.lkp?POL.inc.lkp.x:PLAYER.x,lkz:POL.inc.lkp?POL.inc.lkp.z:PLAYER.z});}return out;}
+  for(const p of nwDrivers()){let lv,x,z,vx,vz;
+    if(p.sameTab){lv=POL.inc?POL.inc.level:0;const v=trVel(PLAYER);x=PLAYER.x;z=PLAYER.z;vx=v[0];vz=v[1];}
+    else{const s=p.presence.s;if(!Array.isArray(s))continue;lv=p.presence.w|0;x=s[0];z=s[1];vx=(s[3]||0)*Math.cos(s[2]||0);vz=-(s[3]||0)*Math.sin(s[2]||0);}
+    if(lv>=4)out.push({id:p.peer,lv,x,z,vx,vz,lkx:x,lkz:z});}
+  return out;}
+function heliPickTarget(){const L=heliTargets();if(!L.length)return null;
+  const cur=L.find(t=>t.id===HELI.tgtId);if(cur&&cur.lv>=Math.max(...L.map(t=>t.lv)))return cur;   // stays on its suspect unless someone is more wanted
+  L.sort((a,b)=>b.lv-a.lv||Math.hypot(a.x-HELI.x,a.z-HELI.z)-Math.hypot(b.x-HELI.x,b.z-HELI.z));return L[0];}
+
+/* ---------------------------------------------------------------- radio (heard by the suspect it's chasing) */
+function heliSay(msg,pri,key){if(HELI.tgtId!==heliMyId())return;if(key){if(HELI.said[key]&&POL.t-HELI.said[key]<8)return;HELI.said[key]=POL.t;}
+  try{polSay('Air 1',msg,pri||1);}catch(e){}}
+
+/* ---------------------------------------------------------------- the pilot: where it wants to be */
+function heliAI(dt){const H=HELI,W=heliPickTarget(),night=LIGHTS.on;H.stT+=dt;
+  if(W){if(H.tgtId!==W.id){H.tgtId=W.id;H.see=false;H.seeHold=0;H.lk={x:W.lkx,z:W.lkz,vx:0,vz:0,t:POL.t};}H.tgt=W;}else H.tgt=null;
+  // eyes: line of sight checked ten times a second
+  H.losT-=dt;let vis=false,dh=1e9;
+  if(W&&heliAirborne()&&H.rpm>0.9){dh=Math.hypot(W.x-H.x,W.z-H.z);
+    const tsp=Math.hypot(W.vx||0,W.vz||0);
+    // once it has lost the car, a parked one is just another parked car: it has to come close to pick it out again
+    const R=H.st==='track'?(night?520:680):H.st==='search'?(tsp<3?(night?110:130):(night?330:400)):(night?450:620);
+    if(dh<R){if(H.losT<=0){H.losT=0.1;H.losOk=heliLOS(W.x,W.z);}vis=H.losOk;}}
+  const st=H.st;
+  if(st==='parked'){if(W)heliSet('spinup');return {mode:'ground'};}
+  if(st==='spinup'){if(H.stT<0.1)heliSay('Air 1 starting up at Harlan PD, airborne in about a minute.',1,'up');
+    if(!W&&H.stT>12){heliSet('spindown');return {mode:'ground'};}
+    if(H.rpm>0.97&&W)heliSet('lift');return {mode:'ground'};}
+  if(st==='spindown'){if(W){heliSet('spinup');}return {mode:'ground'};}
+  if(!W&&st!=='return'&&st!=='land'){heliSay('Air 1 returning to base.',1,'rtb');heliSet('return');}
+  if(st==='lift'){if(H.y>H.pad.y+16)heliSet('locate');return {mode:'pos',x:H.pad.x,z:H.pad.z,y:H.pad.y+22,yaw:H.pad.yaw,vcap:3};}
+  if(st==='locate'){if(H.stT<0.1)heliSay('Air 1 airborne, en route to the suspect\'s last reported location.',1,'air');
+    // ground units keep updating where the suspect was last seen
+    if(W&&(!H.lk||POL.t-H.lk.t>8)){H.lk={x:W.lkx,z:W.lkz,vx:W.vx,vz:W.vz,t:POL.t};}
+    if(vis){H.seeHold+=dt;if(H.seeHold>0.6){heliSet('track');heliSay('Air 1, I have the suspect. I\'ll call it from up here.',2,'eyes');}}else H.seeHold=0;
+    const L=H.lk||{x:H.pad.x,z:H.pad.z};return {mode:'pos',x:L.x,z:L.z,y:HELI_ALT};}
+  if(st==='track'){
+    if(vis){H.lostT=0;H.see=true;H.lk={x:W.x,z:W.z,vx:W.vx,vz:W.vz,t:POL.t};}
+    else{H.lostT+=dt;if(H.lostT>4){H.see=false;heliSet('search');H.searchT=0;
+        const lk=H.lk||{x:W.x,z:W.z,vx:0,vz:0};H.sc={x:lk.x,z:lk.z,vx:lk.vx,vz:lk.vz};
+        heliSay(dh>480?'Air 1, suspect has outrun me, lost visual. Searching the area.':'Air 1, lost visual behind the buildings. Searching the area.',2,'lost');
+        return {mode:'orbit',x:H.sc.x,z:H.sc.z,vx:0,vz:0,R:90,V:24};}}
+    const T=H.see?W:H.lk;return {mode:'follow',x:T.x,z:T.z,vx:T.vx||0,vz:T.vz||0};}
+  if(st==='search'){H.searchT+=dt;
+    // the last seen spot drifts the way the car was going, for the first few seconds
+    if(H.searchT<10){H.sc.x+=(H.sc.vx||0)*dt*0.7;H.sc.z+=(H.sc.vz||0)*dt*0.7;}
+    if(vis){H.seeHold+=dt;if(H.seeHold>2){heliSet('track');H.lostT=0;H.see=true;heliSay('Air 1, visual reacquired.',2,'eyes2');}}else H.seeHold=0;
+    return {mode:'orbit',x:H.sc.x,z:H.sc.z,vx:0,vz:0,R:Math.min(420,200+3.6*H.searchT),V:24};}   // it assumes the car kept going: circles the surrounding streets, widening
+  if(st==='return'){if(W){heliSet('locate');H.lk={x:W.lkx,z:W.lkz,vx:0,vz:0,t:POL.t};}
+    const d=Math.hypot(H.pad.x-H.x,H.pad.z-H.z);if(d<6&&Math.hypot(H.vx,H.vz)<2)heliSet('land');
+    return {mode:'pos',x:H.pad.x,z:H.pad.z,y:d>120?HELI_ALT:Math.max(H.pad.y+25,HELI_ALT*(d/120)),yaw:d<60?H.pad.yaw:null};}
+  if(st==='land'){if(W){heliSet('locate');}
+    if(H.y-H.pad.y<0.06&&Math.abs(H.vy)<0.5){H.y=H.pad.y;H.vy=0;heliSet('spindown');}
+    const hgt=H.y-H.pad.y;return {mode:'pos',x:H.pad.x,z:H.pad.z,y:H.pad.y-1,yaw:H.pad.yaw,vcap:hgt>12?4:hgt>3?2:0.8};}
+  return {mode:'ground'};}
+
+/* ---------------------------------------------------------------- the helicopter: rotor, attitude, thrust, drag */
+function heliStep(h,C){const H=HELI,g=HELI_G;
+  // rotor speed: about ten seconds to come up to flight rpm, half a minute to run down
+  const wantR=(H.st==='spindown'||H.st==='parked')?0:1;H.rpm+=wantR>H.rpm?Math.min(wantR-H.rpm,h/9.5*(0.35+H.rpm)):Math.max(wantR-H.rpm,-h/28);
+  const onPad=H.y<=H.pad.y+0.02&&Math.hypot(H.x-H.pad.x,H.z-H.pad.z)<8,onGround=onPad||H.y<=0.02;
+  if(C.mode==='ground'||H.rpm<0.6){H.T=0;H.vx=H.vy=H.vz=0;H.pit+=(0-H.pit)*Math.min(1,h*3);H.rol+=(0-H.rol)*Math.min(1,h*3);H.pr=H.rr=H.yr=0;return;}
+  // ---- what the pilot asks for: a velocity, a climb rate, a heading
+  let vdx=0,vdz=0,vyd=0,yd=null;const cy=Math.cos(H.yaw),sy=Math.sin(H.yaw);
+  if(C.mode==='pos'){const ex=C.x-H.x,ez=C.z-H.z,e=Math.hypot(ex,ez),vc=Math.min(HELI_VMAX,C.vcap!=null&&e<30?Math.max(2,e*0.3):HELI_VMAX,Math.sqrt(2*2.2*e));
+      if(e>0.01){vdx=ex/e*vc;vdz=ez/e*vc;}vyd=clamp(0.5*(C.y-H.y),-(C.vcap!=null?C.vcap:6),C.vcap!=null?C.vcap:7);
+      yd=C.yaw!=null?C.yaw:(e>25?Math.atan2(-ez,ex):null);}
+  else if(C.mode==='orbit'||C.mode==='follow'){
+    const ox=H.x-C.x,oz=H.z-C.z,od=Math.hypot(ox,oz)||1,ux=ox/od,uz=oz/od,tsp=Math.hypot(C.vx,C.vz);
+    // circling: the suspect stays off the left side (observer's door and searchlight), radius held by flying in or out
+    const R=C.R||HELI_ORB,V=C.V||20,tx=uz,tz=-ux,rad=clamp(0.45*(R-od),-14,14);
+    const ox_v=C.vx+tx*V+ux*rad,oz_v=C.vz+tz*V+uz*rad;
+    let fx=ox_v,fz=oz_v;
+    if(C.mode==='follow'){
+      // trailing a running car: hang back and to its left at its speed (as far as 80 mph allows); circle it when it's slow
+      const s=clamp((tsp-9)/9,0,1);if(s>0){const dx=C.vx/tsp,dz=C.vz/tsp,lx=-dz,lz=dx,lead=1.4;
+        const px=C.x+C.vx*lead-dx*55+lx*28,pz=C.z+C.vz*lead-dz*55+lz*28;
+        const tvx=C.vx+0.35*(px-H.x),tvz=C.vz+0.35*(pz-H.z);fx=fx*(1-s)+tvx*s;fz=fz*(1-s)+tvz*s;}}
+    vdx=fx;vdz=fz;vyd=clamp(0.5*(HELI_ALT-H.y),-6,7);}
+  {const vm=Math.hypot(vdx,vdz);if(vm>HELI_VMAX){vdx*=HELI_VMAX/vm;vdz*=HELI_VMAX/vm;}}
+  const sp=Math.hypot(H.vx,H.vz);
+  if(yd==null)yd=sp>6?Math.atan2(-H.vz,H.vx):H.yaw;   // weathervaning: at speed the nose points into the airflow
+  // ---- cyclic: the horizontal acceleration it needs (plus what drag takes) sets how far it tilts, and which way
+  let ax=0.9*(vdx-H.vx)+HELI_KD*sp*H.vx,az=0.9*(vdz-H.vz)+HELI_KD*sp*H.vz;
+  const am=Math.hypot(ax,az),amax=g*Math.tan(HELI_TILT);if(am>amax){ax*=amax/am;az*=amax/am;}
+  const af=ax*cy-az*sy,ar=ax*sy+az*cy;   // into the helicopter's own frame: forward, right
+  const pd=-Math.atan(af/g),rd=Math.atan(ar/g);
+  // attitude: a heavy rotor disc and fuselage take time to tilt (second order, rate limited), plus a little turbulence
+  H.gust[0]+=((Math.random()-0.5)*0.05-H.gust[0])*Math.min(1,h*0.8);H.gust[1]+=((Math.random()-0.5)*0.05-H.gust[1])*Math.min(1,h*0.8);
+  const wn=2.6,ze=0.85;H.pr+=(wn*wn*(pd+H.gust[0]-H.pit)-2*ze*wn*H.pr)*h;H.rr+=(wn*wn*(rd+H.gust[1]-H.rol)-2*ze*wn*H.rr)*h;
+  H.pr=clamp(H.pr,-0.55,0.55);H.rr=clamp(H.rr,-0.65,0.65);H.pit+=H.pr*h;H.rol+=H.rr*h;
+  // tail rotor: yaw rate toward the heading, limited
+  const ye=wrapPi(yd-H.yaw),yrd=clamp(1.4*ye,-0.6,0.6);H.yr+=(yrd-H.yr)*Math.min(1,h/0.45);H.yaw=wrapPi(H.yaw+H.yr*h);
+  // ---- collective: total rotor thrust for the climb rate it wants, through the tilt; no lift until the rotor is up to speed
+  const cp=Math.cos(H.pit),cr=Math.cos(H.rol),ayd=1.4*(vyd-H.vy);
+  const Td=clamp((g+ayd)/Math.max(0.5,cp*cr),0,g*1.8),Tmax=g*1.8*Math.pow(clamp((H.rpm-0.6)/0.4,0,1),2);
+  H.T+=(Math.min(Td,Tmax)-H.T)*Math.min(1,h/0.3);
+  // ---- forces: thrust along the mast, gravity, drag
+  const sp_=Math.sin(H.pit),sr=Math.sin(H.rol),cy2=Math.cos(H.yaw),sy2=Math.sin(H.yaw);
+  const upx=-sp_*cr*cy2+sr*sy2,upy=cp*cr,upz=sp_*cr*sy2+sr*cy2;
+  H.vx+=(H.T*upx-HELI_KD*sp*H.vx)*h;H.vz+=(H.T*upz-HELI_KD*sp*H.vz)*h;H.vy+=(H.T*upy-g-0.03*Math.abs(H.vy)*H.vy-0.15*H.vy)*h;
+  H.x+=H.vx*h;H.y+=H.vy*h;H.z+=H.vz*h;
+  const floor=(Math.hypot(H.x-H.pad.x,H.z-H.pad.z)<8)?H.pad.y:0;
+  if(H.y<floor){H.y=floor;if(H.vy<0)H.vy=0;H.vx*=0.8;H.vz*=0.8;}}
+
+/* ---------------------------------------------------------------- every frame */
+function heliFrame(dt){if(!HELI.ready||!dt)return;const H=HELI;
+  if(NET.on&&!nwIsAuth()){heliFollow(dt);}
+  else{H.rx=null;let C=heliAI(dt);H.acc+=dt;let n=0;while(H.acc>=1/60&&n<8){heliStep(1/60,C);H.acc-=1/60;n++;}if(n>=8)H.acc=0;}
+  heliEyes(dt);heliVisual(dt);heliAudio(dt);heliReport(dt);}
+/* the searchlight's aim: the suspect while tracking, a sweep ahead while searching */
+function heliEyes(dt){const H=HELI,W=H.tgt,t=performance.now()/1000;let ax,az;
+  if(H.st==='track'&&W&&H.see){ax=W.x+(W.vx||0)*0.15;az=W.z+(W.vz||0)*0.15;}
+  else if(H.st==='search'&&H.sc){const a=t*0.35;ax=H.sc.x+Math.cos(a)*Math.min(160,40+H.searchT*2);az=H.sc.z+Math.sin(a*1.3)*Math.min(160,40+H.searchT*2);}
+  else{const f=60+H.y*0.4;ax=H.x+Math.cos(H.yaw)*f;az=H.z-Math.sin(H.yaw)*f;}
+  if(H.rx){ax=H.rx.ax;az=H.rx.az;}
+  const k=Math.min(1,dt*(H.st==='track'?7:2));H.aim.x+=(ax-H.aim.x)*k;H.aim.z+=(az-H.aim.z)*k;H.aim.y=0.4;
+  H.spotOn=LIGHTS.on&&heliOnCall()&&H.rpm>0.9&&MODE!=='menu';}
+function heliVisual(dt){const H=HELI,o=H.obj;if(!o)return;
+  o.grp.position.set(H.x,H.y,H.z);o.grp.rotation.set(H.rol,H.yaw,H.pit);
+  const t=performance.now()/1000;o.rotor.rotation.y+=H.rpm*dt*6.9*Math.PI*2;o.tailRotor.rotation.z-=H.rpm*dt*30*Math.PI*2;
+  o.blur.material.opacity=Math.max(0,(H.rpm-0.55)/0.45)*0.09;
+  const lit=H.rpm>0.15;o.beacon.material.emissiveIntensity=lit&&(t*1.4%1)<0.12?4:0.4;
+  o.tailStrobe.material.emissiveIntensity=lit&&(t*1.1%1)>0.5&&(t*1.1%1)<0.56?6:0.3;
+  o.strobes.forEach((s,i)=>{const ph=(t*3.2+(i%2)*0.5)%1;s.material.emissiveIntensity=lit&&heliAirborne()&&ph<0.18?6:0.15;});
+  // searchlight: the light itself, the lamp glowing, and the beam visible in the night air
+  const head=o.searchlight.userData.head,lens=head.children[1];
+  const p=new TH.Vector3();head.getWorldPosition(p);
+  const S=H.spot,B=H.beam;S.position.copy(p);S.target.position.set(H.aim.x,H.aim.y,H.aim.z);S.target.updateMatrixWorld();
+  S.intensity+=((H.spotOn?7.5:0)-S.intensity)*Math.min(1,dt*6);lens.material.emissiveIntensity=H.spotOn?3:0.25;
+  const dx=H.aim.x-p.x,dy=H.aim.y-p.y,dz=H.aim.z-p.z,L=Math.hypot(dx,dy,dz);
+  B.visible=S.intensity>0.2;if(B.visible){B.position.copy(p);B.scale.set(L*Math.tan(0.075),L,L*Math.tan(0.075));
+    B.quaternion.setFromUnitVectors(new TH.Vector3(0,-1,0),new TH.Vector3(dx/L,dy/L,dz/L));B.material.opacity=0.07*S.intensity/7.5;}}
+
+/* ---------------------------------------------------------------- what it tells the ground units */
+// a stand-in "unit" for the incident code: while Air 1 has eyes on this player, the pursuit has a visual and the
+// last known position stays live, so every ground unit keeps getting the car's location
+function heliSeer(){const H=HELI;if(!H.ready||!H.see||H.st!=='track'||H.tgtId!==heliMyId())return null;return {id:'Air 1',a:{x:H.x,z:H.z},k:{vis:true},st:'pursuit'};}
+function heliReport(dt){const H=HELI;if(!POL.inc||H.tgtId!==heliMyId())return;
+  if(H.st==='track'&&H.see){H.repT=(H.repT||0)-dt;if(H.repT<=0){H.repT=22;const l=POL.inc.lkp;
+      if(l&&POL.t-(H.said.first||-99)>8)heliSay('Air 1, suspect '+(l.speed>2?l.dir+' on '+l.where:'stopped on '+l.where)+'.',1,'rep');}}
+  else H.repT=4;}
+
+/* ---------------------------------------------------------------- the sound: rotor slap and turbine, heard a long way off */
+function heliAudioBuf(ctx){const sr=ctx.sampleRate,P=Math.round(sr/27.5),N=P*56,b=ctx.createBuffer(1,N,sr),d=b.getChannelData(0);
+  let lp=0,lp2=0;
+  for(let i=0;i<N;i++){const k=i%P,amp=0.75+0.25*Math.sin(Math.floor(i/P)*2.1),tt=k/sr;
+    // each blade passing: a sharp, low thump with some air noise in it
+    const env=Math.exp(-tt/0.0075)*amp,n=(Math.random()*2-1);lp+=(n-lp)*0.18;lp2+=(lp-lp2)*0.25;
+    d[i]=env*(0.65*Math.sin(2*Math.PI*85*tt)*Math.exp(-tt/0.02)+1.6*lp2)+0.06*lp2;}
+  let m=0;for(let i=0;i<N;i++)m=Math.max(m,Math.abs(d[i]));for(let i=0;i<N;i++)d[i]/=m;return b;}
+function heliAudio(dt){const H=HELI,ctx=AC;if(!ctx||!H.ready)return;
+  if(!H.snd){try{const s=ctx.createBufferSource();s.buffer=heliAudioBuf(ctx);s.loop=true;
+      const lpf=ctx.createBiquadFilter();lpf.type='lowpass';lpf.frequency.value=2200;lpf.Q.value=0.4;
+      const g=ctx.createGain();g.gain.value=0;
+      const wh=ctx.createOscillator();wh.type='sawtooth';wh.frequency.value=2600;const wf=ctx.createBiquadFilter();wf.type='bandpass';wf.frequency.value=3200;wf.Q.value=6;const wg=ctx.createGain();wg.gain.value=0;
+      const P=ctx.createPanner();P.panningModel='HRTF';P.distanceModel='inverse';P.refDistance=40;P.rolloffFactor=1.0;P.maxDistance=4000;
+      s.connect(lpf);lpf.connect(g);wh.connect(wf);wf.connect(wg);wg.connect(g);g.connect(P);P.connect(audioOut(ctx));s.start();wh.start();
+      H.snd={s,lpf,g,wh,wg,P};}catch(e){H.snd={dead:true};return;}}
+  const S=H.snd;if(S.dead)return;const t=ctx.currentTime,set=(prm,v,tc)=>prm.setTargetAtTime(v,t,tc||0.08);
+  const live=MODE==='drive'&&!muted&&ctx.state==='running',d=Math.hypot(H.x-camera.position.x,H.y-camera.position.y,H.z-camera.position.z);
+  const P=S.P;if(P.positionX){set(P.positionX,H.x,0.05);set(P.positionY,H.y+2,0.05);set(P.positionZ,H.z,0.05);}else P.setPosition(H.x,H.y+2,H.z);
+  set(S.g.gain,live?2.4*Math.pow(H.rpm,1.6):0,0.15);
+  set(S.s.playbackRate,0.3+0.7*H.rpm,0.2);
+  // far away the air takes the top off it; overhead it slaps
+  set(S.lpf.frequency,700+3400/(1+d/140),0.2);
+  set(S.wh.frequency,600+2400*H.rpm,0.3);set(S.wg.gain,live?0.035*H.rpm/(1+d/60):0,0.2);}
+
+/* ---------------------------------------------------------------- the minimap: a spinning X, flashing red and blue */
+function heliMini(x,toScreen,W,Hh){const H=HELI;if(!H.ready||!heliOnCall())return;
+  let q=toScreen(H.x,H.z);const d=Math.hypot(q[0]-W/2,q[1]-Hh/2),m=W/2-12;if(d>m)q=[W/2+(q[0]-W/2)*m/d,Hh/2+(q[1]-Hh/2)*m/d];
+  const t=performance.now()/1000,red=Math.floor(t*4)%2===0,r=8.5;
+  x.save();x.translate(q[0],q[1]);x.rotate(t*5);x.lineCap='round';
+  x.strokeStyle='#0d0e10';x.lineWidth=6;x.beginPath();x.moveTo(-r,-r);x.lineTo(r,r);x.moveTo(r,-r);x.lineTo(-r,r);x.stroke();
+  x.strokeStyle=red?'#ff2a24':'#2f6bff';x.lineWidth=3.4;x.beginPath();x.moveTo(-r,-r);x.lineTo(r,r);x.moveTo(r,-r);x.lineTo(-r,r);x.stroke();x.restore();}
+
+/* ---------------------------------------------------------------- online: the host sends it, everyone else follows */
+const hr1=v=>Math.round(v*10)/10,hr2=v=>Math.round(v*100)/100;
+function heliPack(){const H=HELI;if(!H.ready)return null;
+  return [hr1(H.x),hr1(H.y),hr1(H.z),hr2(H.yaw),hr2(H.pit),hr2(H.rol),hr2(H.rpm),HELI_CODES[H.st]||'p',H.tgtId||'',H.see?1:0,hr1(H.vx),hr1(H.vy),hr1(H.vz),hr1(H.aim.x),hr1(H.aim.z)];}
+function heliRecv(q){if(!Array.isArray(q)||q.length<15||!HELI.ready)return;HELI.rx={t:performance.now(),x:+q[0],y:+q[1],z:+q[2],yaw:+q[3],pit:+q[4],rol:+q[5],rpm:+q[6],st:HELI_CODES_R[q[7]]||'parked',
+  tgt:String(q[8]||''),see:!!q[9],vx:+q[10],vy:+q[11],vz:+q[12],ax:+q[13],az:+q[14]};}
+function heliFollow(dt){const H=HELI,R=H.rx;if(!R)return;const el=Math.min(0.5,(performance.now()-R.t)/1000),k=Math.min(1,dt*6);
+  const px=R.x+R.vx*el,py=R.y+R.vy*el,pz=R.z+R.vz*el;
+  if(Math.hypot(px-H.x,py-H.y,pz-H.z)>60){H.x=px;H.y=py;H.z=pz;}else{H.x+=(px-H.x)*k;H.y+=(py-H.y)*k;H.z+=(pz-H.z)*k;}
+  H.vx=R.vx;H.vy=R.vy;H.vz=R.vz;H.yaw+=wrapPi(R.yaw-H.yaw)*k;H.pit+=(R.pit-H.pit)*k;H.rol+=(R.rol-H.rol)*k;H.rpm+=(R.rpm-H.rpm)*k;
+  const was=H.st,wasSee=H.see;if(R.st!==H.st){H.st=R.st;H.stT=0;}H.tgtId=R.tgt||null;H.see=R.see;
+  const me=H.tgtId===heliMyId();
+  if(me){const W=heliTargets().find(t=>t.id===H.tgtId);H.tgt=W||null;
+    // the radio calls the host's pilot would make, said on this player's own game
+    if(was!==H.st){if(H.st==='spinup')heliSay('Air 1 starting up at Harlan PD, airborne in about a minute.',1,'up');
+      else if(H.st==='locate'&&was==='lift')heliSay('Air 1 airborne, en route to the suspect\'s last reported location.',1,'air');
+      else if(H.st==='track')heliSay(was==='search'?'Air 1, visual reacquired.':'Air 1, I have the suspect. I\'ll call it from up here.',2,'eyes');
+      else if(H.st==='search')heliSay('Air 1, lost visual. Searching the area.',2,'lost');
+      else if(H.st==='return')heliSay('Air 1 returning to base.',1,'rtb');}}
+  else H.tgt=null;}
 /* ---------------------------------------------------------------------------
    STREET RACE (offline): you against one opponent on the long straight east side of the Perimeter Road (x = 760).
    You line up in the right lane, the opponent in the left (the oncoming lane), both noses on the start line, heading
@@ -13898,7 +14453,7 @@ function drawMini(){
   // icons and the waypoint, kept upright
   const toScreen=(wx,wz)=>{const dx=(wx-car.x)*MINI_SCALE*k,dz=(wz-car.z)*MINI_SCALE*k,c=Math.cos(rot),s=Math.sin(rot);return[W/2+dx*c-dz*s,H/2+dx*s+dz*c];};
   MAP.pois.forEach(p=>{const q=toScreen(p.x,p.z);if(Math.hypot(q[0]-W/2,q[1]-H/2)<W/2-14)drawIcon(x,p.type,q[0],q[1],p.type==='farm'||p.type==='bridge'?9:12);});
-  polMini(x,toScreen,W,H);netMini(x,toScreen,W,H);
+  polMini(x,toScreen,W,H);netMini(x,toScreen,W,H);heliMini(x,toScreen,W,H);
   if(NAVS.wp){let q=toScreen(NAVS.wp.x,NAVS.wp.z);const d=Math.hypot(q[0]-W/2,q[1]-H/2),m=W/2-14;if(d>m)q=[W/2+(q[0]-W/2)*m/d,H/2+(q[1]-H/2)*m/d];
     x.fillStyle='#2f8cff';x.strokeStyle='#fff';x.lineWidth=2;x.beginPath();x.arc(q[0],q[1],9,0,7);x.fill();x.stroke();}
   x.restore();
@@ -14387,7 +14942,7 @@ function frame(now,bg){   // bg: a tick from the background worker while the tab
     acc+=dt;
     car.surf=surfaceAt(car.x,car.z);
     // a bug in the AI must never freeze the game: report it once and keep running
-    try{policeFrame(dt);trafficFrame(dt);}catch(e){if(!window.__simErr){window.__simErr=1;console.error('simulation error',e);}}
+    try{policeFrame(dt);trafficFrame(dt);heliFrame(dt);}catch(e){if(!window.__simErr){window.__simErr=1;console.error('simulation error',e);}}
     let n=0;while(acc>=H&&n<20){const u0=car.u;stepCar(H);collide();if(RACE.on&&RACE.a&&RACE.a.alive&&RACE.a.sim==='phys'&&window.RACE_LOCK!==false){const P=car;car=RACE.a;try{stepCar(H);collide();}finally{car=P;}}try{trafficCollide();}catch(e){if(!window.__colErr){window.__colErr=1;console.error('collision error',e);}}t60Step(H,u0);acc-=H;n++;}
     if(car.crash>0){if(!bg&&!held)crashSound(car.crash);car.crash=0;}
     if(bg)return;
@@ -14422,7 +14977,7 @@ async function boot(){
   try{const S=new Set();CARS.forEach(c=>{try{const n=sndPackFor(carSpec(c.key));if(n)S.add(n);}catch(e){}});S.forEach(n=>{try{sndLoad(n);}catch(e){}});}catch(e){}
   const steps=[['Painting textures',makeTextures],['Mixing materials',makeMats],['Starting the 3D view',initRenderer],['Laying out the county',defineMap],
     ['Building roads, towns and farms',buildMap],['Planning traffic routes',trInitNet],['Smoke and skid marks',initFx],['Drawing the minimap',drawMiniBase],
-    ['Controls',()=>{bindOrbit();bindTouch();bindFullMap();bindSettings();applyGfx();syncHelp();}],['Street lights',initLampPool],['Sky and light',()=>{applyTOD();setupReflections();}]];
+    ['Controls',()=>{bindOrbit();bindTouch();bindFullMap();bindSettings();applyGfx();syncHelp();}],['Street lights',initLampPool],['Air 1 on the station roof',heliInit],['Sky and light',()=>{applyTOD();setupReflections();}]];
   try{for(let i=0;i<steps.length;i++){loadSet(0.03+0.32*i/steps.length,steps[i][0]);await loadYield();steps[i][1]();}
     $('mapnote').innerHTML='3.2 × 3.2 km · '+MAP.roads.length+' roads · '+MAP.nodes.length+' junctions · '+MAP.signals.length+' traffic signals<br>Town of Harlan · SR-12 · Tallgrass River · 2 bridges';
   }catch(e){$('loading').textContent='Could not start the 3D view: '+e.message;console.error(e);return;}
