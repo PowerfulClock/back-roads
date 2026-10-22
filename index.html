@@ -13941,7 +13941,7 @@ function raceRenderSide(side){const S=RS[side],box=$(side==='you'?'rsYou':'rsOpp
   box.innerHTML=h;raceHideLaunch();}
 function raceHideLaunch(){document.querySelectorAll('#race .rrow').forEach(r=>{const l=r.querySelector('label');if(l&&/^Launch/.test(l.textContent))r.style.display=RS.start==='roll'?'none':'';});}   // a rolling start has no launch
 function raceRenderDist(){const b=$('rsDist'),n=$('rsNote');
-  if(n)n.textContent=RS.start==='roll'?'You line up in the right lane, your opponent in the left, well back from the start line. Press SPACE: your opponent rolls up to '+RS.roll+' mph at part throttle. Match its speed, and go when its nose hits the line. More than a car length ahead at that moment is a jump start.'
+  if(n)n.textContent=RS.start==='roll'?'You line up in the right lane, your opponent in the left, well back from the start line. Press SPACE: your opponent rolls up to '+RS.roll+' mph at about 40% throttle. Match its speed, and go when its nose hits the line. More than a car length ahead at that moment is a jump start.'
     :'You line up in the right lane, your opponent in the left. Press SPACE when you\'re ready: they honk three times and go on the third. Hold brake and gas together beforehand to stage your own launch control or brake boost.';
   raceHideLaunch();
   b.innerHTML='<div class="rrow" style="margin:0"><label>Distance</label>'+RACE_FR.map(([f,t])=>'<button type="button" class="seg'+(Math.abs(RS.dist-f*RACE_MAXD)<5?' on':'')+'" data-rsdist="'+(f*RACE_MAXD)+'">'+t+'</button>').join('')+'</div>'+
@@ -14034,15 +14034,15 @@ function raceThink(a,dt){const R=RACE,I=a.in;
     // back into Drive here would upshift at once, the automatic reading the still part-open throttle as a cruise)
     if(a.state==='M'){const c=a.spec,n=c.gears.length;if(a.gear<n-1&&a.shiftT<=0&&a.rpm>c.redline-180){const P=car;car=a;try{beginShift(a.gear+1,a.rpm);}finally{car=P;}}}}
   else{I.thr=0;I.brk=Math.abs(a.u)>1?0.6:1;}}
-/* the opponent rolling up to the line: about 30% throttle to the roll speed, then it holds it. "Downshifts for the line":
+/* the opponent rolling up to the line: about 40% throttle to the roll speed, then it holds it. "Downshifts for the line":
    in the last 180 m it takes the box out of Drive and drops gears until the revs sit in the power band (one gear at a time,
    as a driver would), so it pulls the instant it crosses. "Leaves it in Drive": it cruises in whatever tall gear the
    automatic picked and only floors it at the line, then waits on the kickdown. */
 function raceRollDrive(a,dt){const R=RACE,I=a.in,vt=R.cfg.roll*0.44704,v=a.u,dl=-raceProgress(a),c=a.spec;I.brk=0;I.hand=0;a.lcStage=false;
-  if(v<vt-2.2){
-    // about 30% throttle; a slow car that wouldn't make the speed in the room left gets more, so it's at speed well before the line
+  if(v<vt-Math.max(1.5,(a.ax||0)*1.1)){   // eases off sooner the harder it's pulling, so it settles on the speed without overshooting
+    // about 40% throttle; a slow car that wouldn't make the speed in the room left gets more, so it's at speed well before the line
     const need=(vt*vt-v*v)/(2*Math.max(15,dl-50)),have=Math.max(0.2,a.ax||0);
-    a.rollB=clamp((a.rollB||0)+(need>have*0.9?dt*0.6:-dt*0.3),0,0.55);I.thr=0.3+a.rollB;a.rollI=0.08;}
+    a.rollB=clamp((a.rollB||0)+(need>have*0.9?dt*0.6:-dt*0.3),0,0.45);I.thr=0.4+a.rollB;a.rollI=0.08;}
   else{a.rollI=clamp((a.rollI||0)+(vt-v)*dt*0.05,0,0.5);I.thr=clamp(a.rollI+0.08*(vt-v),0,0.6);if(v>vt+3)I.brk=0.15;}
   const ev=!!(IND[c.ind]||{}).electric,cvt=c.trans==='cvt'||c.trans==='ecvt';
   if(R.cfg.aiShift==='manual'&&!ev&&!cvt&&dl<180&&v>vt-3){
