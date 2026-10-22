@@ -14478,9 +14478,9 @@ function burbSrc(ctx,dest,rpm){const pk=voice&&voice.pack;if(!pk||!pk.ready||!pk
 function burbBurst(ctx,S,t,amp,len,drive){t=Math.max(t,S.lastT+0.004);S.lastT=t+len;const G=S.g.gain;
   G.setValueAtTime(0.0001,t);G.linearRampToValueAtTime(amp,t+0.0035);G.setTargetAtTime(0.0001,t+0.006,len/3.2);
   S.pre.gain.setValueAtTime(drive,t);BURB.n++;}
-/* the real thing: BeamNG's inline-5 2.0 afterfire recordings (stock, tuned and rally sets mixed): overrun clips, single
-   pops, crackles and shift pops, loaded like an engine pack. Used on all the BMW M cars. */
-function burbAF(){const p=sndLoad('i5burble');if(!(p&&p.ready&&p.layers&&p.layers.multi&&p.layers.big))return null;const Ly=p.layers;if(!Ly.small||!Ly.small.length)Ly.small=Ly.multi;if(!Ly.shift||!Ly.shift.length)Ly.shift=Ly.big;return p;}
+/* the real thing: BeamNG's afterfire recordings that the BeamNG M2 mod plays (single pops, multi-pop overrun runs and
+   shift pops), loaded like an engine pack. Used on all the BMW M cars. */
+function burbAF(){const p=sndLoad('m2afterfire');return p&&p.ready&&p.layers&&p.layers.multi&&p.layers.single?p:null;}
 function burbPlay(ctx,dest,t,list,amp,rate){const q=list[Math.floor(Math.random()*list.length)],s=ctx.createBufferSource();s.buffer=q.buf;s.playbackRate.value=rate;
   const g=ctx.createGain();g.gain.value=amp;s.connect(g);g.connect(dest);s.start(t);BURB.n++;return q.buf.duration/rate;}
 function burbleStep(ped,shifting){const ctx=AC,c=car.spec;if(!ctx||!voice||muted||voice.electric||!BURB_CARS.has(car.key||''))return;
@@ -14492,21 +14492,19 @@ function burbleStep(ped,shifting){const ctx=AC,c=car.spec;if(!ctx||!voice||muted
     if(ped>0.45)BURB.armed=true;
     // lift-off: a single pop straight away, then the overrun run
     if(BURB.armed&&ped<0.12){BURB.armed=false;if(inGear&&rpm>2800){const k=clamp((rpm-2500)/(red-2500),0,1);
-      burbPlay(ctx,dest,t+0.03+Math.random()*0.05,AF.layers.big,k0*(0.7+0.3*k),rt());
+      burbPlay(ctx,dest,t+0.03+Math.random()*0.05,AF.layers.single,k0*(0.7+0.3*k),rt());
       BURB.until=t+0.5+2.0*k*mm+Math.random()*0.4;BURB.str=k0*(0.55+0.45*k);BURB.nextT=t+0.18+Math.random()*0.12;}}
     if(ped>0.2)BURB.until=0;
     // upshift on the throttle: the shift pop
     if(shifting&&car.shiftDir>0&&ped>0.5&&rpm>3000)burbPlay(ctx,dest,t+0.01,AF.layers.shift,k0*(mode==='normal'?0.75:1),rt());
     // downshift while slowing: a short burst
-    if(shifting&&car.shiftDir<0&&ped<0.12&&rpm>2200){burbPlay(ctx,dest,t+0.02,Math.random()<0.5?AF.layers.big:AF.layers.shift,k0*0.8,rt());BURB.until=Math.max(BURB.until,t+0.3+0.4*mm);}
+    if(shifting&&car.shiftDir<0&&ped<0.12&&rpm>2200){burbPlay(ctx,dest,t+0.02,Math.random()<0.5?AF.layers.single:AF.layers.shift,k0*0.8,rt());BURB.until=Math.max(BURB.until,t+0.3+0.4*mm);}
     // overrun: multi-pop runs chained back to back, with the odd single breaking through, fading as the window closes
     const over=inGear&&ped<0.12&&rpm>1700&&!car.disabled;
     if(over&&t<BURB.until){const fade=clamp((BURB.until-t)/1.0,0.3,1);
-      // a mix of the libraries: overrun pops chained tightly, small pops and low rumble in between, the odd big bang
-      const rk=clamp((rpm-1500)/(red-1500),0.15,1);
-      while(BURB.nextT<t+0.12){const pt=Math.max(t,BURB.nextT),r=Math.random(),L=r<0.1*(0.6+mm)?AF.layers.big:r<0.6?AF.layers.multi:AF.layers.small,big=L===AF.layers.big;
-        const d=burbPlay(ctx,dest,pt,L,BURB.str*fade*(big?1:0.65+Math.random()*0.3),rt());
-        BURB.nextT=pt+Math.min(d,0.12)*(0.55+Math.random()*0.35)/(0.7+rk*0.5)+(Math.random()<0.15?0.06+Math.random()*0.16:Math.random()*0.03);}}
+      while(BURB.nextT<t+0.12){const pt=Math.max(t,BURB.nextT),single=Math.random()<0.18;
+        const d=burbPlay(ctx,dest,pt,single?AF.layers.single:AF.layers.multi,BURB.str*fade*(single?1:0.8+Math.random()*0.2),rt());
+        BURB.nextT=pt+d*(single?0.9:0.8+Math.random()*0.15)+(Math.random()<0.25?0.05+Math.random()*0.15:0);}}
     else BURB.nextT=Math.max(BURB.nextT,t);
     return;}
   if(ped>0.45)BURB.armed=true;   // on the throttle: armed; it fires once the pedal comes back up (the throttle closes over a few frames)
@@ -15181,7 +15179,7 @@ async function boot(){
   if(!window.THREE){$('loading').textContent='The 3D view needs three.js from a CDN. Check your connection and reload.';return;}
   loadSet(0.02,'Starting');await loadYield();
   // every engine recording any car uses starts downloading now, alongside the build; the screen waits for them below
-  try{const S=new Set();CARS.forEach(c=>{try{const n=sndPackFor(carSpec(c.key));if(n)S.add(n);}catch(e){}});S.add('i5burble');S.forEach(n=>{try{sndLoad(n);}catch(e){}});}catch(e){}
+  try{const S=new Set();CARS.forEach(c=>{try{const n=sndPackFor(carSpec(c.key));if(n)S.add(n);}catch(e){}});S.add('m2afterfire');S.forEach(n=>{try{sndLoad(n);}catch(e){}});}catch(e){}
   const steps=[['Painting textures',makeTextures],['Mixing materials',makeMats],['Starting the 3D view',initRenderer],['Laying out the county',defineMap],
     ['Building roads, towns and farms',buildMap],['Planning traffic routes',trInitNet],['Smoke and skid marks',initFx],['Drawing the minimap',drawMiniBase],
     ['Controls',()=>{bindOrbit();bindTouch();bindFullMap();bindSettings();applyGfx();syncHelp();}],['Street lights',initLampPool],['Air 1 on the station roof',heliInit],['Sky and light',()=>{applyTOD();setupReflections();}]];
