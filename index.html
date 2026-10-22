@@ -14529,6 +14529,60 @@ function crashSound(k){
   for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);
   const s=ctx.createBufferSource();s.buffer=b;const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=380+k*600;
   const g=ctx.createGain();g.gain.value=0.9*k;s.connect(f);f.connect(g);g.connect(audioOut(ctx));s.start(t);}
+/* ---------------------------------------------------------------------------
+   Acoustics: sound bouncing off the world. Every sound in the game (engines, traffic, sirens, horns, Air 1, crashes,
+   burbles) passes through the master bus; this adds what the surroundings do to it, from where the car is:
+   - echoes: eight rays fan out around the car twenty times a second and find the nearest wall in each direction (up to
+     120 m). Each hit is a reflection, delayed by the real round trip at the speed of sound, quieter and duller with
+     distance (air takes the top off), panned to the side it's on. One building gives a distinct slap; a street of them
+     a dense canyon.
+   - passing cars: the same rays catch cars close by. A car a metre or two away sends the sound back a few milliseconds
+     late, and as the gap changes that sweeps the familiar "whoosh" of passing someone (a moving comb filter).
+   - the town's reverb: a diffuse tail, strong when buildings surround you, almost nothing in open country.
+--------------------------------------------------------------------------- */
+const ACOU={on:true,taps:[],rev:null,revG:null,inp:null,t:0,enc:0};
+const ACOU_DIRS=8,ACOU_C=343;
+function acouInit(ctx){if(ACOU.inp||!ctx||!ctx.master)return;
+  const inp=ctx.createGain();inp.gain.value=1;ctx.master.connect(inp);const out=ctx.limiter||ctx.destination;
+  for(let i=0;i<ACOU_DIRS;i++){const d=ctx.createDelay(1.0);d.delayTime.value=0.1;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=6000;
+    const g=ctx.createGain();g.gain.value=0;const p=ctx.createStereoPanner?ctx.createStereoPanner():null;
+    inp.connect(d);d.connect(lp);lp.connect(g);if(p){g.connect(p);p.connect(out);}else g.connect(out);ACOU.taps.push({d,lp,g,p,a:i/ACOU_DIRS*Math.PI*2});}
+  // the diffuse tail: a generated stereo impulse, dense early, about 1.4 s long, darker as it decays
+  try{const sr=ctx.sampleRate,n=Math.floor(sr*1.4),ir=ctx.createBuffer(2,n,sr);
+    for(let c=0;c<2;c++){const d=ir.getChannelData(c);let lp=0;for(let i=0;i<n;i++){const t=i/sr,k=0.25+0.7*Math.exp(-t*3);lp+=(Math.random()*2-1-lp)*k;d[i]=lp*Math.exp(-t*4.2)*(t<0.012?t/0.012:1);}}
+    const cv=ctx.createConvolver();cv.buffer=ir;const rg=ctx.createGain();rg.gain.value=0;const pre=ctx.createDelay(0.1);pre.delayTime.value=0.025;
+    inp.connect(pre);pre.connect(cv);cv.connect(rg);rg.connect(out);ACOU.rev=cv;ACOU.revG=rg;}catch(e){}
+  ACOU.inp=inp;}
+/* distance from (x,z) along (dx,dz) to the nearest building wall (rotated boxes) or car, within max */
+function acouRay(x,z,dx,dz,max,B,C){let best=max,kind=0;
+  for(const b of B){const c=Math.cos(b.rot||0),s=Math.sin(b.rot||0),ox=x-b.x,oz=z-b.z;
+    const lx=ox*c-oz*s,lz=ox*s+oz*c,vx=dx*c-dz*s,vz=dx*s+dz*c,hw=b.w/2,hd=b.d/2;
+    let t0=-1e9,t1=1e9;
+    if(Math.abs(vx)<1e-6){if(Math.abs(lx)>hw)continue;}else{let a=(-hw-lx)/vx,e=(hw-lx)/vx;if(a>e)[a,e]=[e,a];t0=Math.max(t0,a);t1=Math.min(t1,e);}
+    if(Math.abs(vz)<1e-6){if(Math.abs(lz)>hd)continue;}else{let a=(-hd-lz)/vz,e=(hd-lz)/vz;if(a>e)[a,e]=[e,a];t0=Math.max(t0,a);t1=Math.min(t1,e);}
+    if(t1>=t0&&t0>0.3&&t0<best){best=t0;kind=1;}}
+  for(const q of C){const ox=q.x-x,oz=q.z-z,t=ox*dx+oz*dz;if(t<0.5||t>=best)continue;const px=ox-dx*t,pz=oz-dz*t,r=q.r;if(px*px+pz*pz<r*r){best=Math.max(0.5,t-Math.sqrt(r*r-(px*px+pz*pz)));kind=2;}}
+  return [best,kind];}
+function acouFrame(dt){const ctx=AC;if(!ctx||!ctx.master)return;acouInit(ctx);if(!ACOU.inp)return;
+  const live=ACOU.on&&(MODE==='drive')&&CFG.gfx.echo!==false;ACOU.t-=dt;if(ACOU.t>0)return;ACOU.t=0.05;
+  const T=ctx.currentTime,set=(p,v,tc)=>p.setTargetAtTime(v,T,tc||0.06);
+  if(!live){ACOU.taps.forEach(q=>set(q.g.gain,0,0.1));if(ACOU.revG)set(ACOU.revG.gain,0,0.2);return;}
+  const x=car.x,z=car.z,MAX=120;
+  const B=MAP.buildings.filter(b=>(b.h||6)>2.5&&Math.abs(b.x-x)<MAX+40&&Math.abs(b.z-z)<MAX+40);
+  const C=[];for(const a of TRAFFIC.cars){if(!a.alive||a===car||a.alpha<0.3)continue;const d=Math.hypot(a.x-x,a.z-z);if(d<18)C.push({x:a.x,z:a.z,r:Math.max(1.1,(a.halfWid||0.9)*1.15)});}
+  // panning: relative to where the camera (the listener) looks
+  const f=new TH.Vector3();camera.getWorldDirection(f);const fl=Math.hypot(f.x,f.z)||1,fx=f.x/fl,fz=f.z/fl,rx=-fz,rz=fx;
+  let hits=0;
+  ACOU.taps.forEach((q,i)=>{const a=q.a+car.psi,dx=Math.cos(a),dz=-Math.sin(a);const [d,kind]=acouRay(x,z,dx,dz,MAX,B,C);
+    if(!kind){set(q.g.gain,0,0.12);return;}
+    if(kind===1&&d<60)hits++;
+    const delay=Math.min(0.95,2*d/ACOU_C+(kind===2?0.0015:0));
+    // a wall is a big flat reflector; a car a small, rounded one that only matters close up
+    const g=kind===1?0.5/(1+d/9):0.42/(1+d*d/9);
+    set(q.d.delayTime,delay,kind===2?0.03:0.08);set(q.g.gain,Math.min(0.45,g),0.06);set(q.lp.frequency,Math.max(900,9000/(1+d/35)),0.1);
+    if(q.p)set(q.p.pan,clamp(dx*rx+dz*rz,-1,1)*0.85,0.08);});
+  ACOU.enc+=((hits/ACOU_DIRS)-ACOU.enc)*0.15;
+  if(ACOU.revG)set(ACOU.revG.gain,0.015+0.22*ACOU.enc,0.4);}
 function audioFrame(){
   if(!AC||!voice)return;
   const t=AC.currentTime,L=AC.listener,p=camera.position,f=new TH.Vector3();camera.getWorldDirection(f);
@@ -14951,6 +15005,7 @@ function renderSettings(){
     h+=seg('fov','Field of view',[[50,'50°'],[56,'56°'],[62,'62°'],[70,'70°']],+g.fov);
     h+=seg('look','Picture',[['cine','Cinematic'],['classic','Classic']],g.look||'cine');
     h+=seg('cluster','Gauge cluster',[[true,"The car's own"],[false,'Off']],CFG.gfx.cluster!==false);
+    h+=seg('echo','Echoes',[[true,'On'],[false,'Off']],g.echo!==false);   // sound bouncing off buildings and passing cars
     h+=seg('speedfx','Speed effects',[[0,'Off'],[0.6,'Subtle'],[1,'Normal'],[1.5,'Strong']],+(g.speedfx==null?1:g.speedfx));
     h+=seg('mblur','Motion blur',[[0,'Off'],[1,'Normal'],[1.6,'Strong']],+(g.mblur==null?1:g.mblur));
     h+=seg('fps','Frame rate counter',[[false,'Off'],[true,'On']],g.fps);
@@ -15151,7 +15206,7 @@ function frame(now,bg){   // bg: a tick from the background worker while the tab
     let n=0;while(acc>=H&&n<20){const u0=car.u;stepCar(H);collide();if(RACE.on&&RACE.a&&RACE.a.alive&&RACE.a.sim==='phys'&&window.RACE_LOCK!==false){const P=car;car=RACE.a;try{stepCar(H);collide();}finally{car=P;}}try{trafficCollide();}catch(e){if(!window.__colErr){window.__colErr=1;console.error('collision error',e);}}t60Step(H,u0);acc-=H;n++;}
     if(car.crash>0){if(!bg&&!held)crashSound(car.crash);car.crash=0;}
     if(bg)return;
-    syncCar(dt);trafficVisuals(dt);healthFrame(dt);stepSmoke(dt);boomFrame(dt);if(RACE.on)raceFrame(dt);if(!held){driveCamera(dt);navFrame(dt);drawHud();audioFrame();trAudio();updateReflections(dt);}else if(MODE!=='map'){driveCamera(dt);updateReflections(dt);}   // paused online: keep showing the live world behind the menu
+    syncCar(dt);trafficVisuals(dt);healthFrame(dt);stepSmoke(dt);boomFrame(dt);if(RACE.on)raceFrame(dt);if(!held){driveCamera(dt);navFrame(dt);drawHud();audioFrame();trAudio();try{acouFrame(dt);}catch(e){}updateReflections(dt);}else if(MODE!=='map'){driveCamera(dt);updateReflections(dt);}   // paused online: keep showing the live world behind the menu
     if(MODE==='map')drawFullMap();
   }else if(bg)return;
   else if(MODE==='map'){drawFullMap();if(FM.prevMode==='select')previewCamera(dt);}
