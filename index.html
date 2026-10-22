@@ -14585,11 +14585,15 @@ function acouFrame(dt){const ctx=AC;if(!ctx||!ctx.master)return;acouInit(ctx);if
     const delay=Math.min(0.93,2*d/ACOU_C+(kind===2?0.0015:0));
     // a wall is a big reflector; a car a small, rounded one that only matters close up. Very close reflections are
     // kept quiet and dull: they colour the sound (the passing whoosh) without ringing
-    let g=kind===1?0.32/(1+d/9):0.34/(1+d*d/12);if(d<5)g*=0.45+0.11*d;
-    set(q.g.gain,Math.min(0.28,g),0.06);q.ds.forEach(e=>{set(e.d.delayTime,Math.min(0.99,delay*e.k+e.o),kind===2?0.03:0.08);set(e.sl.frequency,Math.max(700,(kind===2?3500:9000)*e.f/(1+d/35)),0.1);});
+    // what buzzes is a SHORT delay (under ~35 ms, a surface within ~6 m) laid over a steady engine note; past ~10 m
+    // the delay is long enough to hear as a separate echo, so near walls stay quiet and farther ones are loud
+    let g;if(kind===1){const s=clamp((d-4)/10,0,1),e=s*s*(3-2*s);g=0.07+0.55*e/(1+Math.max(0,d-14)/35);}
+    else{const o=r.obj.ref,ou=o.u||0,cu=car.u||0,rv=Math.hypot(ou*Math.cos(o.psi||0)-cu*Math.cos(car.psi),-ou*Math.sin(o.psi||0)+cu*Math.sin(car.psi));
+      g=0.3/(1+d*d/14)*clamp(rv/9,0.2,1);}   // a car alongside at the same speed is a static comb: keep it down; passing, it sweeps (the whoosh)
+    set(q.g.gain,Math.min(0.55,g),0.06);q.ds.forEach(e=>{set(e.d.delayTime,Math.min(0.99,delay*e.k+e.o),kind===2?0.03:0.08);set(e.sl.frequency,Math.max(700,(kind===2?3500:9000)*e.f/(1+d/35)),0.1);});
     if(q.p)set(q.p.pan,clamp(dx*rx+dz*rz,-1,1)*0.85,0.08);});
   ACOU.enc+=((hits/ACOU_DIRS)-ACOU.enc)*0.15;
-  if(ACOU.revG)set(ACOU.revG.gain,0.015+0.22*ACOU.enc,0.4);}
+  if(ACOU.revG)set(ACOU.revG.gain,0.03+0.38*ACOU.enc,0.4);}
 function audioFrame(){
   if(!AC||!voice)return;
   const t=AC.currentTime,L=AC.listener,p=camera.position,f=new TH.Vector3();camera.getWorldDirection(f);
