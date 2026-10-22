@@ -13902,7 +13902,10 @@ function heliFollow(dt){const H=HELI,R=H.rx;if(!R)return;const el=Math.min(0.5,(
    the drag strip game. The road is closed for the race: no traffic, no police.
 --------------------------------------------------------------------------- */
 const RACE={on:false,phase:'off',cfg:null,a:null,meshes:[],t:0,line:1240};
-const RACE_RUN=600,RACE_ROLL_LINE=680;   // rolling start: the cars set off 600 m before a start line further up the straight
+const RACE_ROLL_LINE=680;   // rolling start line, further up the straight so there's a mile after it
+/* how far back the cars start for a rolling race: enough for a slow car at part throttle to make the speed, plus room to line up */
+const RACE_RUNS={10:110,20:150,30:210,40:290,50:390,60:520};
+function raceRun(){return RACE_RUNS[RACE.cfg&&RACE.cfg.roll]||300;}
 const RACE_X=760,RACE_LINE=1240,RACE_PSI=Math.PI/2,RACE_MAXD=1609.344;   // start line z; heading -z
 const RACE_FR=[[1/8,'1/8 mile'],[1/4,'1/4 mile'],[1/2,'1/2 mile'],[3/4,'3/4 mile'],[1,'1 mile']];
 let RS=null;
@@ -13971,7 +13974,7 @@ function raceApply(o,S){const C=CARS.find(c=>c.key===S.key),m=(C&&C.modes&&C.mod
   {const P=car;car=o;try{setMode(m,true);}finally{car=P;}}   // the full mode change: shift profile, shift speed, suspension, schedule
   o.tc=!!S.tc;o.launchMode=S.launch||'off';o.launchRpm=S.rpm||3000;o.lcStage=false;o.lcGo=null;o.lcHold=0;o.tcs=null;o.tcCut=0;}
 function raceRoll(){return !!(RACE.cfg&&RACE.cfg.start==='roll');}
-function raceGrid(o,lane){o.x=RACE_X+lane*LANE_OFF;o.z=RACE.line+(raceRoll()?RACE_RUN:0)+(o.halfLen||2.3);o.psi=RACE_PSI;o.u=0;o.v=0;o.yr=0;o.omega=0;o.omegaF=0;o.steer=0;o.ax=0;o.ay=0;
+function raceGrid(o,lane){o.x=RACE_X+lane*LANE_OFF;o.z=RACE.line+(raceRoll()?raceRun():0)+(o.halfLen||2.3);o.psi=RACE_PSI;o.u=0;o.v=0;o.yr=0;o.omega=0;o.omegaF=0;o.steer=0;o.ax=0;o.ay=0;
   o.state='D';o.gear=0;o.thr=0;o.brk=1;o.boost=0;o.flareRpm=null;o.cvtR=null;o.shiftT=0;o.slamT=0;o.lcStage=false;o.lcGo=null;o.rollM=false;o.rollI=0;o.rollB=0;o.rollShT=0;}
 function raceProgress(o){return RACE.line-(o.z-(o.halfLen||2.3));}   // nose past the start line, metres
 function raceStart(){const C=RACE.cfg=JSON.parse(JSON.stringify(RS));RACE.line=C.start==='roll'?RACE_ROLL_LINE:RACE_LINE;
@@ -13984,7 +13987,7 @@ function raceStart(){const C=RACE.cfg=JSON.parse(JSON.stringify(RS));RACE.line=C
   RACE.a=raceMakeOpp(O);
   MODE='drive';show('hud');clusterBuild();CAMV.init=false;CAMV.yaw=0;CAMV.pitch=0;startAudio();setDriveView();setShadowSpan(55);
   RACE.on=true;raceLines();raceReset();$('help').classList.add('gone');$('rhGo').onclick=()=>raceKey();}
-function raceMakeOpp(O){const a=netMakeCar(O.key,O.color||null,RACE_X-LANE_OFF,RACE.line+(raceRoll()?RACE_RUN:0)+3,RACE_PSI);if(!a)return null;
+function raceMakeOpp(O){const a=netMakeCar(O.key,O.color||null,RACE_X-LANE_OFF,RACE.line+(raceRoll()?raceRun():0)+3,RACE_PSI);if(!a)return null;
   Object.assign(a,{remote:false,race:true,persist:true,ai:true,mode:'normal',alpha:1,fade:1});raceApply(a,O);trToPhys(a);a.parked=false;a.awake=true;
   a.paintHex=O.color;return a;}
 function raceReset(){const R=RACE;R.phase='stage';R.t=0;R.ct=0;R.hk=0;R.goT=null;R.pMove=R.oMove=R.pFin=R.oFin=R.pGo=null;R.jump=null;R.gap=null;R.done=false;R.pCross=null;R.lineGap=null;R.pLine=null;R.oLine=null;
@@ -13992,7 +13995,7 @@ function raceReset(){const R=RACE;R.phase='stage';R.t=0;R.ct=0;R.hk=0;R.goT=null
   $('raceRes').hidden=true;raceHud();}
 function raceKey(){const R=RACE;if(!R.on)return false;
   if(R.phase==='stage'){   // back on the line if you've rolled off it, then the countdown
-    const p0=raceRoll()?-RACE_RUN:0;
+    const p0=raceRoll()?-raceRun():0;
     if(Math.abs(raceProgress(car)-p0)>1.5||Math.abs(car.x-(RACE_X+LANE_OFF))>1.2||Math.abs(car.u)>0.4){const L=car.launchMode,st=car.lcStage;raceGrid(car,1);car.launchMode=L;car.state=st?'D':'P';}
     R.phase=raceRoll()?'roll':'count';R.ct=0;R.hk=0;R.p0=raceProgress(car);raceHud();return true;}
   return R.phase==='count'||R.phase==='race'||R.phase==='roll';}
@@ -14034,7 +14037,10 @@ function raceThink(a,dt){const R=RACE,I=a.in;
    as a driver would), so it pulls the instant it crosses. "Leaves it in Drive": it cruises in whatever tall gear the
    automatic picked and only floors it at the line, then waits on the kickdown. */
 function raceRollDrive(a,dt){const R=RACE,I=a.in,vt=R.cfg.roll*0.44704,v=a.u,dl=-raceProgress(a),c=a.spec;I.brk=0;I.hand=0;a.lcStage=false;
-  if(v<vt-2.2){if(R.ct>8&&v<vt*0.85)a.rollB=Math.min(0.35,(a.rollB||0)+dt*0.04);I.thr=0.3+(a.rollB||0);a.rollI=0.08;}   // a slow car gets a bit more throttle so it makes the speed before the line
+  if(v<vt-2.2){
+    // about 30% throttle; a slow car that wouldn't make the speed in the room left gets more, so it's at speed well before the line
+    const need=(vt*vt-v*v)/(2*Math.max(15,dl-50)),have=Math.max(0.2,a.ax||0);
+    a.rollB=clamp((a.rollB||0)+(need>have*0.9?dt*0.6:-dt*0.3),0,0.55);I.thr=0.3+a.rollB;a.rollI=0.08;}
   else{a.rollI=clamp((a.rollI||0)+(vt-v)*dt*0.05,0,0.5);I.thr=clamp(a.rollI+0.08*(vt-v),0,0.6);if(v>vt+3)I.brk=0.15;}
   const ev=!!(IND[c.ind]||{}).electric,cvt=c.trans==='cvt'||c.trans==='ecvt';
   if(R.cfg.aiShift==='manual'&&!ev&&!cvt&&dl<180&&v>vt-3){
