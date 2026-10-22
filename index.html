@@ -4018,7 +4018,7 @@ function buildFordBP(kind,colorHex,name){
     mirror:D.mirror,cuts:D.cuts,handles:D.handles,handleMat:D.handleMat,rocker:D.rocker,rockerY:D.rockerY,
     trim:({M,ribbon,disc,box,planW,sideStrip,gTop,surfX,onHood})=>{
       const W=D.W;
-      const oval=(dir,y,sc)=>{disc(dir,0,y,0.75*sc,M.blue,0.34).scale.set(1.9,1,1);disc(dir,0,y,0.85*sc,M.chrome,0.3).scale.set(1.9,1,1);};
+      const oval=(dir,y,sc)=>{disc(dir,0,y,0.75*sc,(M.ovalBlue||(M.ovalBlue=new TH.MeshStandardMaterial({color:0x1d3f8f,roughness:0.3,metalness:0.4}))),0.34).scale.set(1.9,1,1);disc(dir,0,y,0.85*sc,M.chrome,0.3).scale.set(1.9,1,1);};
       // a lamp outline + lens, with an inner DRL line following its top edge
       const lamp=(z0,z1,yf,lensM,drl)=>{[1,-1].forEach(s=>{ribbon(1,s*z0,s*z1,12,z=>{const b=yf(Math.abs(z));return[b[0]-0.25,b[1]+0.25];},0.12,M.dark);
         ribbon(1,s*(z0+0.2),s*(z1-0.2),12,z=>yf(Math.abs(z)),0.2,lensM||M.lens);
@@ -4113,7 +4113,7 @@ function buildFordBP(kind,colorHex,name){
       ribbon(1,-10,10,16,()=>[9.2,11.0],0.14,M.dark);
       if(police){[1,-1].forEach(s=>{box(1.2,14.5,1.2,M.dark,66.4,13.6,s*9.6);box(4,1.2,1.2,M.dark,64.8,20,s*9.6);box(4,1.2,1.2,M.dark,64.8,8,s*9.6);});
         box(1.2,1.2,19.2,M.dark,66.4,19.4,0);box(1.2,1.2,19.2,M.dark,66.4,9.2,0);box(1.2,5,9,M.dark,66.6,14.4,0);
-        [1,-1].forEach(s=>ribbon(1,s*3,s*8.4,4,()=>[21.6,22.2],0.3,s>0?M.redL:M.blue));}
+        }
       // rear: tall corner lamps (red over amber/clear), centre plate panel, chrome trunk lock bar
       [1,-1].forEach(s=>{const zo=planW(-68)-0.6;
         ribbon(-1,s*15.4,s*zo,8,()=>[18.8,25.6],0.14,M.chrome);ribbon(-1,s*15.8,s*zo,8,()=>[20.8,25.2],0.24,M.tail);
@@ -10519,7 +10519,10 @@ function trLivery(A,T){
   else{
     // the Crown Victoria's bar, part for part (dimensions in inches, as the drag sim builds it): a dark base and five
     // lenses, blue to the driver's side, red to the passenger's, clear in the middle
-    lbX=roofX+0.05;const BM=(TPL.crownvic_p71&&TPL.crownvic_p71.barMats)||{};
+    lbX=roofX+0.05;
+    // Taurus and Impala: the bar sits a little back from the windshield header, a clear strip of roof in front of it
+    if(T.key==='taurussho'||T.key==='impala_9c1'){let x=roofX;while(x<2.2&&roofAt(x+0.02,0)>roofY-0.015)x+=0.02;lbX=Math.max(roofX+0.05,x-0.34);}
+    const BM=(TPL.crownvic_p71&&TPL.crownvic_p71.barMats)||{};
     const mk=(c,e)=>new TH.MeshStandardMaterial({color:c,roughness:0.2,metalness:0,emissive:e,emissiveIntensity:1.0});
     const dark=BM.dark||new TH.MeshStandardMaterial({color:0x0b0c0f,roughness:0.85,metalness:0.2}),blue=BM.blue||mk(0x1f5fe0,0x2a6aff),red=BM.red||mk(0xe01818,0xff2020),clr=BM.clear||mk(0xf6f6f2,0x555550);
     const ry=roofAt(lbX,0)/U,xi=lbX/U;
@@ -10624,7 +10627,15 @@ function trBuildTemplate(key){
   T.lampR=tb?{x:tb.min.x,y:(tb.min.y+tb.max.y)/2,z:Math.max(Math.abs(tb.min.z),Math.abs(tb.max.z))}:{x:bb.min.x+0.15,y:0.8,z:sz.z/2-0.2};
   if(T.lampF.z<0.3||T.lampF.z>sz.z/2)T.lampF.z=sz.z/2-0.2;if(T.lampR.z<0.3||T.lampR.z>sz.z/2)T.lampR.z=sz.z/2-0.2;
   trSplitAmber(A,T);
-  if(police){trUnitMats();trLivery(A,T);}
+  if(police){trUnitMats();trLivery(A,T);
+    // the push bar's top crossbar (the fitted bar: 0.08 x 0.07 x 0.86 m; the P71's own: 1.2 x 1.2 x 19.2 in), for the LED heads mounted on it
+    A.grp.updateMatrixWorld(true);let best=null;
+    A.grp.traverse(m=>{const q=m.isMesh&&m.geometry.parameters;if(!q||q.width==null)return;
+      const isBar=(Math.abs(q.width-0.08)<1e-3&&Math.abs(q.height-0.07)<1e-3&&Math.abs(q.depth-0.86)<1e-3)||(Math.abs(q.width-1.2)<1e-3&&Math.abs(q.height-1.2)<1e-3&&Math.abs(q.depth-19.2)<1e-3);
+      if(!isBar)return;const b=new TH.Box3().setFromObject(m);if(!best||b.max.y>best.max.y)best=b;});
+    // the P71's body parts are merged into one mesh: its crossbar from the builder's own numbers (shell space)
+    if(!best&&key==='crownvic_p71'){best=new TH.Box3();[[65.8,18.8,-9.6],[67.0,20.0,9.6]].forEach(q=>best.expandByPoint(new TH.Vector3(...q).applyMatrix4(A.shell.matrixWorld)));}
+    if(best)T.pbar={fx:best.max.x,yc:(best.min.y+best.max.y)/2,bh:best.max.y-best.min.y,zw:(best.max.z-best.min.z)/2};}
   A.grp.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=false;}});
   T.proxy=trProxy(A.grp,m=>paint.has(m),A.wheels);
   TPL[key]=T;
@@ -12645,6 +12656,10 @@ function polLights(a){const u=a.unit||a.ghostUnit,L=a.lensM||{},dark=polDark();
   // the lens housings glow with their side, so the bar reads from above and from the side too
   if(!L._tint){L._tint=1;[[L.blue,0x0b1530,0x0a36ff],[L.red,0x2e0a0a,0xff1206],[L.clear,0x2a2a2a,0xffffff]].forEach(([m,c,e])=>{if(m){m.color.setHex(c);if(m.emissive)m.emissive.setHex(e);}});}   // dark tinted lens, saturated when lit
   if(L.blue)L.blue.emissiveIntensity=0.08+lvB*2.4;if(L.red)L.red.emissiveIntensity=0.08+lvR*2.4;if(L.clear)L.clear.emissiveIntensity=0.08+lvW*2.6;
+  // push-bar LED heads: blue on the driver's side, red on the passenger's, flashing with their side of the roof bar
+  if(a.pb==null)a.pb=polPushBarBuild(a)||false;
+  if(a.pb){const on=!!(u&&u.lights);a.pb.on[0]=on&&lvB>0.3;a.pb.on[1]=on&&lvR>0.3;
+    a.pb.heads.forEach((h,i)=>{const lit=a.pb.on[i];h.f.material.color.copy(lit?PB_ON[h.c]:PB_OFF[h.c]);h.gl.visible=lit&&near<160;h.gl.material.opacity=lit?0.32+dark*0.38:0;});}
   if(!u)return;
   // each lit LED module gets its own tight neon flare (white-hot core, coloured halo), brightest when it faces you
   if(a.led&&a.led.mods){if(!a.led.fl)a.led.fl=polFlareBuild(a.led.mods,a.root);polFlareStep(a,dark,near);}
@@ -12653,6 +12668,28 @@ function T_x(a){return (a.tpl&&a.tpl.lbX)||0;}
 /* real lights: a fixed pool (a fixed count, so the scene's shaders never recompile) of spot lights, two per cruiser for the
    two nearest flashing cruisers. Each one sits just outside its side of the bar and points outward and down, so the blue
    side lights only the road, cars and walls on its side and the red side only on the other, out to a realistic range. */
+/* push-bar LED heads, mounted flat on the front of the push bar's top crossbar (measured on the template) */
+const PB_ON={b:new TH.Color(0.1,0.28,1.0),r:new TH.Color(1.0,0.08,0.04)},PB_OFF={b:new TH.Color(0.035,0.05,0.12),r:new TH.Color(0.13,0.025,0.025)};let PB_HOUS=null,PB_GLOW=null;
+function polPushBarBuild(a){const P=a.tpl&&a.tpl.pbar;if(!P||!a.root)return null;
+  if(!PB_HOUS)PB_HOUS=new TH.MeshStandardMaterial({color:0x101113,roughness:0.5,metalness:0.4});
+  if(!PB_GLOW){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);
+    g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(0.18,'rgba(255,255,255,0.7)');g.addColorStop(0.5,'rgba(255,255,255,0.15)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,128,128);PB_GLOW=new TH.CanvasTexture(c);}
+  const D=0.03,H=Math.max(0.045,P.bh*1.05),Wd=Math.min(0.15,P.zw*0.42),zc=P.zw*0.52,heads=[];
+  [[-1,'b'],[1,'r']].forEach(([s,c])=>{
+    const h=new TH.Mesh(new TH.BoxGeometry(D,H,Wd),PB_HOUS);h.position.set(P.fx+D/2-0.002,P.yc,s*zc);h.castShadow=true;      // housing, its back on the crossbar face
+    const f=new TH.Mesh(new TH.BoxGeometry(0.004,H*0.7,Wd*0.88),new TH.MeshBasicMaterial({color:0x000000,toneMapped:false}));f.position.set(P.fx+D+0.0005,P.yc,s*zc);
+    const gl=new TH.Sprite(new TH.SpriteMaterial({map:PB_GLOW,color:c==='b'?0x1238ff:0xff1608,transparent:true,blending:TH.AdditiveBlending,depthWrite:false,opacity:0}));
+    gl.scale.set(0.38,0.26,1);gl.position.set(P.fx+D+0.03,P.yc,s*zc);gl.renderOrder=4;gl.visible=false;
+    a.root.add(h);a.root.add(f);a.root.add(gl);heads.push({f,c,gl});});
+  return {heads,on:[false,false],x:P.fx+D+0.03,y:P.yc,zc};}
+/* their light on the road: a fixed pool (the two nearest flashing cruisers, both sides), so the light count never changes */
+const POL_PB=[];
+function polPushBarPool(lit,dark){if(!POL_PB.length&&typeof world!=='undefined'&&world){for(let i=0;i<4;i++){const l=new TH.SpotLight(0xffffff,0,9,0.95,0.75,1.6);l.visible=true;world.add(l);world.add(l.target);POL_PB.push(l);}}
+  const L=lit.filter(q=>q[1].a.pb).slice(0,2);
+  for(let k=0;k<2;k++){const q=L[k];for(let sd=0;sd<2;sd++){const l=POL_PB[k*2+sd];if(!q){l.intensity=0;continue;}const a=q[1].a,pb=a.pb;if(!pb.on[sd]){l.intensity=0;continue;}
+    const side=sd?1:-1,cp=Math.cos(a.psi),sp=Math.sin(a.psi),W=(lx,lz)=>[a.x+cp*lx+sp*lz,a.z-sp*lx+cp*lz];
+    const p=W(pb.x,side*pb.zc),t=W(pb.x+2.6,side*(pb.zc+0.9));l.position.set(p[0],pb.y,p[1]);l.target.position.set(t[0],0,t[1]);l.target.updateMatrixWorld();
+    l.color.setHex(sd?0xff2010:0x2a50ff);l.intensity=(sd?1:1.4)*(0.3+dark*1.4);l.distance=7+dark*6;}}}
 const POL_PL=[],POL_PL_N=2;
 function polLightPool(){if(!POL_PL.length&&typeof world!=='undefined'&&world){for(let i=0;i<POL_PL_N*2;i++){const l=new TH.SpotLight(0xffffff,0,20,1.2,0.85,2);l.visible=true;world.add(l);world.add(l.target);POL_PL.push(l);}}
   if(!POL_PL.length)return;const dark=polDark(),cx=camera.position.x,cz=camera.position.z;
@@ -12669,7 +12706,8 @@ function polLightPool(){if(!POL_PL.length&&typeof world!=='undefined'&&world){fo
       l.target.position.set(a.x+cp*lx+sp*side*8,0,a.z-sp*lx+cp*side*8);l.target.updateMatrixWorld();
       const cr=sd?1:0.06,cg=sd?0.06:0.16,cb=sd?0.03:1;const sm=c+w||1;
       l.color.setRGB((cr*c+w)/sm,(cg*c+w)/sm,(cb*c+w)/sm);
-      l.intensity=v*(sd?1:1.5)*(0.45+dark*3.4);l.distance=10+dark*14;}}}
+      l.intensity=v*(sd?1:1.5)*(0.45+dark*3.4);l.distance=10+dark*14;}}
+  polPushBarPool(lit,dark);}
 const SIREN={v:[]};
 function polSiren(u,mode){if(mode==='burst'){polSirenBurst(u);return;}}
 function polSirenBurst(u){const ctx=AC;if(!ctx||muted||ctx.state!=='running')return;const a=u.a,d=Math.hypot(a.x-camera.position.x,a.z-camera.position.z);if(d>260)return;
@@ -12788,7 +12826,7 @@ function polThink(a,dt,ALL){const u=a.unit;polDriveParams(u);a.trailStop=null;a.
   if(a.mode==='man'&&a.s>=u.manEnd-1.5){const d=u.manDone;u.manDone=null;polHold(a);d&&d(a);}}
 
 /* ---------------------------------------------------------------- every frame */
-function policeFrame(dt){if(!POL.ready||MODE!=='drive'){if(!POL.ready)POL_PL.forEach(l=>l.intensity=0);return;}POL.t+=dt;polLightPool();
+function policeFrame(dt){if(!POL.ready||MODE!=='drive'){if(!POL.ready){POL_PL.forEach(l=>l.intensity=0);POL_PB.forEach(l=>l.intensity=0);}return;}POL.t+=dt;polLightPool();
   POL.trackT=(POL.trackT||0)-dt;if(POL.trackT<=0){polTrack(0.25);POL.trackT=0.25;}
   POL.units.forEach(u=>{u.brainT-=dt;if(u.brainT<=0){u.brainT=0.2;polBrain(u,0.2);}});
   polStopStep(dt);polIncidentStep(dt);polBoxStep(dt);polDispatch(false);polStripsStep();polRadioStep(dt);polSirenStep();
