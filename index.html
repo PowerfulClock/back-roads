@@ -739,7 +739,7 @@ function audioCtx(){
   if(!AC){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;AC=new C();
     AC.master=AC.createGain();AC.master.gain.value=volGain(volSetting());
     // a brick-wall limiter after the master volume: engines, sirens, horns and traffic stacking up no longer clip into crackle
-    try{const K=AC.createDynamicsCompressor();K.threshold.value=-4;K.knee.value=4;K.ratio.value=20;K.attack.value=0.002;K.release.value=0.12;AC.master.connect(K);K.connect(AC.destination);AC.limiter=K;}catch(e){AC.master.connect(AC.destination);}}
+    try{const K=AC.createDynamicsCompressor();K.threshold.value=-3;K.knee.value=6;K.ratio.value=12;K.attack.value=0.006;K.release.value=0.25;AC.master.connect(K);K.connect(AC.destination);AC.limiter=K;}catch(e){AC.master.connect(AC.destination);}}
   if(AC.state==='suspended')AC.resume();
   return AC;
 }
@@ -14540,19 +14540,24 @@ function crashSound(k){
      late, and as the gap changes that sweeps the familiar "whoosh" of passing someone (a moving comb filter).
    - the town's reverb: a diffuse tail, strong when buildings surround you, almost nothing in open country.
 --------------------------------------------------------------------------- */
-const ACOU={on:true,taps:[],rev:null,revG:null,inp:null,t:0,enc:0};
-const ACOU_DIRS=8,ACOU_C=343;
+const ACOU={on:true,bins:[],rev:null,revG:null,inp:null,t:0,enc:0};
+const ACOU_DIRS=12,ACOU_C=343;
+// Echo design (v78). Earlier versions moved delay lines around every frame and layered a few clean copies; on a steady
+// engine note that rings as a pitched comb (the buzz), and the moving delays warble. Now nothing moves: a fixed set of
+// echo "bins" at 45-300 ms, each a convolver whose impulse is a short burst of decaying noise (how a building face
+// scatters sound), so an echo has no pitch of its own. Each frame only the bins' loudness and pan change, slowly.
+const ACOU_BD=[0.045,0.065,0.09,0.125,0.17,0.23,0.31];
 function acouInit(ctx){if(ACOU.inp||!ctx||!ctx.master)return;
-  const inp=ctx.createGain();inp.gain.value=1;ctx.master.connect(inp);const out=ctx.limiter||ctx.destination;
-  // each reflection is three slightly offset, differently filtered copies: a real wall scatters, it doesn't return a
-  // clean copy, and a clean copy over a steady engine note combs it into a buzz
-  for(let i=0;i<ACOU_DIRS;i++){const g=ctx.createGain();g.gain.value=0;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=6000;
-    const p=ctx.createStereoPanner?ctx.createStereoPanner():null;const ds=[];
-    [[1,0,0.5,1],[1.06,0.0021,0.3,0.7],[1.13,0.0047,0.2,0.5]].forEach(([k,o,a,f])=>{const d=ctx.createDelay(1.0);d.delayTime.value=0.1;const sg=ctx.createGain();sg.gain.value=a;
-      const sl=ctx.createBiquadFilter();sl.type='lowpass';sl.frequency.value=6000*f;inp.connect(d);d.connect(sl);sl.connect(sg);sg.connect(lp);ds.push({d,k,o,sl,f});});
-    lp.connect(g);if(p){g.connect(p);p.connect(out);}else g.connect(out);ACOU.taps.push({ds,lp,g,p,a:i/ACOU_DIRS*Math.PI*2});}
+  const inp=ctx.createGain();inp.gain.value=1;ctx.master.connect(inp);const out=ctx.limiter||ctx.destination;const sr=ctx.sampleRate;
+  try{ACOU_BD.forEach((dl,i)=>{const len=0.03+0.012*i,n=Math.floor(sr*(dl+len)),ir=ctx.createBuffer(1,n,sr),d=ir.getChannelData(0),o=Math.floor(sr*dl);
+      let lp=0,e=0;const k=Math.max(0.12,0.55-0.06*i);   // farther walls sound duller
+      for(let j=0;j<n-o;j++){const t=j/sr;lp+=(Math.random()*2-1-lp)*k;d[o+j]=lp*Math.exp(-t/(len*0.32))*(t<0.002?t/0.002:1);e+=d[o+j]*d[o+j];}
+      const nm=1/Math.sqrt(e||1);for(let j=o;j<n;j++)d[j]*=nm;
+      const cv=ctx.createConvolver();cv.normalize=false;cv.buffer=ir;const g=ctx.createGain();g.gain.value=0;
+      const p=ctx.createStereoPanner?ctx.createStereoPanner():null;inp.connect(cv);cv.connect(g);if(p){g.connect(p);p.connect(out);}else g.connect(out);
+      ACOU.bins.push({g,p,d:dl});});}catch(e){}
   // the diffuse tail: a generated stereo impulse, dense early, about 1.4 s long, darker as it decays
-  try{const sr=ctx.sampleRate,n=Math.floor(sr*1.4),ir=ctx.createBuffer(2,n,sr);
+  try{const n=Math.floor(sr*1.4),ir=ctx.createBuffer(2,n,sr);
     for(let c=0;c<2;c++){const d=ir.getChannelData(c);let lp=0;for(let i=0;i<n;i++){const t=i/sr,k=0.25+0.7*Math.exp(-t*3);lp+=(Math.random()*2-1-lp)*k;d[i]=lp*Math.exp(-t*4.2)*(t<0.012?t/0.012:1);}}
     const cv=ctx.createConvolver();cv.buffer=ir;const rg=ctx.createGain();rg.gain.value=0;const pre=ctx.createDelay(0.1);pre.delayTime.value=0.025;
     inp.connect(pre);pre.connect(cv);cv.connect(rg);rg.connect(out);ACOU.rev=cv;ACOU.revG=rg;}catch(e){}
@@ -14569,31 +14574,24 @@ function acouRay(x,z,dx,dz,max,B,C){let best=max,kind=0,obj=null;
   return [best,kind,obj];}
 function acouFrame(dt){const ctx=AC;if(!ctx||!ctx.master)return;acouInit(ctx);if(!ACOU.inp)return;
   const live=ACOU.on&&(MODE==='drive')&&CFG.gfx.echo!==false;ACOU.t-=dt;if(ACOU.t>0)return;ACOU.t=0.05;
-  const T=ctx.currentTime,set=(p,v,tc)=>p.setTargetAtTime(v,T,tc||0.06);
-  if(!live){ACOU.taps.forEach(q=>set(q.g.gain,0,0.1));if(ACOU.revG)set(ACOU.revG.gain,0,0.2);return;}
-  const x=car.x,z=car.z,MAX=120;
+  const T=ctx.currentTime,set=(p,v,tc)=>p.setTargetAtTime(v,T,tc||0.2);
+  if(!live){ACOU.bins.forEach(q=>set(q.g.gain,0,0.1));if(ACOU.revG)set(ACOU.revG.gain,0,0.2);return;}
+  const x=car.x,z=car.z,MAX=ACOU_C*ACOU_BD[ACOU_BD.length-1]/2+8;
   const B=MAP.buildings.filter(b=>(b.h||6)>2.5&&Math.abs(b.x-x)<MAX+40&&Math.abs(b.z-z)<MAX+40);
-  const C=[];for(const a of TRAFFIC.cars){if(!a.alive||a===car||a.alpha<0.3)continue;const d=Math.hypot(a.x-x,a.z-z);if(d<18)C.push({x:a.x,z:a.z,r:Math.max(1.1,(a.halfWid||0.9)*1.15),ref:a});}
-  // panning: relative to where the camera (the listener) looks
   const f=new TH.Vector3();camera.getWorldDirection(f);const fl=Math.hypot(f.x,f.z)||1,fx=f.x/fl,fz=f.z/fl,rx=-fz,rz=fx;
-  let hits=0;const R=ACOU.taps.map(q=>{const a=q.a+car.psi,dx=Math.cos(a),dz=-Math.sin(a);const [d,kind,obj]=acouRay(x,z,dx,dz,MAX,B,C);return {q,dx,dz,d,kind,obj};});
-  // an object several rays hit reflects once (from its nearest point), not once per ray
-  const near=new Map();R.forEach(r=>{if(!r.kind)return;const k=r.obj&&(r.obj.ref||r.obj),n=near.get(k);if(!n||r.d<n.d)near.set(k,r);});
-  R.forEach(r=>{const q=r.q,{d,kind,dx,dz}=r;
-    if(!kind||near.get(r.obj&&(r.obj.ref||r.obj))!==r){set(q.g.gain,0,0.12);return;}
-    if(kind===1&&d<60)hits++;
-    const delay=Math.min(0.93,2*d/ACOU_C+(kind===2?0.0015:0));
-    // a wall is a big reflector; a car a small, rounded one that only matters close up. Very close reflections are
-    // kept quiet and dull: they colour the sound (the passing whoosh) without ringing
-    // what buzzes is a SHORT delay (under ~35 ms, a surface within ~6 m) laid over a steady engine note; past ~10 m
-    // the delay is long enough to hear as a separate echo, so near walls stay quiet and farther ones are loud
-    let g;if(kind===1){const s=clamp((d-4)/10,0,1),e=s*s*(3-2*s);g=0.07+0.55*e/(1+Math.max(0,d-14)/35);}
-    else{const o=r.obj.ref,ou=o.u||0,cu=car.u||0,rv=Math.hypot(ou*Math.cos(o.psi||0)-cu*Math.cos(car.psi),-ou*Math.sin(o.psi||0)+cu*Math.sin(car.psi));
-      g=0.3/(1+d*d/14)*clamp(rv/9,0.2,1);}   // a car alongside at the same speed is a static comb: keep it down; passing, it sweeps (the whoosh)
-    set(q.g.gain,Math.min(0.55,g),0.06);q.ds.forEach(e=>{set(e.d.delayTime,Math.min(0.99,delay*e.k+e.o),kind===2?0.03:0.08);set(e.sl.frequency,Math.max(700,(kind===2?3500:9000)*e.f/(1+d/35)),0.1);});
-    if(q.p)set(q.p.pan,clamp(dx*rx+dz*rz,-1,1)*0.85,0.08);});
+  const W=ACOU_BD.map(()=>({g:0,pan:0}));let hits=0;
+  for(let i=0;i<ACOU_DIRS;i++){const a=i/ACOU_DIRS*Math.PI*2+car.psi,dx=Math.cos(a),dz=-Math.sin(a);const [d,kind]=acouRay(x,z,dx,dz,MAX,B,[]);
+    if(kind!==1)continue;if(d<60)hits++;
+    // a surface closer than ~7 m returns sound too soon to hear as an echo (that's what combed into a buzz): it only
+    // feeds the room tail below. Farther walls: louder the nearer they are, split between the two nearest bins
+    const del=2*d/ACOU_C;if(del<ACOU_BD[0]*0.8)continue;
+    const g=0.42/(1+Math.max(0,d-10)/28)*clamp((del-ACOU_BD[0]*0.8)/(ACOU_BD[0]*0.4),0,1),pan=clamp(dx*rx+dz*rz,-1,1)*0.9;
+    let j=0;while(j<ACOU_BD.length-1&&ACOU_BD[j+1]<del)j++;
+    const t=j<ACOU_BD.length-1?clamp(Math.log(del/ACOU_BD[j])/Math.log(ACOU_BD[j+1]/ACOU_BD[j]),0,1):0;
+    [[j,1-t],[j+1,t]].forEach(([k,w])=>{if(k<W.length&&w>0){W[k].g+=g*w;W[k].pan+=pan*g*w;}});}
+  ACOU.bins.forEach((q,k)=>{const w=W[k],g=Math.min(0.5,w.g);set(q.g.gain,g,0.25);if(q.p&&w.g>0)set(q.p.pan,w.pan/w.g,0.3);});
   ACOU.enc+=((hits/ACOU_DIRS)-ACOU.enc)*0.15;
-  if(ACOU.revG)set(ACOU.revG.gain,0.03+0.38*ACOU.enc,0.4);}
+  if(ACOU.revG)set(ACOU.revG.gain,0.03+0.3*ACOU.enc,0.4);}
 function audioFrame(){
   if(!AC||!voice)return;
   const t=AC.currentTime,L=AC.listener,p=camera.position,f=new TH.Vector3();camera.getWorldDirection(f);
