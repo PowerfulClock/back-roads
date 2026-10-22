@@ -14410,7 +14410,7 @@ function makeTurboSnd(ctx,twin){const out=ctx.createGain();out.gain.value=1;out.
       nf.frequency.setTargetAtTime(1800+shaft*3800,t,0.08);ng.gain.setTargetAtTime(0.05*b*(0.3+0.7*load),t,0.06);},
     stop(){try{out.gain.setTargetAtTime(0,ctx.currentTime,0.08);setTimeout(()=>{[o,o2,n].forEach(x=>{try{x.stop();}catch(e){}});},400);}catch(e){}}};}
 function startAudio(){stopAudio();const ctx=audioCtx();if(!ctx)return;if(muted&&ctx.master)ctx.master.gain.value=0;makeVoice();}
-function makeVoice(){
+function makeVoice(){BURB.until=0;BURB.armed=false;
   const ctx=AC,c=car.spec;if(!ctx)return;
   if(voice){try{voice.stop();}catch(e){}voice=null;}
   const pack=sndLoad(sndPackFor(c));
@@ -14419,6 +14419,42 @@ function makeVoice(){
   if(turboSnd){turboSnd.stop();turboSnd=null;}const B=boostSetup(c);if(B&&B.turbo&&B.kind!=='centri'){try{turboSnd=makeTurboSnd(ctx,B.kind==='twin'||B.kind==='quad');}catch(e){turboSnd=null;}}
 }
 function stopAudio(){if(voice){try{voice.stop();}catch(e){}voice=null;}if(turboSnd){turboSnd.stop();turboSnd=null;}}
+/* ---------------------------------------------------------------------------
+   Overrun burbles (BMW M2): the S58's sport exhaust. Lift off from high revs and it lets out a run of deep, irregular
+   bangs ("blub-blub-blub... pop") with a crackle in some of them, quicker at high revs and dying away as the revs fall;
+   a short burst on each rev-matched downshift while slowing; a quick brap on full-throttle upshifts in Sport and Track.
+   Normal mode keeps it subdued (the particulate filter), Sport fuller, Track the most. Each bang is synthesised: a low
+   thump filtered around the six's firing frequency, so it follows the revs, plus an occasional sharp crack on top.
+--------------------------------------------------------------------------- */
+const BURB={until:0,str:0,nextT:0,noise:null,n:0};
+const BURB_CARS=/^bmwM2/;
+function burbNoise(ctx){if(!BURB.noise||BURB.noise.sampleRate!==ctx.sampleRate){const b=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;BURB.noise=b;}return BURB.noise;}
+function burbPop(ctx,dest,t,amp,rpm,crack){const N=burbNoise(ctx),fire=rpm/60*3;BURB.n++;
+  const s=ctx.createBufferSource();s.buffer=N;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=clamp(fire*1.8+140*Math.random(),170,640);lp.Q.value=2.2;
+  const pk=ctx.createBiquadFilter();pk.type='peaking';pk.frequency.value=clamp(fire*0.9,70,230);pk.gain.value=9;pk.Q.value=1.4;
+  const g=ctx.createGain(),d=0.035+Math.random()*0.05;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(0.0002,amp),t+0.004);g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+  s.connect(lp);lp.connect(pk);pk.connect(g);g.connect(dest);s.start(t,Math.random()*0.9);s.stop(t+d+0.02);
+  if(crack>0){const s2=ctx.createBufferSource();s2.buffer=N;const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=2200+Math.random()*2400;bp.Q.value=0.9;
+    const g2=ctx.createGain(),d2=0.006+Math.random()*0.012;g2.gain.setValueAtTime(0.0001,t);g2.gain.exponentialRampToValueAtTime(Math.max(0.0002,amp*crack),t+0.0015);g2.gain.exponentialRampToValueAtTime(0.0001,t+d2);
+    s2.connect(bp);bp.connect(g2);g2.connect(dest);s2.start(t,Math.random()*0.9);s2.stop(t+d2+0.01);}}
+function burbleStep(ped,shifting){const ctx=AC,c=car.spec;if(!ctx||!voice||muted||voice.electric||!BURB_CARS.test(car.key||''))return;
+  const t=ctx.currentTime,mode=car.mode||'normal',mm=mode==='track'?1:mode==='sport'?0.8:0.4,base=(c.burble||0.6)*mm,dest=voice.panner||audioOut(ctx);
+  const inGear=car.state==='D'||car.state==='M',rpm=car.rpm||800,red=c.redline||7000;
+  // lift-off from the throttle: the higher the revs, the longer and stronger the run
+  if(ped>0.45)BURB.armed=true;   // on the throttle: armed; it fires once the pedal comes back up (the throttle closes over a few frames)
+  if(BURB.armed&&ped<0.12){BURB.armed=false;if(inGear&&rpm>2800){const k=clamp((rpm-2500)/(red-2500),0,1);BURB.until=t+0.6+2.2*k*mm+Math.random()*0.4;BURB.str=base*(0.55+0.45*k);BURB.nextT=t+0.05+Math.random()*0.08;}}
+  const over=inGear&&ped<0.12&&rpm>1700&&!car.disabled;
+  if(ped>0.2)BURB.until=0;   // back on the throttle: it stops
+  // a rev-matched downshift while slowing
+  if(shifting&&car.shiftDir<0&&ped<0.12&&rpm>2200){BURB.until=Math.max(BURB.until,t+0.35+0.5*mm);BURB.str=Math.max(BURB.str,base*0.8);BURB.nextT=Math.min(BURB.nextT,t+0.03);}
+  // full-throttle upshift in Sport or Track: a quick brap
+  if(shifting&&car.shiftDir>0&&ped>0.8&&mode!=='normal'){const n=2+Math.floor(Math.random()*3);for(let i=0;i<n;i++)burbPop(ctx,dest,t+0.01+i*(0.022+Math.random()*0.02),0.6*base*(1-i/(n+1)),rpm,0.5);}
+  if(over&&t<BURB.until){const fade=clamp((BURB.until-t)/1.2,0.25,1),rk=clamp((rpm-1500)/(red-1500),0.15,1);
+    while(BURB.nextT<t+0.1){const pt=Math.max(t,BURB.nextT),big=Math.random()<0.18*mm;
+      burbPop(ctx,dest,pt,clamp(BURB.str*fade*(big?0.95:0.3+Math.random()*0.35),0.002,1.1),rpm,big?0.9:(Math.random()<0.4?0.35:0));
+      // irregular: quick blubs in clusters, with gaps; quicker at higher revs
+      BURB.nextT=pt+(Math.random()<0.25?0.12+Math.random()*0.2:0.028+Math.random()*0.06)/(0.6+rk*0.7);}}
+  else BURB.nextT=Math.max(BURB.nextT,t);}
 function crashSound(k){
   const ctx=AC;if(!ctx||muted)return;
   const t=ctx.currentTime,len=0.35,b=ctx.createBuffer(1,ctx.sampleRate*len,ctx.sampleRate),d=b.getChannelData(0);
@@ -14442,6 +14478,7 @@ function audioFrame(){
   // blow-off: boost was up and the throttle just snapped shut (or an upshift cut it)
   const ped=1-Math.pow(1-car.thr,1.7),B=boostSetup(car.spec),now=AC.currentTime,dt=Math.min(0.1,now-(voice.lastT||now));voice.lastT=now;
   if(B&&B.turbo&&B.kind!=='centri'&&((voice.lastPed||0)-ped>0.3||(shifting&&car.shiftDir>0&&b>0.5))&&b>0.35&&now-(voice.bovT||0)>0.7){voice.bovT=now;voice.bov();}
+  burbleStep(ped,shifting);
   voice.lastPed=ped;if(turboSnd)turboSnd.update(b,car.rpm,car.spec.redline||6500,car.load,dt||0.016);
 }
 
