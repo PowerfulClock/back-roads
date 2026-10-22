@@ -14477,10 +14477,35 @@ function burbSrc(ctx,dest,rpm){const pk=voice&&voice.pack;if(!pk||!pk.ready||!pk
 function burbBurst(ctx,S,t,amp,len,drive){t=Math.max(t,S.lastT+0.004);S.lastT=t+len;const G=S.g.gain;
   G.setValueAtTime(0.0001,t);G.linearRampToValueAtTime(amp,t+0.0035);G.setTargetAtTime(0.0001,t+0.006,len/3.2);
   S.pre.gain.setValueAtTime(drive,t);BURB.n++;}
+/* the real thing: the afterfire recordings the BeamNG M2 mod uses (BeamNG's own single pops, multi-pop overrun runs and
+   shift pops), loaded like an engine pack */
+function burbAF(){const p=sndLoad('m2afterfire');return p&&p.ready&&p.layers&&p.layers.multi?p:null;}
+function burbPlay(ctx,dest,t,list,amp,rate){const q=list[Math.floor(Math.random()*list.length)],s=ctx.createBufferSource();s.buffer=q.buf;s.playbackRate.value=rate;
+  const g=ctx.createGain();g.gain.value=amp;s.connect(g);g.connect(dest);s.start(t);BURB.n++;return q.buf.duration/rate;}
 function burbleStep(ped,shifting){const ctx=AC,c=car.spec;if(!ctx||!voice||muted||voice.electric||!BURB_CARS.test(car.key||''))return;
   const t=ctx.currentTime,mode=car.mode||'normal',mm=mode==='track'?1:mode==='sport'?0.85:0.55,base=1.2*(c.burble||0.6)*mm,dest=voice.panner||audioOut(ctx);
   const inGear=car.state==='D'||car.state==='M',rpm=car.rpm||800,red=c.redline||7000;
   // lift-off from the throttle: the higher the revs, the longer and stronger the run
+  const AF=burbAF();
+  if(AF){const k0=0.8*base,rt=()=>clamp(0.92+rpm/40000,0.92,1.1)*(0.96+Math.random()*0.08);
+    if(ped>0.45)BURB.armed=true;
+    // lift-off: a single pop straight away, then the overrun run
+    if(BURB.armed&&ped<0.12){BURB.armed=false;if(inGear&&rpm>2800){const k=clamp((rpm-2500)/(red-2500),0,1);
+      burbPlay(ctx,dest,t+0.03+Math.random()*0.05,AF.layers.single,k0*(0.7+0.3*k),rt());
+      BURB.until=t+0.5+2.0*k*mm+Math.random()*0.4;BURB.str=k0*(0.55+0.45*k);BURB.nextT=t+0.18+Math.random()*0.12;}}
+    if(ped>0.2)BURB.until=0;
+    // upshift on the throttle: the shift pop
+    if(shifting&&car.shiftDir>0&&ped>0.5&&rpm>3000)burbPlay(ctx,dest,t+0.01,AF.layers.shift,k0*(mode==='normal'?0.75:1),rt());
+    // downshift while slowing: a short burst
+    if(shifting&&car.shiftDir<0&&ped<0.12&&rpm>2200){burbPlay(ctx,dest,t+0.02,Math.random()<0.5?AF.layers.single:AF.layers.shift,k0*0.8,rt());BURB.until=Math.max(BURB.until,t+0.3+0.4*mm);}
+    // overrun: multi-pop runs chained back to back, with the odd single breaking through, fading as the window closes
+    const over=inGear&&ped<0.12&&rpm>1700&&!car.disabled;
+    if(over&&t<BURB.until){const fade=clamp((BURB.until-t)/1.0,0.3,1);
+      while(BURB.nextT<t+0.12){const pt=Math.max(t,BURB.nextT),single=Math.random()<0.18;
+        const d=burbPlay(ctx,dest,pt,single?AF.layers.single:AF.layers.multi,BURB.str*fade*(single?1:0.8+Math.random()*0.2),rt());
+        BURB.nextT=pt+d*(single?0.9:0.8+Math.random()*0.15)+(Math.random()<0.25?0.05+Math.random()*0.15:0);}}
+    else BURB.nextT=Math.max(BURB.nextT,t);
+    return;}
   if(ped>0.45)BURB.armed=true;   // on the throttle: armed; it fires once the pedal comes back up (the throttle closes over a few frames)
   if(BURB.armed&&ped<0.12){BURB.armed=false;if(inGear&&rpm>2800){const k=clamp((rpm-2500)/(red-2500),0,1);BURB.until=t+0.6+2.2*k*mm+Math.random()*0.4;BURB.str=base*(0.55+0.45*k);BURB.nextT=t+0.05+Math.random()*0.08;}}
   const over=inGear&&ped<0.12&&rpm>1700&&!car.disabled;
@@ -15153,7 +15178,7 @@ async function boot(){
   if(!window.THREE){$('loading').textContent='The 3D view needs three.js from a CDN. Check your connection and reload.';return;}
   loadSet(0.02,'Starting');await loadYield();
   // every engine recording any car uses starts downloading now, alongside the build; the screen waits for them below
-  try{const S=new Set();CARS.forEach(c=>{try{const n=sndPackFor(carSpec(c.key));if(n)S.add(n);}catch(e){}});S.forEach(n=>{try{sndLoad(n);}catch(e){}});}catch(e){}
+  try{const S=new Set();CARS.forEach(c=>{try{const n=sndPackFor(carSpec(c.key));if(n)S.add(n);}catch(e){}});S.add('m2afterfire');S.forEach(n=>{try{sndLoad(n);}catch(e){}});}catch(e){}
   const steps=[['Painting textures',makeTextures],['Mixing materials',makeMats],['Starting the 3D view',initRenderer],['Laying out the county',defineMap],
     ['Building roads, towns and farms',buildMap],['Planning traffic routes',trInitNet],['Smoke and skid marks',initFx],['Drawing the minimap',drawMiniBase],
     ['Controls',()=>{bindOrbit();bindTouch();bindFullMap();bindSettings();applyGfx();syncHelp();}],['Street lights',initLampPool],['Air 1 on the station roof',heliInit],['Sky and light',()=>{applyTOD();setupReflections();}]];
