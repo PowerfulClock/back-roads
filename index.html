@@ -14544,9 +14544,13 @@ const ACOU={on:true,taps:[],rev:null,revG:null,inp:null,t:0,enc:0};
 const ACOU_DIRS=8,ACOU_C=343;
 function acouInit(ctx){if(ACOU.inp||!ctx||!ctx.master)return;
   const inp=ctx.createGain();inp.gain.value=1;ctx.master.connect(inp);const out=ctx.limiter||ctx.destination;
-  for(let i=0;i<ACOU_DIRS;i++){const d=ctx.createDelay(1.0);d.delayTime.value=0.1;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=6000;
-    const g=ctx.createGain();g.gain.value=0;const p=ctx.createStereoPanner?ctx.createStereoPanner():null;
-    inp.connect(d);d.connect(lp);lp.connect(g);if(p){g.connect(p);p.connect(out);}else g.connect(out);ACOU.taps.push({d,lp,g,p,a:i/ACOU_DIRS*Math.PI*2});}
+  // each reflection is three slightly offset, differently filtered copies: a real wall scatters, it doesn't return a
+  // clean copy, and a clean copy over a steady engine note combs it into a buzz
+  for(let i=0;i<ACOU_DIRS;i++){const g=ctx.createGain();g.gain.value=0;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=6000;
+    const p=ctx.createStereoPanner?ctx.createStereoPanner():null;const ds=[];
+    [[1,0,0.5,1],[1.06,0.0021,0.3,0.7],[1.13,0.0047,0.2,0.5]].forEach(([k,o,a,f])=>{const d=ctx.createDelay(1.0);d.delayTime.value=0.1;const sg=ctx.createGain();sg.gain.value=a;
+      const sl=ctx.createBiquadFilter();sl.type='lowpass';sl.frequency.value=6000*f;inp.connect(d);d.connect(sl);sl.connect(sg);sg.connect(lp);ds.push({d,k,o,sl,f});});
+    lp.connect(g);if(p){g.connect(p);p.connect(out);}else g.connect(out);ACOU.taps.push({ds,lp,g,p,a:i/ACOU_DIRS*Math.PI*2});}
   // the diffuse tail: a generated stereo impulse, dense early, about 1.4 s long, darker as it decays
   try{const sr=ctx.sampleRate,n=Math.floor(sr*1.4),ir=ctx.createBuffer(2,n,sr);
     for(let c=0;c<2;c++){const d=ir.getChannelData(c);let lp=0;for(let i=0;i<n;i++){const t=i/sr,k=0.25+0.7*Math.exp(-t*3);lp+=(Math.random()*2-1-lp)*k;d[i]=lp*Math.exp(-t*4.2)*(t<0.012?t/0.012:1);}}
@@ -14554,32 +14558,35 @@ function acouInit(ctx){if(ACOU.inp||!ctx||!ctx.master)return;
     inp.connect(pre);pre.connect(cv);cv.connect(rg);rg.connect(out);ACOU.rev=cv;ACOU.revG=rg;}catch(e){}
   ACOU.inp=inp;}
 /* distance from (x,z) along (dx,dz) to the nearest building wall (rotated boxes) or car, within max */
-function acouRay(x,z,dx,dz,max,B,C){let best=max,kind=0;
+function acouRay(x,z,dx,dz,max,B,C){let best=max,kind=0,obj=null;
   for(const b of B){const c=Math.cos(b.rot||0),s=Math.sin(b.rot||0),ox=x-b.x,oz=z-b.z;
     const lx=ox*c-oz*s,lz=ox*s+oz*c,vx=dx*c-dz*s,vz=dx*s+dz*c,hw=b.w/2,hd=b.d/2;
     let t0=-1e9,t1=1e9;
     if(Math.abs(vx)<1e-6){if(Math.abs(lx)>hw)continue;}else{let a=(-hw-lx)/vx,e=(hw-lx)/vx;if(a>e)[a,e]=[e,a];t0=Math.max(t0,a);t1=Math.min(t1,e);}
     if(Math.abs(vz)<1e-6){if(Math.abs(lz)>hd)continue;}else{let a=(-hd-lz)/vz,e=(hd-lz)/vz;if(a>e)[a,e]=[e,a];t0=Math.max(t0,a);t1=Math.min(t1,e);}
-    if(t1>=t0&&t0>0.3&&t0<best){best=t0;kind=1;}}
-  for(const q of C){const ox=q.x-x,oz=q.z-z,t=ox*dx+oz*dz;if(t<0.5||t>=best)continue;const px=ox-dx*t,pz=oz-dz*t,r=q.r;if(px*px+pz*pz<r*r){best=Math.max(0.5,t-Math.sqrt(r*r-(px*px+pz*pz)));kind=2;}}
-  return [best,kind];}
+    if(t1>=t0&&t0>0.3&&t0<best){best=t0;kind=1;obj=b;}}
+  for(const q of C){const ox=q.x-x,oz=q.z-z,t=ox*dx+oz*dz;if(t<0.5||t>=best)continue;const px=ox-dx*t,pz=oz-dz*t,r=q.r;if(px*px+pz*pz<r*r){best=Math.max(0.5,t-Math.sqrt(r*r-(px*px+pz*pz)));kind=2;obj=q;}}
+  return [best,kind,obj];}
 function acouFrame(dt){const ctx=AC;if(!ctx||!ctx.master)return;acouInit(ctx);if(!ACOU.inp)return;
   const live=ACOU.on&&(MODE==='drive')&&CFG.gfx.echo!==false;ACOU.t-=dt;if(ACOU.t>0)return;ACOU.t=0.05;
   const T=ctx.currentTime,set=(p,v,tc)=>p.setTargetAtTime(v,T,tc||0.06);
   if(!live){ACOU.taps.forEach(q=>set(q.g.gain,0,0.1));if(ACOU.revG)set(ACOU.revG.gain,0,0.2);return;}
   const x=car.x,z=car.z,MAX=120;
   const B=MAP.buildings.filter(b=>(b.h||6)>2.5&&Math.abs(b.x-x)<MAX+40&&Math.abs(b.z-z)<MAX+40);
-  const C=[];for(const a of TRAFFIC.cars){if(!a.alive||a===car||a.alpha<0.3)continue;const d=Math.hypot(a.x-x,a.z-z);if(d<18)C.push({x:a.x,z:a.z,r:Math.max(1.1,(a.halfWid||0.9)*1.15)});}
+  const C=[];for(const a of TRAFFIC.cars){if(!a.alive||a===car||a.alpha<0.3)continue;const d=Math.hypot(a.x-x,a.z-z);if(d<18)C.push({x:a.x,z:a.z,r:Math.max(1.1,(a.halfWid||0.9)*1.15),ref:a});}
   // panning: relative to where the camera (the listener) looks
   const f=new TH.Vector3();camera.getWorldDirection(f);const fl=Math.hypot(f.x,f.z)||1,fx=f.x/fl,fz=f.z/fl,rx=-fz,rz=fx;
-  let hits=0;
-  ACOU.taps.forEach((q,i)=>{const a=q.a+car.psi,dx=Math.cos(a),dz=-Math.sin(a);const [d,kind]=acouRay(x,z,dx,dz,MAX,B,C);
-    if(!kind){set(q.g.gain,0,0.12);return;}
+  let hits=0;const R=ACOU.taps.map(q=>{const a=q.a+car.psi,dx=Math.cos(a),dz=-Math.sin(a);const [d,kind,obj]=acouRay(x,z,dx,dz,MAX,B,C);return {q,dx,dz,d,kind,obj};});
+  // an object several rays hit reflects once (from its nearest point), not once per ray
+  const near=new Map();R.forEach(r=>{if(!r.kind)return;const k=r.obj&&(r.obj.ref||r.obj),n=near.get(k);if(!n||r.d<n.d)near.set(k,r);});
+  R.forEach(r=>{const q=r.q,{d,kind,dx,dz}=r;
+    if(!kind||near.get(r.obj&&(r.obj.ref||r.obj))!==r){set(q.g.gain,0,0.12);return;}
     if(kind===1&&d<60)hits++;
-    const delay=Math.min(0.95,2*d/ACOU_C+(kind===2?0.0015:0));
-    // a wall is a big flat reflector; a car a small, rounded one that only matters close up
-    const g=kind===1?0.5/(1+d/9):0.42/(1+d*d/9);
-    set(q.d.delayTime,delay,kind===2?0.03:0.08);set(q.g.gain,Math.min(0.45,g),0.06);set(q.lp.frequency,Math.max(900,9000/(1+d/35)),0.1);
+    const delay=Math.min(0.93,2*d/ACOU_C+(kind===2?0.0015:0));
+    // a wall is a big reflector; a car a small, rounded one that only matters close up. Very close reflections are
+    // kept quiet and dull: they colour the sound (the passing whoosh) without ringing
+    let g=kind===1?0.32/(1+d/9):0.34/(1+d*d/12);if(d<5)g*=0.45+0.11*d;
+    set(q.g.gain,Math.min(0.28,g),0.06);q.ds.forEach(e=>{set(e.d.delayTime,Math.min(0.99,delay*e.k+e.o),kind===2?0.03:0.08);set(e.sl.frequency,Math.max(700,(kind===2?3500:9000)*e.f/(1+d/35)),0.1);});
     if(q.p)set(q.p.pan,clamp(dx*rx+dz*rz,-1,1)*0.85,0.08);});
   ACOU.enc+=((hits/ACOU_DIRS)-ACOU.enc)*0.15;
   if(ACOU.revG)set(ACOU.revG.gain,0.015+0.22*ACOU.enc,0.4);}
