@@ -14576,20 +14576,23 @@ function acouFrame(dt){const ctx=AC;if(!ctx||!ctx.master)return;acouInit(ctx);if
   const live=ACOU.on&&(MODE==='drive')&&CFG.gfx.echo!==false;ACOU.t-=dt;if(ACOU.t>0)return;ACOU.t=0.05;
   const T=ctx.currentTime,set=(p,v,tc)=>p.setTargetAtTime(v,T,tc||0.2);
   if(!live){ACOU.bins.forEach(q=>set(q.g.gain,0,0.1));if(ACOU.revG)set(ACOU.revG.gain,0,0.2);return;}
-  const x=car.x,z=car.z,MAX=ACOU_C*ACOU_BD[ACOU_BD.length-1]/2+8;
+  const x=car.x,z=car.z,MAX=ACOU_C*ACOU_BD[ACOU_BD.length-1]/2;
   const B=MAP.buildings.filter(b=>(b.h||6)>2.5&&Math.abs(b.x-x)<MAX+40&&Math.abs(b.z-z)<MAX+40);
   const f=new TH.Vector3();camera.getWorldDirection(f);const fl=Math.hypot(f.x,f.z)||1,fx=f.x/fl,fz=f.z/fl,rx=-fz,rz=fx;
-  const W=ACOU_BD.map(()=>({g:0,pan:0}));let hits=0;
-  for(let i=0;i<ACOU_DIRS;i++){const a=i/ACOU_DIRS*Math.PI*2+car.psi,dx=Math.cos(a),dz=-Math.sin(a);const [d,kind]=acouRay(x,z,dx,dz,MAX,B,[]);
-    if(kind!==1)continue;if(d<60)hits++;
-    // a surface closer than ~7 m returns sound too soon to hear as an echo (that's what combed into a buzz): it only
-    // feeds the room tail below. Farther walls: louder the nearer they are, split between the two nearest bins
-    const del=2*d/ACOU_C;if(del<ACOU_BD[0]*0.8)continue;
-    const g=0.42/(1+Math.max(0,d-10)/28)*clamp((del-ACOU_BD[0]*0.8)/(ACOU_BD[0]*0.4),0,1),pan=clamp(dx*rx+dz*rz,-1,1)*0.9;
+  const W=ACOU_BD.map(()=>({g:0,pan:0}));let hits=0;const near=new Map();
+  for(let i=0;i<ACOU_DIRS;i++){const a=i/ACOU_DIRS*Math.PI*2+car.psi,dx=Math.cos(a),dz=-Math.sin(a);const [d,kind,obj]=acouRay(x,z,dx,dz,MAX,B,[]);
+    if(kind!==1)continue;hits+=clamp(1.4-d/25,0,1);   // the street feels enclosed only when buildings are close
+    const n=near.get(obj);if(!n||d<n.d)near.set(obj,{d,dx,dz,obj});}
+  // one echo per building, from its nearest face. Level follows real spreading: the echo travels 2d while the listener
+  // hears the engine from ~6 m, so it falls off as 6/(2d); brick and glass return ~70%; a low building is a small target
+  near.forEach(({d,dx,dz,obj})=>{
+    const del=2*d/ACOU_C;if(del<ACOU_BD[0]*0.8)return;
+    const size=clamp(((obj.h||6)-2)/10,0.25,1)*clamp(Math.max(obj.w||10,obj.d||10)/14,0.4,1);
+    const g=0.7*Math.min(1,6/(2*d))*size*clamp((del-ACOU_BD[0]*0.8)/(ACOU_BD[0]*0.4),0,1),pan=clamp(dx*rx+dz*rz,-1,1)*0.9;
     let j=0;while(j<ACOU_BD.length-1&&ACOU_BD[j+1]<del)j++;
     const t=j<ACOU_BD.length-1?clamp(Math.log(del/ACOU_BD[j])/Math.log(ACOU_BD[j+1]/ACOU_BD[j]),0,1):0;
-    [[j,1-t],[j+1,t]].forEach(([k,w])=>{if(k<W.length&&w>0){W[k].g+=g*w;W[k].pan+=pan*g*w;}});}
-  ACOU.bins.forEach((q,k)=>{const w=W[k],g=Math.min(0.5,w.g);set(q.g.gain,g,0.25);if(q.p&&w.g>0)set(q.p.pan,w.pan/w.g,0.3);});
+    [[j,1-t],[j+1,t]].forEach(([k,w])=>{if(k<W.length&&w>0){W[k].g+=g*w;W[k].pan+=pan*g*w;}});});
+  ACOU.bins.forEach((q,k)=>{const w=W[k],g=Math.min(0.4,w.g);set(q.g.gain,g,0.25);if(q.p&&w.g>0)set(q.p.pan,w.pan/w.g,0.3);});
   ACOU.enc+=((hits/ACOU_DIRS)-ACOU.enc)*0.15;
   if(ACOU.revG)set(ACOU.revG.gain,0.03+0.3*ACOU.enc,0.4);}
 function audioFrame(){
