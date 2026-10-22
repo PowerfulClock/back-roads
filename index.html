@@ -14030,7 +14030,9 @@ function raceThink(a,dt){const R=RACE,I=a.in;
   if(R.phase==='roll'){raceRollDrive(a,dt);return;}
   const fin=R.oFin!=null;
   if(!fin){if(a.lcStage){a.lcStage=false;a.lcGo=a.t||0;}if(I.brk>0){I.brk=0;a.brk=0;}I.thr=1;
-    if(a.state==='M')a.state='D';}   // rolling start, gear held for the line: flat out, and it shifts at the top of each gear from here
+    // rolling start with the gear held for the line: it stays in manual and shifts up itself near the redline (dropping
+    // back into Drive here would upshift at once, the automatic reading the still part-open throttle as a cruise)
+    if(a.state==='M'){const c=a.spec,n=c.gears.length;if(a.gear<n-1&&a.shiftT<=0&&a.rpm>c.redline-180){const P=car;car=a;try{beginShift(a.gear+1,a.rpm);}finally{car=P;}}}}
   else{I.thr=0;I.brk=Math.abs(a.u)>1?0.6:1;}}
 /* the opponent rolling up to the line: about 30% throttle to the roll speed, then it holds it. "Downshifts for the line":
    in the last 180 m it takes the box out of Drive and drops gears until the revs sit in the power band (one gear at a time,
@@ -14045,7 +14047,8 @@ function raceRollDrive(a,dt){const R=RACE,I=a.in,vt=R.cfg.roll*0.44704,v=a.u,dl=
   const ev=!!(IND[c.ind]||{}).electric,cvt=c.trans==='cvt'||c.trans==='ecvt';
   if(R.cfg.aiShift==='manual'&&!ev&&!cvt&&dl<180&&v>vt-3){
     const red=c.redline,want=clamp(Math.max(c.tqRpm||0,red*0.68),red*0.55,red*0.86),w=v/a.r*60/(2*Math.PI);let g=0,best=1e9;
-    c.gears.forEach((gr,i)=>{const rpm=w*gr*c.fd;if(rpm>red*0.9)return;const e=Math.abs(rpm-want);if(e<best){best=e;g=i;}});
+    c.gears.forEach((gr,i)=>{const rpm=w*gr*c.fd;if(rpm>red*0.82)return;   // leave room to pull before the next shift
+     const e=Math.abs(rpm-want);if(e<best){best=e;g=i;}});
     if(!a.rollM){a.rollM=true;a.state='M';a.rollShT=0;}
     a.rollShT-=dt;if(a.gear>g&&a.shiftT<=0&&a.rollShT<=0){const P=car;car=a;try{beginShift(a.gear-1,a.rpm);}finally{car=P;}a.rollShT=0.45;}}}
 function raceResults(){const R=RACE,a=R.a,Y=CARS.find(c=>c.key===R.cfg.you.key),O=CARS.find(c=>c.key===R.cfg.opp.key);
