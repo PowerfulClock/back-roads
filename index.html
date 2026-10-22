@@ -14410,7 +14410,7 @@ function makeTurboSnd(ctx,twin){const out=ctx.createGain();out.gain.value=1;out.
       nf.frequency.setTargetAtTime(1800+shaft*3800,t,0.08);ng.gain.setTargetAtTime(0.05*b*(0.3+0.7*load),t,0.06);},
     stop(){try{out.gain.setTargetAtTime(0,ctx.currentTime,0.08);setTimeout(()=>{[o,o2,n].forEach(x=>{try{x.stop();}catch(e){}});},400);}catch(e){}}};}
 function startAudio(){stopAudio();const ctx=audioCtx();if(!ctx)return;if(muted&&ctx.master)ctx.master.gain.value=0;makeVoice();}
-function makeVoice(){BURB.until=0;BURB.armed=false;
+function makeVoice(){BURB.until=0;BURB.armed=false;if(BURB.src){try{BURB.src.s.stop();}catch(e){}BURB.src=null;}
   const ctx=AC,c=car.spec;if(!ctx)return;
   if(voice){try{voice.stop();}catch(e){}voice=null;}
   const pack=sndLoad(sndPackFor(c));
@@ -14453,11 +14453,30 @@ function burbBank(ctx){if(BURB.bank&&BURB.bank.sr===ctx.sampleRate)return BURB.b
     cracks.push(mk(0.05,(d,n)=>{for(let i=0;i<n;i++){const t=i/sr,w=R()*2-1;let x=sn(w)*Math.exp(-t/0.0012)+0.4*lo(w)*2*Math.exp(-t/0.006);
       for(const [ct,ca] of clicks){const u=t-ct;if(u>0&&u<0.003)x+=ca*sn(w)*Math.exp(-u/0.0006);}d[i]=x;}}));}
   return BURB.bank={sr,blats,bangs,cracks};}
-function burbPop(ctx,dest,t,amp,rpm,crack,big){const B=burbBank(ctx);BURB.n++;
+function burbPop(ctx,dest,t,amp,rpm,crack,big){const S=burbSrc(ctx,dest,rpm);
+  if(S){burbBurst(ctx,S,t,amp*(big?0.75:0.5),big?0.05+Math.random()*0.045:0.018+Math.random()*0.026,big?3.2:1.6+Math.random());return;}
+  const B=burbBank(ctx);BURB.n++;
   const play=(buf,rate,a)=>{const s=ctx.createBufferSource();s.buffer=buf;s.playbackRate.value=rate;const g=ctx.createGain();g.gain.value=a;s.connect(g);g.connect(dest);s.start(t);};
   const L=big?B.bangs:B.blats,rr=clamp(0.85+rpm/20000,0.88,1.2)*(0.93+Math.random()*0.14);
   play(L[Math.floor(Math.random()*L.length)],rr,amp);
   if(crack>0)play(B.cracks[Math.floor(Math.random()*B.cracks.length)],0.9+Math.random()*0.25,amp*crack*0.7);}
+/* the bangs themselves, made from the car's own recorded exhaust: its off-throttle sample, looped at the current revs and
+   held silent, opened in short sharp bursts (the gas lighting off in the pipes) and pushed into soft saturation on the big
+   ones. Falls back to the synthetic bank if the recording isn't loaded. */
+function burbSrc(ctx,dest,rpm){const pk=voice&&voice.pack;if(!pk||!pk.ready||!pk.layers||!pk.layers.off)return null;
+  const L=pk.layers.off;let best=L[0];for(const q of L)if(Math.abs(q.rpm-rpm)<Math.abs(best.rpm-rpm))best=q;
+  let S=BURB.src;
+  if(!S||S.dest!==dest||S.buf!==best.buf){if(S)try{S.s.stop(ctx.currentTime+0.25);}catch(e){}
+    const s=ctx.createBufferSource();s.buffer=best.buf;s.loop=true;
+    const pre=ctx.createGain();pre.gain.value=1;
+    const sh=ctx.createWaveShaper();{const n=1024,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;c[i]=Math.tanh(2.2*x)/Math.tanh(2.2);}sh.curve=c;sh.oversample='2x';}
+    const body=ctx.createBiquadFilter();body.type='peaking';body.frequency.value=240;body.Q.value=0.8;body.gain.value=5;   // a little more chest in the bang
+    const g=ctx.createGain();g.gain.value=0;s.connect(pre);pre.connect(sh);sh.connect(body);body.connect(g);g.connect(dest);s.start(ctx.currentTime,Math.random()*best.buf.duration);
+    S=BURB.src={s,pre,g,dest,buf:best.buf,rpm0:best.rpm,lastT:0};}
+  S.s.playbackRate.setTargetAtTime(clamp(rpm/S.rpm0,0.6,1.6),ctx.currentTime,0.05);return S;}
+function burbBurst(ctx,S,t,amp,len,drive){t=Math.max(t,S.lastT+0.004);S.lastT=t+len;const G=S.g.gain;
+  G.setValueAtTime(0.0001,t);G.linearRampToValueAtTime(amp,t+0.0035);G.setTargetAtTime(0.0001,t+0.006,len/3.2);
+  S.pre.gain.setValueAtTime(drive,t);BURB.n++;}
 function burbleStep(ped,shifting){const ctx=AC,c=car.spec;if(!ctx||!voice||muted||voice.electric||!BURB_CARS.test(car.key||''))return;
   const t=ctx.currentTime,mode=car.mode||'normal',mm=mode==='track'?1:mode==='sport'?0.85:0.55,base=1.2*(c.burble||0.6)*mm,dest=voice.panner||audioOut(ctx);
   const inGear=car.state==='D'||car.state==='M',rpm=car.rpm||800,red=c.redline||7000;
