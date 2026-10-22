@@ -14428,29 +14428,38 @@ function stopAudio(){if(voice){try{voice.stop();}catch(e){}voice=null;}if(turboS
 --------------------------------------------------------------------------- */
 const BURB={until:0,str:0,nextT:0,bank:null,n:0};
 const BURB_CARS=/^bmwM2/;
-/* a bank of exhaust bangs, synthesised once: "blubs" (a sharp attack ringing the exhaust: a deep boom at 65-95 Hz, a
-   second mode at 150-230 Hz, a raspy tail) and "cracks" (a hard snap with a few tiny crackles after it) */
+/* a bank of exhaust sounds, synthesised once. No pitched ringing (that reads as tin): each one is a pressure pulse
+   (a half-sine thump and its rebound) with rough low "blat" noise, shaped by a heavily damped exhaust-pipe reflection.
+   blats: the small uneven pulses that run together into the overrun rumble; bangs: the big deep ones, with a whoosh
+   tail; cracks: pure broadband snaps */
 function burbBank(ctx){if(BURB.bank&&BURB.bank.sr===ctx.sampleRate)return BURB.bank;const sr=ctx.sampleRate,R=Math.random;
-  const mk=(len,fn)=>{const n=Math.floor(sr*len),b=ctx.createBuffer(1,n,sr),d=b.getChannelData(0);fn(d,n);let m=0;for(let i=0;i<n;i++)m=Math.max(m,Math.abs(d[i]));for(let i=0;i<n;i++)d[i]/=m||1;
-    for(let i=0;i<Math.min(n,64);i++)d[i]*=i/64;for(let i=0;i<Math.min(n,400);i++)d[n-1-i]*=i/400;return b;};
-  const band=(lo,hi)=>{let a=0,b=0;const ka=Math.exp(-2*Math.PI*hi/sr),kb=Math.exp(-2*Math.PI*lo/sr);return ()=>{const w=R()*2-1;a=a*ka+w*(1-ka);b=b*kb+a*(1-kb);return a-b;};};
-  const blubs=[],cracks=[];
-  for(let k=0;k<10;k++){const f1=65+R()*30,t1=0.011+R()*0.009,f2=150+R()*80,ph=R()*6.28,bn=band(400,1400),hot=0.7+R()*0.5;
-    blubs.push(mk(0.09,(d,n)=>{for(let i=0;i<n;i++){const t=i/sr;
-      let x=0.95*Math.sin(2*Math.PI*f1*t*(1-0.15*t/0.09)+ph)*Math.exp(-t/t1)+0.45*Math.sin(2*Math.PI*f2*t)*Math.exp(-t/0.009)
-        +0.7*hot*bn()*Math.exp(-t/0.014)+1.0*(R()*2-1)*Math.exp(-t/0.0014);
-      d[i]=Math.tanh(1.8*x)+0.08*Math.tanh(4*x*x);}}));}   // a little asymmetric grit, like a real exhaust
-  for(let k=0;k<7;k++){const f=280+R()*240,bn=band(1800,6000),clicks=[...Array(2+Math.floor(R()*4))].map(()=>[0.004+R()*0.03,0.25+R()*0.5]);
-    cracks.push(mk(0.07,(d,n)=>{for(let i=0;i<n;i++){const t=i/sr;let x=(R()*2-1)*Math.exp(-t/0.0018)+0.55*Math.sin(2*Math.PI*f*t)*Math.exp(-t/0.008)+0.35*bn()*Math.exp(-t/0.006);
-      for(const [ct,ca] of clicks){const u=t-ct;if(u>0&&u<0.004)x+=ca*(R()*2-1)*Math.exp(-u/0.0007);}d[i]=Math.tanh(2*x);}}));}
-  return BURB.bank={sr,blubs,cracks};}
-function burbPop(ctx,dest,t,amp,rpm,crack){const B=burbBank(ctx);BURB.n++;
+  const lpN=fc=>{let y=0;const k=1-Math.exp(-2*Math.PI*fc/sr);return v=>y+=(v-y)*k;};
+  const bpN=(lo,hi)=>{const a=lpN(hi),a2=lpN(hi),b=lpN(lo);return v=>{const y=a2(a(v));return 1.6*(y-b(y));};};   // band-limited noise (two-pole top)
+  const hp70=d=>{let y=0,px=0;const k=Math.exp(-2*Math.PI*70/sr);for(let i=0;i<d.length;i++){const x=d[i];y=k*(y+x-px);px=x;d[i]=y;}};   // nothing small speakers can't play
+  const pulse=(t,T1,T2)=>t<T1?Math.sin(Math.PI*t/T1):(t<T1+T2?-0.55*Math.sin(Math.PI*(t-T1)/T2):0);
+  const pipe=(d,n)=>{   // damped pipe reflections: smear and body, no ring
+    const D=Math.floor(sr*(0.0045+R()*0.003)),D2=Math.floor(sr*(0.011+R()*0.004)),f1=lpN(650),f2=lpN(420);
+    for(let i=0;i<n;i++){if(i>=D)d[i]+=0.38*f1(d[i-D]);if(i>=D2)d[i]+=0.22*f2(d[i-D2]);}};
+  const mk=(len,fn)=>{const n=Math.floor(sr*len),b=ctx.createBuffer(1,n,sr),d=b.getChannelData(0);fn(d,n);pipe(d,n);hp70(d);
+    let m=0;for(let i=0;i<n;i++)m=Math.max(m,Math.abs(d[i]));for(let i=0;i<n;i++)d[i]=Math.tanh(1.2*d[i]/(m||1))/Math.tanh(1.2);
+    for(let i=0;i<Math.min(n,600);i++)d[n-1-i]*=i/600;return b;};
+  const blats=[],bangs=[],cracks=[];
+  for(let k=0;k<12;k++){const T1=0.0018+R()*0.0016,T2=0.0028+R()*0.0025,bn=bpN(180,1300+R()*500),tn=0.012+R()*0.014,ra=0.8+R()*0.5;
+    blats.push(mk(0.06,(d,n)=>{for(let i=0;i<n;i++){const t=i/sr;d[i]=0.8*pulse(t,T1,T2)+ra*bn(R()*2-1)*3.2*Math.exp(-t/tn)*Math.min(1,t/0.0006);}}));}
+  for(let k=0;k<8;k++){const T1=0.0028+R()*0.002,T2=0.0045+R()*0.004,lo=bpN(160,1500+R()*500),lo2=bpN(120,500),sn=lpN(5000);
+    bangs.push(mk(0.2,(d,n)=>{for(let i=0;i<n;i++){const t=i/sr,w=R()*2-1;
+      d[i]=1.0*pulse(t,T1,T2)+1.1*lo(w)*3.2*Math.exp(-t/0.028)*Math.min(1,t/0.0005)+0.35*sn(w)*Math.exp(-t/0.0012)+0.45*lo2(w)*4*Math.exp(-t/0.06);}}));}   // thump, blat, snap, whoosh
+  for(let k=0;k<7;k++){const sn=lpN(6500),clicks=[...Array(1+Math.floor(R()*3))].map(()=>[0.004+R()*0.025,0.3+R()*0.5]),lo=lpN(1200);
+    cracks.push(mk(0.05,(d,n)=>{for(let i=0;i<n;i++){const t=i/sr,w=R()*2-1;let x=sn(w)*Math.exp(-t/0.0012)+0.4*lo(w)*2*Math.exp(-t/0.006);
+      for(const [ct,ca] of clicks){const u=t-ct;if(u>0&&u<0.003)x+=ca*sn(w)*Math.exp(-u/0.0006);}d[i]=x;}}));}
+  return BURB.bank={sr,blats,bangs,cracks};}
+function burbPop(ctx,dest,t,amp,rpm,crack,big){const B=burbBank(ctx);BURB.n++;
   const play=(buf,rate,a)=>{const s=ctx.createBufferSource();s.buffer=buf;s.playbackRate.value=rate;const g=ctx.createGain();g.gain.value=a;s.connect(g);g.connect(dest);s.start(t);};
-  // the boom's pitch rides the revs a little
-  play(B.blubs[Math.floor(Math.random()*B.blubs.length)],clamp(0.8+rpm/16000,0.85,1.25)*(0.94+Math.random()*0.12),amp);
-  if(crack>0)play(B.cracks[Math.floor(Math.random()*B.cracks.length)],0.9+Math.random()*0.25,amp*crack);}
+  const L=big?B.bangs:B.blats,rr=clamp(0.85+rpm/20000,0.88,1.2)*(0.93+Math.random()*0.14);
+  play(L[Math.floor(Math.random()*L.length)],rr,amp);
+  if(crack>0)play(B.cracks[Math.floor(Math.random()*B.cracks.length)],0.9+Math.random()*0.25,amp*crack*0.7);}
 function burbleStep(ped,shifting){const ctx=AC,c=car.spec;if(!ctx||!voice||muted||voice.electric||!BURB_CARS.test(car.key||''))return;
-  const t=ctx.currentTime,mode=car.mode||'normal',mm=mode==='track'?1:mode==='sport'?0.85:0.55,base=1.5*(c.burble||0.6)*mm,dest=voice.panner||audioOut(ctx);
+  const t=ctx.currentTime,mode=car.mode||'normal',mm=mode==='track'?1:mode==='sport'?0.85:0.55,base=1.2*(c.burble||0.6)*mm,dest=voice.panner||audioOut(ctx);
   const inGear=car.state==='D'||car.state==='M',rpm=car.rpm||800,red=c.redline||7000;
   // lift-off from the throttle: the higher the revs, the longer and stronger the run
   if(ped>0.45)BURB.armed=true;   // on the throttle: armed; it fires once the pedal comes back up (the throttle closes over a few frames)
@@ -14461,12 +14470,13 @@ function burbleStep(ped,shifting){const ctx=AC,c=car.spec;if(!ctx||!voice||muted
   if(shifting&&car.shiftDir<0&&ped<0.12&&rpm>2200){BURB.until=Math.max(BURB.until,t+0.35+0.5*mm);BURB.str=Math.max(BURB.str,base*0.8);BURB.nextT=Math.min(BURB.nextT,t+0.03);}
   // full-throttle upshift in Sport or Track: a quick brap
   // an upshift on the throttle: the ignition cut fires a quick brap of pops (strongest in Track, still there in Normal)
-  if(shifting&&car.shiftDir>0&&ped>0.5&&rpm>3000){const n=2+Math.floor(Math.random()*3)+(mode==='track'?1:0);for(let i=0;i<n;i++)burbPop(ctx,dest,t+0.008+i*(0.018+Math.random()*0.018),base*(0.95-i*0.12),rpm,i===0?0.9:(Math.random()<0.5?0.5:0));}
+  if(shifting&&car.shiftDir>0&&ped>0.5&&rpm>3000){const n=2+Math.floor(Math.random()*3)+(mode==='track'?1:0);for(let i=0;i<n;i++)burbPop(ctx,dest,t+0.008+i*(0.02+Math.random()*0.02),base*(0.95-i*0.12),rpm,i===0?0.7:(Math.random()<0.4?0.4:0),i<2);}
   if(over&&t<BURB.until){const fade=clamp((BURB.until-t)/1.2,0.25,1),rk=clamp((rpm-1500)/(red-1500),0.15,1);
-    while(BURB.nextT<t+0.1){const pt=Math.max(t,BURB.nextT),big=Math.random()<0.25*mm;
-      burbPop(ctx,dest,pt,clamp(BURB.str*fade*(big?1:0.45+Math.random()*0.35),0.002,1.6),rpm,big?0.85:(Math.random()<0.45?0.4:0));
-      // irregular: quick blubs in clusters, with gaps; quicker at higher revs
-      BURB.nextT=pt+(Math.random()<0.2?0.09+Math.random()*0.16:0.024+Math.random()*0.05)/(0.6+rk*0.7);}}
+    while(BURB.nextT<t+0.1){const pt=Math.max(t,BURB.nextT),big=Math.random()<0.16*mm;
+      if(big)burbPop(ctx,dest,pt,clamp(BURB.str*fade,0.002,1.6),rpm,Math.random()<0.6?0.8:0,true);
+      else if(Math.random()>0.22)burbPop(ctx,dest,pt,clamp(BURB.str*fade*(0.3+Math.random()*0.35),0.002,1.2),rpm,Math.random()<0.12?0.35:0,false);   // some pulses don't fire: that's the burble
+      // the rumble: uneven pulses, quicker at higher revs, with the odd gap
+      BURB.nextT=pt+(Math.random()<0.12?0.08+Math.random()*0.12:(0.016+Math.random()*0.03)/(0.6+rk*0.7));}}
   else BURB.nextT=Math.max(BURB.nextT,t);}
 function crashSound(k){
   const ctx=AC;if(!ctx||muted)return;
