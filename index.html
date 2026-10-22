@@ -772,7 +772,7 @@ function sndPackFor(c){
       if(/gt350/.test(nm))return 'mustangam';
       return 'coyote';}}
   {const nm=(c.name||'').toLowerCase(),yr=parseInt(c.name,10)||0,v8=/^v8/.test(c.engSound||'');
-    if(/crown victoria/.test(nm))return /sport|p71|police|interceptor/.test(nm)?'crownvicdual':'crownvic';
+    if(/crown victoria|marauder/.test(nm))return /sport|p71|police|interceptor|marauder/.test(nm)?'crownvicdual':'crownvic';
     if(/corvette/.test(nm))return /\bc6\b/.test(nm)?'vettec6':/\bc8\b/.test(nm)||yr>=2020?'vettec8':'vettec7';
     if(/camaro/.test(nm)&&v8)return 'vettec7';
     if(/viper/.test(nm))return 'viper';
@@ -1621,6 +1621,10 @@ Object.assign(PRESETS,{
  crownvic_sport:Object.assign({},P1,{body:'crownvic',name:"2003 Ford Crown Victoria LX Sport",mfr:"Ford",hp:239,hpRpm:4900,tq:287,tqRpm:4100,redline:5300,
   ind:"na",disp:4.6,engSound:"v8x",gears:[2.84,1.55,1.00,0.70],fd:3.27,drive:"rwd",trans:"auto",
   layout:"front",tire:"allseason",weight:4088,dist:55,tireD:27.0,cda:8.5,wb:114.7,cg:20.5,
+  launchRpm:2200,stall:2.6,modes:['normal'],mode:'normal'}),
+ marauder04:Object.assign({},P1,{body:'crownvic',name:"2004 Mercury Marauder",mfr:"Mercury",hp:318,hpRpm:5750,tq:330,rated:[302,318],tqRpm:4300,redline:6000,
+  ind:"na",disp:4.6,engSound:"v8x",gears:[2.84,1.55,1.00,0.70],fd:3.55,drive:"rwd",trans:"auto",
+  layout:"front",tire:"summer",weight:4195,dist:55,tireD:27.6,cda:8.5,wb:114.7,cg:20,
   launchRpm:2200,stall:2.6,modes:['normal'],mode:'normal'}),
  crownvic_p71:Object.assign({},P1,{body:'crownvic',name:"2005 Crown Victoria P71 Police Interceptor",mfr:"Ford",hp:250,hpRpm:4900,tq:297,tqRpm:4100,redline:5300,
   ind:"na",disp:4.6,engSound:"v8x",gears:[2.84,1.55,1.00,0.70],fd:3.27,drive:"rwd",trans:"auto",
@@ -2488,7 +2492,8 @@ function wheelSpec(body,name){
     else if(/\bgt\b/.test(n)){f=r=ty(19,235,55);style='ten';finish='silver';}
     else{f=r=ty(20,245,45);style='five';finish='silver';}
   }else if(body==='crownvic'){
-    if(/p71|police/.test(n)){f=r=ty(17,235,55);style='steel';}
+    if(/marauder/.test(n)){f=ty(18,235,50);r=ty(18,245,55);style='five';finish='silver';}
+    else if(/p71|police/.test(n)){f=r=ty(17,235,55);style='steel';}
     else if(/sport/.test(n)){f=r=ty(17,235,55);style='five';}
     else{f=r=ty(17,225,60);style='seven';}
   }else if(body==='viper'||body==='viperacr'){
@@ -3967,7 +3972,7 @@ function buildAudi(kind,colorHex,name){
 }
 function fordKind(name){const n=(name||'').toLowerCase();
   if(/focus rs/.test(n))return 'focusrs';if(/fusion/.test(n))return 'fusion';if(/taurus/.test(n))return 'taurus';
-  if(/crown vic/.test(n))return 'crownvic';return null;}
+  if(/crown vic|marauder/.test(n))return 'crownvic';return null;}
 function buildFordBP(kind,colorHex,name){
   const n=(name||'').toLowerCase(),police=/p71|police|interceptor/.test(n);
   const side=(D)=>(x,y)=>{const top=bpTab(D.gtop)(x)-D.sideGap;
@@ -6409,7 +6414,7 @@ function suspProfile(c){
   else if(/durango|explorer|tahoe|suv/.test(n)||body==='durango')k='suv';
   else if(/\bm[2-8]\b|rs ?7|amg|plaid|lucid|zl1|focus rs|golf r|elantra n|type r|supra|m340|m440|m550|m850|g70 3\.3|stinger/.test(n))k='sport';
   else if(/gti|mazda3|mx-5|miata|wrx|focus st|camaro|g70|model 3|s60/.test(n))k='hot';
-  else if(/challenger|charger|mustang|chevelle|camaro|gto|demon|hellcat|scat|srt8|crown victoria p71|police/.test(n))k='muscle';
+  else if(/challenger|charger|mustang|chevelle|camaro|gto|demon|hellcat|scat|srt8|crown victoria p71|police|marauder/.test(n))k='muscle';
   else if(/crown victoria|town car|grand marquis|impala ls|buick/.test(n))k='floaty';
   else if(/g80|genesis|lincoln|mkz|s-class|lexus|model s/.test(n))k='luxury';
   const P=Object.assign({cls:k},T[k]);
@@ -8050,7 +8055,7 @@ function qmCluster(l,c){const col='#e8a20c';
     const lambo=cs?cs==='lambo':/lamborghini/i.test(nm);
     const yr=parseInt(nm,10)||0;
     const isAcc=/\baccord\b/i.test(nm);
-    const NEWC={charger26:/\b20(2[4-9]|3\d) dodge charger\b/i,gtr35:/nissan gt-?r\b/i,r34:/skyline/i,grsupra:/\bgr supra\b/i,supra4:/toyota supra\b/i,ferrari:/ferrari/i,r8:/\baudi\b.*\bR8\b/i,mclaren:/mclaren/i,elantran:/elantra n\b/i,golf:/\b(golf|gti)\b/i,c6:/corvette.*\bC6\b/i,lincoln:/lincoln|\bfusion\b/i,viper:/viper/i,crownvic:/crown victoria/i,impala:/impala/i,
+    const NEWC={charger26:/\b20(2[4-9]|3\d) dodge charger\b/i,gtr35:/nissan gt-?r\b/i,r34:/skyline/i,grsupra:/\bgr supra\b/i,supra4:/toyota supra\b/i,ferrari:/ferrari/i,r8:/\baudi\b.*\bR8\b/i,mclaren:/mclaren/i,elantran:/elantra n\b/i,golf:/\b(golf|gti)\b/i,c6:/corvette.*\bC6\b/i,lincoln:/lincoln|\bfusion\b/i,viper:/viper/i,crownvic:/crown victoria|marauder/i,impala:/impala/i,
       venom:/venom/i,focusrs:/focus rs/i,agera:/agera|jesko/i,regera:/regera/i,lucid:/lucid/i,tesla:/tesla/i,taurus:/taurus/i,
       mazda3:/mazda ?3\b/i,miata:/miata|mx-5/i,volvo:/volvo/i,g70:/genesis g70/i,g80:/genesis g80/i,infiniti:/infiniti/i};
     let nstyle=null;
@@ -9648,7 +9653,7 @@ const CARS=[
     'Sports cars & supercars':['gtr23prem','gtr23tspec','gtr23nismo','r34gtr','r34vspec','r34vspec2','r34mspec','r34vnur','r34mnur','r34ztune',
       'grs20_30','grs20_le','grs21_20','grs21_30','grs21_a91','grs23_mt','grs24_45','supra4rz','supra4rzs','supra4szr','supra4sz','supra4us','supra4usna',
       'f8trib','f8spider','f812sf','f812gts','f812comp','f458','f458spider','f458spec','huracanEvoRwd','huracanEvoSpy','huracanEvoRwdSpy','huracanPerf','huracanPerfSpy'],
-    'Sedans & coupes':['a7_30t','a7_tdi','s7_15','rs7_15','rs7p_16']};
+    'Sedans & coupes':['marauder04','a7_30t','a7_tdi','s7_15','rs7_15','rs7p_16']};
   const PAL={dodge:['#9b1b1e','#111214','#e6e4df','#a9acb0','#4b4f55','#1d3a72','#d1561e','#5b8c2a'],ferrari:['#c4161c','#f2c300','#111214','#e9e9e6','#1f3a68','#5d6167'],
     lambo:['#7fbf1f','#f2a900','#111214','#e9e9e6','#d4441c','#5d6167'],supra:['#d6261f','#f0b400','#111214','#e9e9e6','#5d6167','#1f3a68'],
     nissan:['#1f4fa0','#e9e9e6','#111214','#a7abb0','#8e1b1e','#5d6167'],def:['#e9e9e6','#111214','#5d6167','#a7abb0','#1f3a68','#8e1b1e','#2f6b3a']};
